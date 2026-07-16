@@ -1,0 +1,21 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 300 300">
+  <ellipse cx="150" cy="275" rx="68" ry="10" fill="#000" opacity="0.3"/>
+  <g transform="translate(150,165)">
+    <path d="M-55 50 L0 -90 L55 50 Z" fill="#6b21a8"/>
+    <ellipse cx="0" cy="40" rx="45" ry="55" fill="#7c3aed"/>
+    <circle cx="0" cy="-35" r="44" fill="#e9d5ff"/>
+    <circle cx="-16" cy="-40" r="14" fill="white"/>
+    <circle cx="16" cy="-40" r="14" fill="white"/>
+    <circle cx="-14" cy="-38" r="7" fill="#4c1d95"/>
+    <circle cx="18" cy="-38" r="7" fill="#4c1d95"/>
+    <path d="M-10 -18 Q0 -10 10 -18" stroke="#4c1d95" stroke-width="2" fill="none"/>
+    <circle cx="55" cy="5" r="38" fill="#1e1b4b" stroke="#a78bfa" stroke-width="3"/>
+    <circle cx="55" cy="5" r="30" fill="#312e81" opacity="0.8"/>
+    <polyline points="40,15 50,0 60,10 70,-5" fill="none" stroke="#ef4444" stroke-width="2"/>
+    <text x="55" y="12" text-anchor="middle" font-size="7" fill="#ef4444">DUMP</text>
+    <text x="55" y="-15" text-anchor="middle" font-size="10" fill="#c4b5fd">♑</text>
+    <ellipse cx="-50" cy="15" rx="12" ry="18" fill="#e9d5ff"/>
+    <text x="-50" y="20" text-anchor="middle" font-size="8" fill="#6b21a8">🔮</text>
+  </g>
+  <text x="150" y="28" text-anchor="middle" font-family="Comic Sans MS,cursive" font-size="13" fill="#c4b5fd" font-weight="bold">CRYSTAL CHARTA</text>
+</svg>

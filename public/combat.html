@@ -1,0 +1,210 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Bonklandia</title>
+  <style>
+    body { margin:0; background: linear-gradient(#1a0033, #330011); color:white; font-family:Georgia,serif; min-height:100vh; }
+    .game { max-width:1300px; margin:20px auto; background:rgba(0,0,0,0.92); border:5px solid #d97706; border-radius:24px; overflow:hidden; }
+    .header { text-align:center; padding:25px; background:#451a03; font-size:2.8rem; color:#fbbf24; }
+    .subheader { text-align:center; padding:8px; background:#78350f; color:#fcd34d; }
+    .combat { display:flex; gap:40px; padding:30px; flex-wrap:wrap; }
+    .party { width:300px; }
+    .enemy { flex:1; text-align:center; min-width:300px; }
+    .actions { width:280px; }
+    img { width:170px; height:170px; object-fit:contain; border:4px solid #fcd34d; border-radius:16px; background:transparent; }
+    .enemy img { width:300px; height:300px; border-color:#ef4444; }
+    .char { margin-bottom:22px; background:rgba(0,0,0,0.6); padding:12px; border-radius:12px; }
+    button { width:100%; padding:18px; margin:8px 0; background:#b45309; color:white; border:none; border-radius:12px; font-size:1.25rem; cursor:pointer; font-family:inherit; }
+    button:hover { background:#d97706; }
+    button:disabled { background:#4b5563; cursor:not-allowed; }
+    .hp-bar { height:16px; background:#4b5563; border-radius:8px; overflow:hidden; margin:12px auto; max-width:400px; }
+    .hp-fill { height:100%; background:#ef4444; transition:width .4s; }
+    .taunt { font-style:italic; color:#fcd34d; opacity:0.85; margin:8px 0 16px; }
+    .enemy-title { color:#f87171; font-size:0.9rem; text-transform:uppercase; letter-spacing:2px; }
+    .log { margin-top:10px; padding:20px; background:#111; border-top:4px solid #78350f; height:200px; overflow-y:auto; font-family:monospace; font-size:0.9rem; }
+    .victory-overlay { position:fixed; inset:0; background:rgba(0,0,0,0.9); display:flex; align-items:center; justify-content:center; z-index:100; }
+    .victory-box { text-align:center; max-width:500px; padding:20px; }
+    .victory-box h2 { font-size:3.5rem; color:#fbbf24; margin-bottom:20px; }
+  </style>
+</head>
+<body>
+  <div class="game">
+    <div class="header">BONKLANDIA</div>
+    <div class="subheader" id="waveLabel">Wave 1 — Fight the Degens</div>
+
+    <div class="combat">
+      <div class="party">
+        <h2 style="color:#fcd34d">The Bonk Fam</h2>
+        <div class="char">
+          <img src="/assets/characters/bonk.png?v=20260715e" alt="Bonk">
+          <strong>Bonk</strong> — Head Honcho
+        </div>
+        <div class="char">
+          <img src="/assets/characters/bonga.png?v=20260715e" alt="Bonga">
+          <strong>Bonga</strong> — Sister
+        </div>
+        <div class="char">
+          <img src="/assets/characters/beng.png?v=20260715e" alt="Beng">
+          <strong>Beng</strong> — Guardian Sister
+        </div>
+      </div>
+
+      <div class="enemy">
+        <div class="enemy-title" id="enemyTitle"></div>
+        <h1 style="color:#ef4444" id="enemyName">LOADING...</h1>
+        <p class="taunt" id="enemyTaunt"></p>
+        <img id="enemyImg" src="/assets/enemies/fudder.svg" alt="Enemy">
+        <div class="hp-bar"><div class="hp-fill" id="enemyHPFill" style="width:100%"></div></div>
+        <h3>Cope HP: <span id="enemyHP">0</span>/<span id="enemyMaxHP">0</span></h3>
+      </div>
+
+      <div class="actions">
+        <h2 style="color:#fcd34d">Send It</h2>
+        <button onclick="attack(65, 'Bonk Blitz', 'Bonk bonks the negativity into orbit!')">Bonk Blitz</button>
+        <button onclick="attack(50, 'WAGMI Blast', 'Pure conviction damage!')">WAGMI Blast</button>
+        <button onclick="attack(40, 'Diamond Hands', 'The Fam grips and rips!')">Diamond Hands</button>
+        <button onclick="hypeUp()">Hype Mixtape</button>
+      </div>
+    </div>
+
+    <div class="log" id="log">Bonklandia sends the Fam into Degen Valley...</div>
+  </div>
+
+  <script>
+    const enemies = [
+      { name: 'Captain Fudder', title: 'Spreads FUD at 3am', hp: 280, img: '/assets/enemies/fudder.svg',
+        taunt: '"Guys it\'s literally going to zero. I read it on Discord."',
+        reactions: ['Captain Fudder drops his "IT\'S A SCAM" sign!', 'Fudder screams RUG INCOMING for no reason!'],
+        defeat: 'Captain Fudder logs off in shame. WAGMI.', counter: 'Fudder spam-posts FUD', counterDmg: 12 },
+      { name: 'Sir Jeets-A-Lot', title: 'Sells the bottom every time', hp: 240, img: '/assets/enemies/jeeter.svg',
+        taunt: '"I\'m just taking profits bro" *sells at -40%*',
+        reactions: ['Sir Jeets-A-Lot panic-sells his lunch money!', 'Paper hands at maximum velocity!'],
+        defeat: 'Sir Jeets-A-Lot jeeted himself out of existence.', counter: 'Jeeter dumps and blames devs', counterDmg: 18 },
+      { name: 'Karen the Non-Believer', title: 'Still waiting for BTC to die', hp: 300, img: '/assets/enemies/non-believer.svg',
+        taunt: '"Crypto is a ponzi. My cousin\'s friend lost everything."',
+        reactions: ['Karen waves a 2018 Forbes article!', 'She adjusts her "I told you so" glasses!'],
+        defeat: 'Karen blocks the whole Fam on Facebook.', counter: 'Karen sends a skeptic essay', counterDmg: 15 },
+      { name: 'Ruggy McPull', title: 'Your funds are now his funds', hp: 350, img: '/assets/enemies/scammer.svg',
+        taunt: '"Trust me bro, liquidity is locked forever* (*not locked)"',
+        reactions: ['Ruggy\'s fake Rolex falls off!', 'His verified checkmark was crayon!'],
+        defeat: 'Ruggy McPull got rugged by the Bonk Fam.', counter: 'Fake Airdrop Phishing Attack', counterDmg: 22 },
+      { name: 'Paper Hands Pete', title: 'Holds for 4 minutes max', hp: 200, img: '/assets/enemies/paper-hands.svg',
+        taunt: '"Chart dipped 0.3%, I\'m out, I\'m OUT!"',
+        reactions: ['Paper Hands literally dissolve!', 'Pete refreshes DexScreener 900 times!'],
+        defeat: 'Paper Hands Pete folded like a lawn chair.', counter: 'Pete spreads panic in Telegram', counterDmg: 14 },
+      { name: 'NGMI Nigel', title: 'Professional vibe killer', hp: 260, img: '/assets/enemies/ngmi.svg',
+        taunt: '"We\'re all gonna make it? Nah. I make spreadsheets."',
+        reactions: ['Nigel\'s Excel chart crashes!', 'NGMI energy backfires!'],
+        defeat: 'NGMI Nigel updated his LinkedIn.', counter: 'Nigel posts a doom thread', counterDmg: 16 },
+      { name: 'Grandpa Boomer', title: 'Still bragging about 0.5% APY', hp: 310, img: '/assets/enemies/boomer.svg',
+        taunt: '"Back in my day we had pensions. This internet money is Monopoly cash."',
+        reactions: ['Boomer drops his "Bitcoin is Dead" newspaper!', 'He waves his passbook savings!'],
+        defeat: 'Grandpa Boomer went back to cable news.', counter: 'Boomer lectures about real jobs', counterDmg: 13 },
+      { name: 'Shilliam Shillson', title: 'Paid promotion disguised as alpha', hp: 270, img: '/assets/enemies/shill.svg',
+        taunt: '"This gem is gonna 1000x! *not financial advice* (it is)"',
+        reactions: ['Shilliam\'s fake laser eyes fall off!', 'His rented Lambo backdrop collapses!'],
+        defeat: 'Shilliam Shillson got ratio\'d into oblivion.', counter: 'Shill drops a sponsored FUD thread', counterDmg: 17 },
+      { name: 'Crystal Charta', title: 'Technical analysis via horoscope', hp: 290, img: '/assets/enemies/astrologer.svg',
+        taunt: '"Mercury is in retrograde. The chart says dump. Trust the stars."',
+        reactions: ['Charta\'s crystal ball shows a red candle!', 'Her zodiac prediction was wrong again!'],
+        defeat: 'Crystal Charta blamed Saturn and logged off.', counter: 'Charta predicts bear market via moon phase', counterDmg: 15 },
+      { name: 'Copium Carl', title: 'Mainlines hopium derivatives', hp: 230, img: '/assets/enemies/copium.svg',
+        taunt: '"It\'s just a healthy correction. Recovery any day now..."',
+        reactions: ['Carl\'s copium tank springs a leak!', 'His recovery chart ages another year!'],
+        defeat: 'Copium Carl ran out of copium and hope.', counter: 'Carl posts "we\'re still early" again', counterDmg: 11 },
+      { name: 'Leverage Lenny', title: '100x or homeless', hp: 320, img: '/assets/enemies/leverage.svg',
+        taunt: '"I only need a 1% move. What could go wrong with 100x?"',
+        reactions: ['Lenny gets liquidated mid-sentence!', 'His 100x badge explodes!'],
+        defeat: 'Leverage Lenny got rekt by a 0.1% wick.', counter: 'Lenny rage-FUDs leverage on CT', counterDmg: 20 },
+      { name: 'Airdrop Andy', title: '47 wallets, zero loyalty', hp: 250, img: '/assets/enemies/airdrop.svg',
+        taunt: '"I\'m not a sybil, these are all my cousins. Free money!"',
+        reactions: ['Andy\'s 47 wallets get flagged!', 'The airdrop was worth $0.003!'],
+        defeat: 'Airdrop Andy farmed himself into irrelevance.', counter: 'Andy dumps his airdrop instantly', counterDmg: 19 }
+    ];
+
+    let wave = 1;
+    let current = null;
+    let enemyHP = 0;
+    let maxHP = 0;
+    const logEl = document.getElementById('log');
+
+    function addLog(msg) {
+      logEl.innerHTML += '• ' + msg + '<br>';
+      logEl.scrollTop = logEl.scrollHeight;
+    }
+
+    function spawnEnemy(w) {
+      current = { ...enemies[(w - 1) % enemies.length] };
+      enemyHP = current.hp;
+      maxHP = current.hp;
+      document.getElementById('enemyName').textContent = current.name.toUpperCase();
+      document.getElementById('enemyTitle').textContent = current.title;
+      document.getElementById('enemyTaunt').textContent = current.taunt;
+      document.getElementById('enemyImg').src = current.img;
+      document.getElementById('enemyImg').alt = current.name;
+      document.getElementById('enemyMaxHP').textContent = maxHP;
+      document.getElementById('waveLabel').textContent = `Wave ${w} — Fight the Degens`;
+      updateEnemyHP();
+      addLog(`--- WAVE ${w}: ${current.name} appears! ---`);
+      addLog(current.taunt);
+    }
+
+    function updateEnemyHP() {
+      document.getElementById('enemyHP').textContent = Math.max(0, enemyHP);
+      document.getElementById('enemyHPFill').style.width = (Math.max(0, enemyHP) / maxHP) * 100 + '%';
+    }
+
+    function attack(dmg, name, flavor) {
+      if (!current || enemyHP <= 0) return;
+      enemyHP = Math.max(0, enemyHP - dmg);
+      updateEnemyHP();
+      addLog(flavor);
+      addLog(`${name} deals ${dmg} damage!`);
+      addLog(current.reactions[Math.floor(Math.random() * current.reactions.length)]);
+
+      if (enemyHP <= 0) {
+        addLog(current.defeat);
+        setTimeout(showVictory, 400);
+      } else {
+        addLog(`${current.counter} (-${current.counterDmg} morale)`);
+      }
+    }
+
+    function hypeUp() {
+      addLog('Bonga drops a hype mixtape. Fam vibes restored!');
+    }
+
+    function showVictory() {
+      const overlay = document.createElement('div');
+      overlay.className = 'victory-overlay';
+      const isFinal = wave >= enemies.length;
+      overlay.innerHTML = `
+        <div class="victory-box">
+          <h2>WAGMI!</h2>
+          <p style="font-size:1.2rem;margin-bottom:24px">${current.defeat}</p>
+          <button onclick="this.closest('.victory-overlay').remove(); ${isFinal ? 'resetGame()' : 'nextWave()'}">
+            ${isFinal ? 'Run It Back' : 'Next Degen'}
+          </button>
+        </div>
+      `;
+      document.body.appendChild(overlay);
+    }
+
+    function nextWave() {
+      wave++;
+      spawnEnemy(wave);
+    }
+
+    function resetGame() {
+      wave = 1;
+      logEl.innerHTML = '';
+      addLog('The Bonk Fam re-enters Degen Valley...');
+      spawnEnemy(1);
+    }
+
+    spawnEnemy(1);
+  </script>
+</body>
+</html>
