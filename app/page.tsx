@@ -1056,7 +1056,7 @@ export default function Home() {
             </div>
           </div>
 
-          <div className="combat-col combat-col-center flex-1 min-w-[300px]">
+          <div className="combat-col combat-col-center flex-1 min-w-0 w-full">
             <div className="enemy-placard">
               <div className="text-[#c97070] text-base uppercase tracking-[0.2em]">{enemy.title}</div>
               <h1 className="text-[#e8a0a0] text-3xl md:text-4xl font-bold mt-1">{enemy.name}</h1>

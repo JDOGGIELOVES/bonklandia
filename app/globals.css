@@ -1084,22 +1084,103 @@ body {
 }
 
 @media (max-width: 767px) {
+  .combat-arena {
+    min-height: 300px;
+  }
+
+  .fighter-sprite {
+    left: 0;
+    bottom: 2px;
+    max-width: 46%;
+  }
+
+  .fighter-sprite .fighter-img {
+    width: 100%;
+    max-width: 148px;
+    height: auto;
+    aspect-ratio: 340 / 460;
+  }
+
+  .fighter-sprite .fighter-label {
+    font-size: 0.8rem;
+    margin-top: 0.15rem;
+    line-height: 1.1;
+  }
+
+  .enemy-sprite {
+    right: 0;
+    bottom: 24px;
+    max-width: 36%;
+  }
+
+  .enemy-sprite .enemy-img {
+    width: 100%;
+    max-width: 92px;
+    height: auto;
+    aspect-ratio: 165 / 220;
+  }
+
+  .enemy-sprite > .text-center {
+    font-size: 0.72rem !important;
+    margin-top: 0.15rem !important;
+    line-height: 1.1;
+  }
+
+  .fighter-spotlight {
+    width: 46%;
+  }
+
+  .enemy-spotlight {
+    width: 40%;
+  }
+
+  .damage-popup {
+    right: 14%;
+    font-size: 1.75rem;
+  }
+
+  .damage-popup.crit {
+    font-size: 2.25rem;
+  }
+
+  .damage-popup.player-hit {
+    left: 10%;
+  }
+
   @keyframes fighter-lunge {
     50% {
-      transform: translateX(160px) scale(1.25) rotate(10deg);
+      transform: translateX(72px) scale(1.2) rotate(10deg);
     }
     65% {
-      transform: translateX(145px) scale(1.2) rotate(6deg);
+      transform: translateX(64px) scale(1.15) rotate(6deg);
     }
   }
 
   @keyframes enemy-lunge {
     50% {
-      transform: translateX(-130px) scale(1.15) rotate(-10deg);
+      transform: translateX(-68px) scale(1.12) rotate(-10deg);
     }
     65% {
-      transform: translateX(-115px) scale(1.1) rotate(-6deg);
+      transform: translateX(-58px) scale(1.08) rotate(-6deg);
     }
+  }
+}
+
+@media (max-width: 400px) {
+  .fighter-sprite {
+    max-width: 44%;
+  }
+
+  .fighter-sprite .fighter-img {
+    max-width: 128px;
+  }
+
+  .enemy-sprite {
+    max-width: 34%;
+  }
+
+  .enemy-sprite .enemy-img {
+    max-width: 80px;
   }
 }
 
@@ -1520,23 +1601,23 @@ body {
 
 @media (max-width: 767px) {
   @keyframes fighter-lunge-sonic {
-    50% { transform: translateX(150px) scale(1.28) rotate(14deg); }
+    50% { transform: translateX(78px) scale(1.22) rotate(14deg); }
   }
 
   @keyframes fighter-lunge-send {
-    40% { transform: translateX(170px) scale(1.32) rotate(18deg); }
+    40% { transform: translateX(88px) scale(1.26) rotate(18deg); }
   }
 
   @keyframes fighter-lunge-chaos {
-    50% { transform: translateX(140px) scale(1.25) rotate(22deg); }
+    50% { transform: translateX(70px) scale(1.2) rotate(22deg); }
   }
 
   @keyframes enemy-lunge-fud {
-    50% { transform: translateX(-130px) scale(1.2) rotate(-14deg); }
+    50% { transform: translateX(-68px) scale(1.14) rotate(-14deg); }
   }
 
-  .combat-impact-ring-enemy { right: 8%; }
-  .combat-impact-ring-player { left: 8%; }
+  .combat-impact-ring-enemy { right: 6%; }
+  .combat-impact-ring-player { left: 6%; }
 }
 
 .tutorial-frame {
