@@ -111,6 +111,7 @@ type CasinoSecureSession = {
   sessionId: string;
   settleToken: string;
   maxWinnings: number;
+  localOnly?: boolean;
 };
 
 type CasinoSlotProps = {
@@ -140,7 +141,7 @@ export default function CasinoSlot({ session, secureSession, fighter, onExit, on
   const [settleError, setSettleError] = useState<string | null>(null);
   const [selectedBetChips, setSelectedBetChips] = useState(0);
   const [ladderSteps, setLadderSteps] = useState(0);
-  const { spendChips, chips: bankChips } = useBonkBank();
+  const { spendChips, addChips, chips: bankChips } = useBonkBank();
   const {
     muted,
     audioReady,
@@ -163,6 +164,16 @@ export default function CasinoSlot({ session, secureSession, fighter, onExit, on
     if (totalWinnings <= settledWinningsRef.current) return;
 
     const settle = async () => {
+      if (secureSession.localOnly) {
+        const delta = totalWinnings - settledWinningsRef.current;
+        if (delta > 0) {
+          addChips(delta);
+          settledWinningsRef.current = totalWinnings;
+        }
+        setSettleError(null);
+        return;
+      }
+
       try {
         const res = await fetch('/api/casino/settle', {
           method: 'POST',
@@ -193,7 +204,7 @@ export default function CasinoSlot({ session, secureSession, fighter, onExit, on
     };
 
     void settle();
-  }, [totalWinnings, secureSession]);
+  }, [totalWinnings, secureSession, addChips]);
 
   const ladderPrimed = ladderSteps >= JACKPOT_LADDER_STEPS;
   const selectedBet = getChipBetOption(selectedBetChips);

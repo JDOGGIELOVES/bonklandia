@@ -4,6 +4,7 @@ import Image from 'next/image';
 import Link from 'next/link';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import LandingHero from '@/components/LandingHero';
+import LandingScene from '@/components/LandingScene';
 import {
   DIFFICULTY_META,
   PLAYABLE_CHARACTERS,
@@ -21,8 +22,16 @@ import {
 } from '@/lib/enemies';
 import {
   buildCasinoSession,
+  getMaxJackpot,
   type CasinoSession,
 } from '@/lib/slot-machine';
+
+type CasinoSecureSession = {
+  sessionId: string;
+  settleToken: string;
+  maxWinnings: number;
+  localOnly?: boolean;
+};
 import CasinoSlot from '@/components/CasinoSlot';
 import CombatArenaVfx from '@/components/CombatArenaVfx';
 import VictoryRewardModal from '@/components/VictoryRewardModal';
@@ -178,11 +187,7 @@ export default function Home() {
   const [showVictory, setShowVictory] = useState(false);
   const [casinoEntering, setCasinoEntering] = useState(false);
   const [casinoSession, setCasinoSession] = useState<CasinoSession | null>(null);
-  const [casinoSecureSession, setCasinoSecureSession] = useState<{
-    sessionId: string;
-    settleToken: string;
-    maxWinnings: number;
-  } | null>(null);
+  const [casinoSecureSession, setCasinoSecureSession] = useState<CasinoSecureSession | null>(null);
   const [waveModifier, setWaveModifier] = useState<WaveModifier>(() => pickWaveModifier(1, 1));
   const [previewId, setPreviewId] = useState<string | null>(null);
   const [showTutorial, setShowTutorial] = useState(true);
@@ -268,6 +273,20 @@ export default function Home() {
   }, []);
 
   const casinoTriggeredRef = useRef(false);
+  const casinoLaunchingRef = useRef(false);
+  const playerHPRef = useRef(playerHP);
+
+  useEffect(() => {
+    playerHPRef.current = playerHP;
+  }, [playerHP]);
+
+  const persistCasinoPending = useCallback((payload: CasinoSecureSession) => {
+    try {
+      sessionStorage.setItem('bonk-casino-pending', JSON.stringify(payload));
+    } catch {
+      // Private mode / storage blocked — casino still plays locally.
+    }
+  }, []);
 
   const enterCasino = useCallback((
     session: CasinoSession,
@@ -296,62 +315,105 @@ export default function Home() {
     }, session.tier.transitionMs);
   }, [addLog]);
 
+  const enterCasinoLocalFallback = useCallback((
+    session: CasinoSession,
+    fighterChar: PlayableCharacter,
+    playTransitionSound: () => void,
+  ) => {
+    const maxJackpot = getMaxJackpot(session.paytableWave, session.chipMultiplier);
+    const securePayload: CasinoSecureSession = {
+      sessionId: `local-${Date.now()}`,
+      settleToken: 'local',
+      maxWinnings: Math.ceil(maxJackpot * 8) * session.spins,
+      localOnly: true,
+    };
+    setCasinoSecureSession(securePayload);
+    persistCasinoPending(securePayload);
+    addLog('Bonga Chill rigs the reels offline — spins are yours.');
+    enterCasino(session, fighterChar, playTransitionSound);
+  }, [enterCasino, addLog, persistCasinoPending]);
+
   const openCasinoWithAuth = useCallback(async (
     session: CasinoSession,
     fighterChar: PlayableCharacter,
     playTransitionSound: () => void,
   ) => {
-    try {
-      const nonceRes = await fetch('/api/casino/nonce');
-      const nonceData = await nonceRes.json() as { nonce?: string; error?: string };
-      if (!nonceRes.ok || !nonceData.nonce) {
-        addLog(nonceData.error ?? 'Casino security handshake failed.');
-        return;
+    setCasinoEntering(true);
+    setCasinoSession(session);
+
+    const body = JSON.stringify({
+      outcome: session.outcome,
+      paytableWave: session.paytableWave,
+      difficulty: session.difficulty,
+      chipMultiplier: session.chipMultiplier,
+    });
+
+    for (let attempt = 0; attempt < 3; attempt += 1) {
+      try {
+        const sessionRes = await fetch('/api/casino/start', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body,
+        });
+        const secure = await sessionRes.json() as {
+          sessionId?: string;
+          settleToken?: string;
+          maxWinnings?: number;
+          error?: string;
+        };
+
+        if (sessionRes.ok && secure.sessionId && secure.settleToken) {
+          const securePayload: CasinoSecureSession = {
+            sessionId: secure.sessionId,
+            settleToken: secure.settleToken,
+            maxWinnings: secure.maxWinnings ?? 0,
+          };
+          setCasinoSecureSession(securePayload);
+          persistCasinoPending(securePayload);
+          enterCasino(session, fighterChar, playTransitionSound);
+          return;
+        }
+
+        if (attempt < 2) {
+          addLog(secure.error ?? 'Casino handshake retrying...');
+          await wait(400 * (attempt + 1));
+        }
+      } catch {
+        if (attempt < 2) {
+          addLog('Casino handshake retrying...');
+          await wait(400 * (attempt + 1));
+        }
       }
-
-      const sessionRes = await fetch('/api/casino/session', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          nonce: nonceData.nonce,
-          outcome: session.outcome,
-          paytableWave: session.paytableWave,
-          difficulty: session.difficulty,
-          chipMultiplier: session.chipMultiplier,
-        }),
-      });
-      const secure = await sessionRes.json() as {
-        sessionId?: string;
-        settleToken?: string;
-        maxWinnings?: number;
-        error?: string;
-      };
-
-      if (!sessionRes.ok || !secure.sessionId || !secure.settleToken) {
-        addLog(secure.error ?? 'Casino session could not start.');
-        return;
-      }
-
-      const securePayload = {
-        sessionId: secure.sessionId,
-        settleToken: secure.settleToken,
-        maxWinnings: secure.maxWinnings ?? 0,
-      };
-      setCasinoSecureSession(securePayload);
-      sessionStorage.setItem('bonk-casino-pending', JSON.stringify(securePayload));
-      enterCasino(session, fighterChar, playTransitionSound);
-    } catch {
-      addLog('Casino security handshake failed.');
     }
-  }, [enterCasino, addLog]);
+
+    addLog('Vault link failed — opening consolation reels locally.');
+    enterCasinoLocalFallback(session, fighterChar, playTransitionSound);
+  }, [enterCasino, enterCasinoLocalFallback, addLog, persistCasinoPending]);
 
   const goToDefeatCasino = useCallback((reachedWave: number, fighterChar: PlayableCharacter) => {
+    if (casinoLaunchingRef.current || casinoTriggeredRef.current) return;
+    casinoLaunchingRef.current = true;
     const session = buildCasinoSession('defeat', reachedWave, fighterChar.difficulty);
     void openCasinoWithAuth(session, fighterChar, playDefeat);
   }, [openCasinoWithAuth, playDefeat]);
 
+  useEffect(() => {
+    if (phase !== 'combat' || !fighter || playerHP > 0) return;
+    if (casinoLaunchingRef.current || casinoTriggeredRef.current || casinoEntering) return;
+
+    const timer = window.setTimeout(() => {
+      if (casinoLaunchingRef.current || casinoTriggeredRef.current || playerHPRef.current > 0) return;
+      addLog('The Bonk Casino opens its doors...');
+      goToDefeatCasino(wave, fighter);
+    }, 1200);
+
+    return () => window.clearTimeout(timer);
+  }, [phase, fighter, playerHP, wave, casinoEntering, goToDefeatCasino, addLog]);
+
   const claimVictorySpins = useCallback(() => {
     if (!fighter) return;
+    if (casinoLaunchingRef.current || casinoTriggeredRef.current) return;
+    casinoLaunchingRef.current = true;
     setShowVictory(false);
     const session = buildCasinoSession('victory', wave, fighter.difficulty);
     void openCasinoWithAuth(session, fighter, playRunComplete);
@@ -375,8 +437,10 @@ export default function Home() {
 
   const startGame = (character: PlayableCharacter) => {
     casinoTriggeredRef.current = false;
+    casinoLaunchingRef.current = false;
     setCasinoEntering(false);
     setFighter(character);
+    playerHPRef.current = character.hp;
     setPlayerHP(character.hp);
     setPlayerVibe(character.vibe * 10);
     setBlockNextHit(false);
@@ -451,6 +515,7 @@ export default function Home() {
     }
 
     const newEnemyHP = Math.max(0, enemyHP - dmg);
+    playerHPRef.current = newPlayerHP;
     setPlayerHP(newPlayerHP);
     setEnemyHP(newEnemyHP);
     addLog(`${ability.name} deals ${dmg} damage to ${enemy.name}!`);
@@ -546,12 +611,10 @@ export default function Home() {
     addLog(`${enemy.name} attacks!`);
     addLog(`${enemy.counterAttack} (-${counterDmg} HP)`);
 
-    let playerDied = false;
-    setPlayerHP(h => {
-      const next = Math.max(0, h - counterDmg);
-      playerDied = next <= 0;
-      return next;
-    });
+    const nextPlayerHP = Math.max(0, playerHPRef.current - counterDmg);
+    const playerDied = nextPlayerHP <= 0;
+    playerHPRef.current = nextPlayerHP;
+    setPlayerHP(nextPlayerHP);
     if (playerDied) addLog(`${fighter.name} is bonked out! The casino beckons...`);
     setPlayerVibe(v => Math.max(0, v - special.vibeDrain - Math.round(counterDmg * 0.8)));
 
@@ -708,6 +771,7 @@ export default function Home() {
 
   const backToSelect = () => {
     casinoTriggeredRef.current = false;
+    casinoLaunchingRef.current = false;
     setCasinoSession(null);
     setCasinoSecureSession(null);
     setPhase('select');
@@ -752,6 +816,7 @@ export default function Home() {
   const afterVictoryCasinoRunItBack = () => {
     if (!fighter) return;
     casinoTriggeredRef.current = false;
+    casinoLaunchingRef.current = false;
     setCasinoSession(null);
     setPhase('combat');
     resetRun();
@@ -778,126 +843,142 @@ export default function Home() {
   if (phase === 'select') {
     return (
       <div className="game-scene game-scene-landing">
-        <div className="landing-atmosphere" aria-hidden />
-        <div className="game-scene-vignette" />
-        <div className="game-scene-content max-w-7xl mx-auto px-4 py-6 md:py-10">
-          <LandingHero />
+        <LandingScene />
+        <div className="game-scene-vignette landing-vignette" />
+        <div className="renaissance-hall">
+          <div className="renaissance-hall-content max-w-7xl mx-auto px-4 py-6 md:py-10">
+            <LandingHero />
 
-          <div className="landing-actions">
-            <FamLorePanel
-              open={showLore}
-              onToggle={() => setShowLore(v => !v)}
-              highlightId={previewId}
-            />
-            <TutorialPanel
-              open={showTutorial}
-              onToggle={() => setShowTutorial(v => !v)}
-              onDismiss={dismissTutorial}
-            />
-          </div>
+            <div className="landing-actions">
+              <FamLorePanel
+                open={showLore}
+                onToggle={() => setShowLore(v => !v)}
+                highlightId={previewId}
+              />
+              <TutorialPanel
+                open={showTutorial}
+                onToggle={() => setShowTutorial(v => !v)}
+                onDismiss={dismissTutorial}
+              />
+            </div>
 
-          <div className="art-frame landing-gallery-frame mb-8">
-            <span className="art-frame-corners-tr" aria-hidden />
-            <span className="art-frame-corners-bl" aria-hidden />
-            <div className="landing-gallery-inner p-5 md:p-7">
-              <div className="landing-gallery-heading">
-                <span className="landing-gallery-heading-line" aria-hidden />
-                <h2 className="landing-gallery-title">The Gallery of Champions</h2>
-                <span className="landing-gallery-heading-line" aria-hidden />
+            <section className="hall-of-champions">
+              <div className="hall-of-champions-arch" aria-hidden>
+                <span className="hall-arch-keystone">VI</span>
               </div>
-              <p className="landing-gallery-subhead">Six bloodlines await thy command</p>
+              <div className="hall-of-champions-header">
+                <h2 className="hall-of-champions-title">Hall of Champions</h2>
+                <p className="hall-of-champions-subtitle">Choose thy bloodline — six houses of the Bonk</p>
+              </div>
+
               <div
-                className="character-gallery"
+                className="character-gallery hall-of-champions-body"
                 onMouseLeave={handleGalleryMouseLeave}
               >
-              <div className="character-gallery-layout">
-              <div className="character-gallery-cards">
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                {PLAYABLE_CHARACTERS.map(char => (
-                  <button
-                    key={char.id}
-                    type="button"
-                    onClick={() => handleCharacterCardClick(char)}
-                    onMouseEnter={() => setPreviewId(char.id)}
-                    onFocus={() => setPreviewId(char.id)}
-                    className={`character-card${previewId === char.id ? ' character-card-active' : ''}`}
+                <div className="character-gallery-layout">
+                  <div className="character-gallery-cards">
+                    <div className="champion-hall-grid">
+                      {PLAYABLE_CHARACTERS.map(char => (
+                        <button
+                          key={char.id}
+                          type="button"
+                          onClick={() => handleCharacterCardClick(char)}
+                          onMouseEnter={() => setPreviewId(char.id)}
+                          onFocus={() => setPreviewId(char.id)}
+                          className={`champion-plaque${previewId === char.id ? ' champion-plaque-active' : ''}`}
+                        >
+                          <span className="champion-plaque-nail champion-plaque-nail-tl" aria-hidden />
+                          <span className="champion-plaque-nail champion-plaque-nail-tr" aria-hidden />
+                          <span className="champion-plaque-nail champion-plaque-nail-bl" aria-hidden />
+                          <span className="champion-plaque-nail champion-plaque-nail-br" aria-hidden />
+                          <div className="champion-plaque-portrait-wrap">
+                            <div className="champion-plaque-portrait">
+                              <Image
+                                src={char.img}
+                                alt={char.name}
+                                width={180}
+                                height={240}
+                                className="character-img champion-plaque-img object-contain"
+                                unoptimized
+                              />
+                            </div>
+                            <div className="champion-plaque-difficulty">
+                              <DifficultyBadge difficulty={char.difficulty} />
+                            </div>
+                          </div>
+                          <div className="champion-plaque-ribbon">
+                            <h3 className="champion-plaque-name">{char.name}</h3>
+                          </div>
+                          <p className="champion-plaque-epithet">{char.role}</p>
+                          <p className="champion-plaque-tagline">{char.tagline}</p>
+                          <div className="champion-plaque-heraldry">
+                            <div className="herald-shield herald-shield-pwr"><span>PWR</span><strong>{char.power}</strong></div>
+                            <div className="herald-shield herald-shield-def"><span>DEF</span><strong>{char.defense}</strong></div>
+                            <div className="herald-shield herald-shield-vibe"><span>VIBE</span><strong>{char.vibe}</strong></div>
+                            <div className="herald-shield herald-shield-spd"><span>SPD</span><strong>{char.speed}</strong></div>
+                          </div>
+                          <div className="champion-plaque-footer">
+                            <span className="champion-plaque-hp">♥ {char.hp} HP</span>
+                          </div>
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+
+                  <aside
+                    className={`illuminated-scroll character-preview-panel${preview ? '' : ' character-preview-panel-dormant'}`}
+                    aria-live="polite"
                   >
-                    <div className="flex gap-4 items-start relative z-10">
-                      <div className="character-card-portrait shrink-0">
-                        <div className="character-card-portrait-frame">
+                    <div className="illuminated-scroll-rod illuminated-scroll-rod-top" aria-hidden />
+                    {preview ? (
+                      <div key={preview.id} className="character-preview-content illuminated-scroll-body">
+                        <div className="illuminated-scroll-portrait">
                           <Image
-                            src={char.img}
-                            alt={char.name}
-                            width={150}
-                            height={200}
-                            className="character-img w-[140px] h-[185px] object-contain"
+                            src={preview.img}
+                            alt={preview.name}
+                            width={120}
+                            height={160}
+                            className="character-img object-contain"
                             unoptimized
                           />
                         </div>
-                      </div>
-                      <div className="flex-1 min-w-0">
-                        <div className="flex items-center gap-2 flex-wrap">
-                          <h3 className="font-display text-2xl font-bold text-[#f0d878]">{char.name}</h3>
-                          <DifficultyBadge difficulty={char.difficulty} />
+                        <p className="character-preview-label scroll-ink-label">Royal Decree — Champion Dossier</p>
+                        <div className="flex items-center gap-3 flex-wrap mb-1">
+                          <h3 className="scroll-ink-title font-display text-2xl lg:text-3xl">{preview.name}</h3>
+                          <DifficultyBadge difficulty={preview.difficulty} large />
                         </div>
-                        <p className="text-lg text-[#d4af37]/80 italic">{char.role}</p>
-                        <p className="text-base text-[#f5e6c8]/55 mt-1 line-clamp-2">{char.tagline}</p>
-                      </div>
-                    </div>
-                    <div className="mt-3 grid grid-cols-4 gap-2 relative z-10">
-                      <div className="stat-pill"><div className="text-red-400/80">PWR</div><div className="font-bold text-[#f5e6c8]">{char.power}</div></div>
-                      <div className="stat-pill"><div className="text-blue-400/80">DEF</div><div className="font-bold text-[#f5e6c8]">{char.defense}</div></div>
-                      <div className="stat-pill"><div className="text-purple-400/80">VIBE</div><div className="font-bold text-[#f5e6c8]">{char.vibe}</div></div>
-                      <div className="stat-pill"><div className="text-green-400/80">SPD</div><div className="font-bold text-[#f5e6c8]">{char.speed}</div></div>
-                    </div>
-                    <div className="mt-2 flex justify-between items-center text-base relative z-10">
-                      <span className="text-emerald-400/80">HP: {char.hp}</span>
-                      <span className="text-[#f5e6c8]/40 italic">{char.difficultyTip}</span>
-                    </div>
-                  </button>
-                ))}
-              </div>
-              </div>
-
-              <aside
-                className={`character-preview-panel art-panel${preview ? '' : ' character-preview-panel-dormant'}`}
-                aria-live="polite"
-              >
-                {preview ? (
-                  <div key={preview.id} className="character-preview-content">
-                    <p className="character-preview-label">Champion preview</p>
-                    <div className="flex items-center gap-3 flex-wrap mb-1">
-                      <h3 className="font-display text-2xl lg:text-3xl text-[#f0d878]">{preview.name} — {preview.role}</h3>
-                      <DifficultyBadge difficulty={preview.difficulty} large />
-                    </div>
-                    <p className="text-base text-[#f5e6c8]/45 mb-2">{preview.difficultyTip}</p>
-                    <p className="italic text-[#f5e6c8]/65 mb-4">{preview.selectLine}</p>
-                    <div className="character-preview-abilities">
-                      {preview.abilities.map(ab => (
-                        <div key={ab.id} className="stat-pill p-3 text-left">
-                          <div className="font-display font-bold text-[#d4af37]">{ab.name}</div>
-                          <div className="text-base text-[#f5e6c8]/50 mt-1">{ab.description}</div>
+                        <p className="scroll-ink-role text-lg italic mb-1">{preview.role}</p>
+                        <p className="scroll-ink-quote italic mb-4 border-l-2 border-[#8b6914]/40 pl-3">{preview.selectLine}</p>
+                        <div className="character-preview-abilities">
+                          {preview.abilities.map(ab => (
+                            <div key={ab.id} className="scroll-ability-entry">
+                              <div className="scroll-ink-ability font-display font-bold">{ab.name}</div>
+                              <div className="scroll-ink-muted text-base mt-1">{ab.description}</div>
+                            </div>
+                          ))}
                         </div>
-                      ))}
-                    </div>
-                    <CharacterLoreSnippet characterId={preview.id} />
-                    <button
-                      type="button"
-                      onClick={() => startGame(preview)}
-                      className="art-btn character-preview-play w-full mt-5 py-3 text-[#f0d878] font-display font-bold text-lg"
-                    >
-                      Bonk as {preview.name} →
-                    </button>
-                  </div>
-                ) : (
-                  <p className="character-preview-empty">
-                    Hover or tap a bloodline to preview abilities, stats, and lore.
-                  </p>
-                )}
-              </aside>
+                        <CharacterLoreSnippet characterId={preview.id} />
+                        <button
+                          type="button"
+                          onClick={() => startGame(preview)}
+                          className="art-btn heraldic-cta character-preview-play w-full mt-5 py-3 text-[#f0d878] font-display font-bold text-lg"
+                        >
+                          ⚔ Bonk as {preview.name}
+                        </button>
+                      </div>
+                    ) : (
+                      <div className="illuminated-scroll-body illuminated-scroll-empty">
+                        <span className="illuminated-scroll-seal" aria-hidden>⚜</span>
+                        <p className="character-preview-empty">
+                          Select a portrait from the hall to unroll thy champion&apos;s dossier.
+                        </p>
+                      </div>
+                    )}
+                    <div className="illuminated-scroll-rod illuminated-scroll-rod-bottom" aria-hidden />
+                  </aside>
+                </div>
               </div>
-              </div>
-            </div>
+            </section>
           </div>
         </div>
       </div>
@@ -1167,9 +1248,9 @@ export default function Home() {
                   </button>
                 ))}
               </div>
-              {playerHP <= 0 && casinoEntering && (
+              {playerHP <= 0 && phase === 'combat' && (
                 <div className="text-center text-base text-[#d4af37]/80 py-3 shrink-0 animate-pulse">
-                  Entering the Bonk Casino...
+                  {casinoEntering ? 'Entering the Bonk Casino...' : 'Bonked out — summoning the slot machine...'}
                 </div>
               )}
             </div>
