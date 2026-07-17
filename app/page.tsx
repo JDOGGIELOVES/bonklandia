@@ -242,16 +242,20 @@ export default function Home() {
   const wait = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
 
   useEffect(() => {
-    let dismissed = localStorage.getItem(TUTORIAL_KEY);
-    if (!dismissed) {
-      const legacy = localStorage.getItem(LEGACY_STORAGE_KEYS.tutorial);
-      if (legacy) {
-        localStorage.setItem(TUTORIAL_KEY, legacy);
-        localStorage.removeItem(LEGACY_STORAGE_KEYS.tutorial);
-        dismissed = legacy;
+    try {
+      let dismissed = localStorage.getItem(TUTORIAL_KEY);
+      if (!dismissed) {
+        const legacy = localStorage.getItem(LEGACY_STORAGE_KEYS.tutorial);
+        if (legacy) {
+          localStorage.setItem(TUTORIAL_KEY, legacy);
+          localStorage.removeItem(LEGACY_STORAGE_KEYS.tutorial);
+          dismissed = legacy;
+        }
       }
+      if (dismissed === 'true') setShowTutorial(false);
+    } catch {
+      // Private browsing / storage blocked — keep tutorial visible.
     }
-    if (dismissed === 'true') setShowTutorial(false);
   }, []);
 
   const dismissTutorial = () => {

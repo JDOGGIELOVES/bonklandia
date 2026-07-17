@@ -23,6 +23,14 @@
 
 html {
   font-size: 20px;
+  -webkit-text-size-adjust: 100%;
+  text-size-adjust: 100%;
+}
+
+@media (max-width: 767px) {
+  html {
+    font-size: 18px;
+  }
 }
 
 body {
@@ -46,6 +54,7 @@ body {
 .game-scene {
   position: relative;
   min-height: 100vh;
+  min-height: 100dvh;
   background:
     radial-gradient(ellipse 120% 80% at 50% 0%, rgba(88, 28, 72, 0.35) 0%, transparent 55%),
     radial-gradient(ellipse 80% 60% at 80% 100%, rgba(30, 16, 51, 0.5) 0%, transparent 50%),

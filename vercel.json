@@ -1,0 +1,10 @@
+{
+  "redirects": [
+    {
+      "source": "/:path*",
+      "has": [{ "type": "host", "value": "www.bonklandia.com" }],
+      "destination": "https://bonklandia.com/:path*",
+      "permanent": true
+    }
+  ]
+}
