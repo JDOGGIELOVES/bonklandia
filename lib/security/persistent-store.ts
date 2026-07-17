@@ -1,17 +1,35 @@
 import { mkdirSync, readFileSync, writeFileSync, existsSync } from 'fs';
 import { join } from 'path';
+import { tmpdir } from 'os';
 
-const DATA_DIR = join(process.cwd(), '.data');
+let cachedDataDir: string | null = null;
+
+function getDataDir(): string {
+  if (cachedDataDir) return cachedDataDir;
+
+  const localDir = join(process.cwd(), '.data');
+  try {
+    if (!existsSync(localDir)) mkdirSync(localDir, { recursive: true });
+    cachedDataDir = localDir;
+    return localDir;
+  } catch {
+    const tmpDir = join(tmpdir(), 'bonklandia-data');
+    if (!existsSync(tmpDir)) mkdirSync(tmpDir, { recursive: true });
+    cachedDataDir = tmpDir;
+    return tmpDir;
+  }
+}
 
 function ensureDataDir(): void {
-  if (!existsSync(DATA_DIR)) {
-    mkdirSync(DATA_DIR, { recursive: true });
+  const dir = getDataDir();
+  if (!existsSync(dir)) {
+    mkdirSync(dir, { recursive: true });
   }
 }
 
 export function loadJsonStore<T>(filename: string, fallback: T): T {
   ensureDataDir();
-  const path = join(DATA_DIR, filename);
+  const path = join(getDataDir(), filename);
   if (!existsSync(path)) return fallback;
 
   try {
@@ -23,6 +41,6 @@ export function loadJsonStore<T>(filename: string, fallback: T): T {
 
 export function saveJsonStore<T>(filename: string, data: T): void {
   ensureDataDir();
-  const path = join(DATA_DIR, filename);
+  const path = join(getDataDir(), filename);
   writeFileSync(path, JSON.stringify(data, null, 2), 'utf8');
 }

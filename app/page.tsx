@@ -22,16 +22,13 @@ import {
 } from '@/lib/enemies';
 import {
   buildCasinoSession,
-  getMaxJackpot,
   type CasinoSession,
 } from '@/lib/slot-machine';
-
-type CasinoSecureSession = {
-  sessionId: string;
-  settleToken: string;
-  maxWinnings: number;
-  localOnly?: boolean;
-};
+import {
+  buildLocalSecureSession,
+  fetchServerCasinoSession,
+  type CasinoSecureSession,
+} from '@/lib/casino-client';
 import CasinoSlot from '@/components/CasinoSlot';
 import CombatArenaVfx from '@/components/CombatArenaVfx';
 import VictoryRewardModal from '@/components/VictoryRewardModal';
@@ -273,12 +270,16 @@ export default function Home() {
   }, []);
 
   const casinoTriggeredRef = useRef(false);
-  const casinoLaunchingRef = useRef(false);
+  const casinoTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const playerHPRef = useRef(playerHP);
 
   useEffect(() => {
     playerHPRef.current = playerHP;
   }, [playerHP]);
+
+  useEffect(() => () => {
+    if (casinoTimerRef.current) clearTimeout(casinoTimerRef.current);
+  }, []);
 
   const persistCasinoPending = useCallback((payload: CasinoSecureSession) => {
     try {
@@ -288,15 +289,20 @@ export default function Home() {
     }
   }, []);
 
-  const enterCasino = useCallback((
+  const launchCasinoNow = useCallback((
     session: CasinoSession,
     fighterChar: PlayableCharacter,
     playTransitionSound: () => void,
+    securePayload: CasinoSecureSession,
   ) => {
     if (casinoTriggeredRef.current) return;
     casinoTriggeredRef.current = true;
 
+    if (casinoTimerRef.current) clearTimeout(casinoTimerRef.current);
+
     setCasinoSession(session);
+    setCasinoSecureSession(securePayload);
+    persistCasinoPending(securePayload);
     setCasinoEntering(true);
     void playTransitionSound();
 
@@ -309,115 +315,62 @@ export default function Home() {
       addLog(`Consolation spins: ${session.spins}. Win the full run for up to 10 victory pulls.`);
     }
 
-    setTimeout(() => {
+    const transitionMs = session.outcome === 'defeat'
+      ? Math.min(session.tier.transitionMs, 700)
+      : session.tier.transitionMs;
+
+    casinoTimerRef.current = setTimeout(() => {
       setPhase('casino');
       setCasinoEntering(false);
-    }, session.tier.transitionMs);
-  }, [addLog]);
-
-  const enterCasinoLocalFallback = useCallback((
-    session: CasinoSession,
-    fighterChar: PlayableCharacter,
-    playTransitionSound: () => void,
-  ) => {
-    const maxJackpot = getMaxJackpot(session.paytableWave, session.chipMultiplier);
-    const securePayload: CasinoSecureSession = {
-      sessionId: `local-${Date.now()}`,
-      settleToken: 'local',
-      maxWinnings: Math.ceil(maxJackpot * 8) * session.spins,
-      localOnly: true,
-    };
-    setCasinoSecureSession(securePayload);
-    persistCasinoPending(securePayload);
-    addLog('Bonga Chill rigs the reels offline — spins are yours.');
-    enterCasino(session, fighterChar, playTransitionSound);
-  }, [enterCasino, addLog, persistCasinoPending]);
-
-  const openCasinoWithAuth = useCallback(async (
-    session: CasinoSession,
-    fighterChar: PlayableCharacter,
-    playTransitionSound: () => void,
-  ) => {
-    setCasinoEntering(true);
-    setCasinoSession(session);
-
-    const body = JSON.stringify({
-      outcome: session.outcome,
-      paytableWave: session.paytableWave,
-      difficulty: session.difficulty,
-      chipMultiplier: session.chipMultiplier,
-    });
-
-    for (let attempt = 0; attempt < 3; attempt += 1) {
-      try {
-        const sessionRes = await fetch('/api/casino/start', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body,
-        });
-        const secure = await sessionRes.json() as {
-          sessionId?: string;
-          settleToken?: string;
-          maxWinnings?: number;
-          error?: string;
-        };
-
-        if (sessionRes.ok && secure.sessionId && secure.settleToken) {
-          const securePayload: CasinoSecureSession = {
-            sessionId: secure.sessionId,
-            settleToken: secure.settleToken,
-            maxWinnings: secure.maxWinnings ?? 0,
-          };
-          setCasinoSecureSession(securePayload);
-          persistCasinoPending(securePayload);
-          enterCasino(session, fighterChar, playTransitionSound);
-          return;
-        }
-
-        if (attempt < 2) {
-          addLog(secure.error ?? 'Casino handshake retrying...');
-          await wait(400 * (attempt + 1));
-        }
-      } catch {
-        if (attempt < 2) {
-          addLog('Casino handshake retrying...');
-          await wait(400 * (attempt + 1));
-        }
-      }
-    }
-
-    addLog('Vault link failed — opening consolation reels locally.');
-    enterCasinoLocalFallback(session, fighterChar, playTransitionSound);
-  }, [enterCasino, enterCasinoLocalFallback, addLog, persistCasinoPending]);
+      casinoTimerRef.current = null;
+    }, transitionMs);
+  }, [addLog, persistCasinoPending]);
 
   const goToDefeatCasino = useCallback((reachedWave: number, fighterChar: PlayableCharacter) => {
-    if (casinoLaunchingRef.current || casinoTriggeredRef.current) return;
-    casinoLaunchingRef.current = true;
+    if (casinoTriggeredRef.current) return;
     const session = buildCasinoSession('defeat', reachedWave, fighterChar.difficulty);
-    void openCasinoWithAuth(session, fighterChar, playDefeat);
-  }, [openCasinoWithAuth, playDefeat]);
+    launchCasinoNow(
+      session,
+      fighterChar,
+      playDefeat,
+      buildLocalSecureSession(session),
+    );
+
+    void fetchServerCasinoSession(session).then(serverSecure => {
+      if (!serverSecure) return;
+      setCasinoSecureSession(serverSecure);
+      persistCasinoPending(serverSecure);
+    });
+  }, [launchCasinoNow, playDefeat, persistCasinoPending]);
 
   useEffect(() => {
     if (phase !== 'combat' || !fighter || playerHP > 0) return;
-    if (casinoLaunchingRef.current || casinoTriggeredRef.current || casinoEntering) return;
+    if (casinoTriggeredRef.current) return;
 
     const timer = window.setTimeout(() => {
-      if (casinoLaunchingRef.current || casinoTriggeredRef.current || playerHPRef.current > 0) return;
+      if (casinoTriggeredRef.current || playerHPRef.current > 0 || !fighter) return;
       addLog('The Bonk Casino opens its doors...');
       goToDefeatCasino(wave, fighter);
-    }, 1200);
+    }, 600);
 
     return () => window.clearTimeout(timer);
-  }, [phase, fighter, playerHP, wave, casinoEntering, goToDefeatCasino, addLog]);
+  }, [phase, fighter, playerHP, wave, goToDefeatCasino, addLog]);
 
   const claimVictorySpins = useCallback(() => {
-    if (!fighter) return;
-    if (casinoLaunchingRef.current || casinoTriggeredRef.current) return;
-    casinoLaunchingRef.current = true;
+    if (!fighter || casinoTriggeredRef.current) return;
     setShowVictory(false);
     const session = buildCasinoSession('victory', wave, fighter.difficulty);
-    void openCasinoWithAuth(session, fighter, playRunComplete);
-  }, [fighter, wave, openCasinoWithAuth, playRunComplete]);
+
+    void (async () => {
+      const serverSecure = await fetchServerCasinoSession(session);
+      launchCasinoNow(
+        session,
+        fighter,
+        playRunComplete,
+        serverSecure ?? buildLocalSecureSession(session),
+      );
+    })();
+  }, [fighter, wave, launchCasinoNow, playRunComplete]);
 
   const spawnEnemy = useCallback((nextWave: number, run = runNumber) => {
     const next = pickEnemyByWave(nextWave, run);
@@ -436,8 +389,8 @@ export default function Home() {
   }, [addLog, runNumber]);
 
   const startGame = (character: PlayableCharacter) => {
+    if (casinoTimerRef.current) clearTimeout(casinoTimerRef.current);
     casinoTriggeredRef.current = false;
-    casinoLaunchingRef.current = false;
     setCasinoEntering(false);
     setFighter(character);
     playerHPRef.current = character.hp;
@@ -652,6 +605,7 @@ export default function Home() {
     if (waveModifier.playerRegenPerTurn > 0) {
       setPlayerHP(h => {
         const healed = Math.min(fighter.hp, h + waveModifier.playerRegenPerTurn);
+        playerHPRef.current = healed;
         if (healed > h) {
           addLog(`${waveModifier.emoji} ${waveModifier.name} restores ${healed - h} HP.`);
         }
@@ -770,8 +724,8 @@ export default function Home() {
   };
 
   const backToSelect = () => {
+    if (casinoTimerRef.current) clearTimeout(casinoTimerRef.current);
     casinoTriggeredRef.current = false;
-    casinoLaunchingRef.current = false;
     setCasinoSession(null);
     setCasinoSecureSession(null);
     setPhase('select');
@@ -790,8 +744,11 @@ export default function Home() {
 
     setRunNumber(nextRun);
     setWave(1);
+    playerHPRef.current = fighter.hp;
     setPlayerHP(fighter.hp);
     setPlayerVibe(fighter.vibe * 10);
+    if (casinoTimerRef.current) clearTimeout(casinoTimerRef.current);
+    casinoTriggeredRef.current = false;
     setBlockNextHit(false);
     setTurnPhase('player');
     setShowVictory(false);
@@ -815,8 +772,8 @@ export default function Home() {
 
   const afterVictoryCasinoRunItBack = () => {
     if (!fighter) return;
+    if (casinoTimerRef.current) clearTimeout(casinoTimerRef.current);
     casinoTriggeredRef.current = false;
-    casinoLaunchingRef.current = false;
     setCasinoSession(null);
     setPhase('combat');
     resetRun();
@@ -985,11 +942,12 @@ export default function Home() {
     );
   }
 
-  if (phase === 'casino' && fighter && casinoSession && casinoSecureSession) {
+  if (phase === 'casino' && fighter && casinoSession) {
+    const activeSecureSession = casinoSecureSession ?? buildLocalSecureSession(casinoSession);
     return (
       <CasinoSlot
         session={casinoSession}
-        secureSession={casinoSecureSession}
+        secureSession={activeSecureSession}
         fighter={fighter}
         onExit={casinoSession.outcome === 'victory' ? afterVictoryCasinoExit : backToSelect}
         onRunItBack={casinoSession.outcome === 'victory' ? afterVictoryCasinoRunItBack : undefined}
