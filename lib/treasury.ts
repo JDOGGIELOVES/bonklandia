@@ -27,38 +27,189 @@ const TREASURY_SECRET_ENV_KEYS = [
   'TREASURY_SECRET_KEY',
 ] as const;
 
+export type TreasuryKeyStatus = {
+  /** True when a secret env var is present (value never returned). */
+  envPresent: boolean;
+  envName: string | null;
+  /** Character length of the raw secret (for format debugging). */
+  rawLength: number;
+  parseOk: boolean;
+  byteLength: number | null;
+  keypairOk: boolean;
+  matchesTreasury: boolean;
+  derivedPubkey: string | null;
+  expectedPubkey: string;
+  ready: boolean;
+  reason: string | null;
+};
+
+function stripWrappingQuotes(value: string): string {
+  let s = value.trim();
+  // Vercel / dashboards sometimes store values with extra quote layers.
+  for (let i = 0; i < 3; i++) {
+    if (
+      (s.startsWith('"') && s.endsWith('"') && s.length >= 2) ||
+      (s.startsWith("'") && s.endsWith("'") && s.length >= 2)
+    ) {
+      s = s.slice(1, -1).trim();
+      continue;
+    }
+    break;
+  }
+  return s;
+}
+
+/** Accept base58 secret (64 bytes), base58 seed (32 bytes), JSON byte array, or hex. */
 function parseSecretKey(raw: string): Uint8Array | null {
-  const trimmed = raw.trim().replace(/^["']|["']$/g, '').replace(/\s+/g, '');
+  const trimmed = stripWrappingQuotes(raw);
   if (!trimmed) return null;
 
-  try {
-    if (trimmed.startsWith('[')) {
-      const bytes = Uint8Array.from(JSON.parse(trimmed) as number[]);
-      return bytes.length === 64 ? bytes : null;
+  // JSON number array — keep structure, only normalize whitespace lightly
+  if (trimmed.startsWith('[')) {
+    try {
+      const parsed = JSON.parse(trimmed) as unknown;
+      if (Array.isArray(parsed)) {
+        const bytes = Uint8Array.from(parsed.map(n => Number(n)));
+        if (bytes.length === 64 || bytes.length === 32) return bytes;
+      }
+    } catch {
+      // fall through
     }
-    const decoded = bs58.decode(trimmed);
-    return decoded.length === 64 ? decoded : null;
+  }
+
+  const compact = trimmed.replace(/\s+/g, '');
+
+  // Hex (64 or 128 hex chars = 32 or 64 bytes)
+  if (/^(0x)?[0-9a-fA-F]+$/.test(compact)) {
+    const hex = compact.replace(/^0x/i, '');
+    if (hex.length === 64 || hex.length === 128) {
+      const bytes = new Uint8Array(hex.length / 2);
+      for (let i = 0; i < bytes.length; i++) {
+        bytes[i] = parseInt(hex.slice(i * 2, i * 2 + 2), 16);
+      }
+      return bytes;
+    }
+  }
+
+  // Base58 secret key or seed
+  try {
+    const decoded = bs58.decode(compact);
+    if (decoded.length === 64 || decoded.length === 32) return decoded;
+  } catch {
+    // fall through
+  }
+
+  return null;
+}
+
+function keypairFromSecretBytes(secret: Uint8Array): Keypair | null {
+  try {
+    if (secret.length === 64) return Keypair.fromSecretKey(secret);
+    if (secret.length === 32) return Keypair.fromSeed(secret);
   } catch {
     return null;
   }
+  return null;
 }
 
 export function loadTreasuryKeypair(): Keypair | null {
   for (const envKey of TREASURY_SECRET_ENV_KEYS) {
-    const raw = process.env[envKey]?.trim();
-    if (!raw) continue;
+    const raw = process.env[envKey];
+    if (raw == null || !String(raw).trim()) continue;
 
-    const secret = parseSecretKey(raw);
+    const secret = parseSecretKey(String(raw));
     if (!secret) continue;
 
-    try {
-      return Keypair.fromSecretKey(secret);
-    } catch {
-      continue;
-    }
+    const keypair = keypairFromSecretBytes(secret);
+    if (keypair) return keypair;
   }
 
   return null;
+}
+
+/** Safe diagnostics for /api/treasury — never returns secret material. */
+export function getTreasuryKeyStatus(): TreasuryKeyStatus {
+  const expected = resolveTreasuryPublicKey().toBase58();
+  let envName: string | null = null;
+  let raw = '';
+
+  for (const key of TREASURY_SECRET_ENV_KEYS) {
+    const value = process.env[key];
+    if (value != null && String(value).trim()) {
+      envName = key;
+      raw = String(value);
+      break;
+    }
+  }
+
+  if (!envName) {
+    return {
+      envPresent: false,
+      envName: null,
+      rawLength: 0,
+      parseOk: false,
+      byteLength: null,
+      keypairOk: false,
+      matchesTreasury: false,
+      derivedPubkey: null,
+      expectedPubkey: expected,
+      ready: false,
+      reason: 'Treasury signing key not configured on server. Set BONGA_TREASURY_SECRET_KEY in Vercel and redeploy.',
+    };
+  }
+
+  const secret = parseSecretKey(raw);
+  if (!secret) {
+    return {
+      envPresent: true,
+      envName,
+      rawLength: stripWrappingQuotes(raw).length,
+      parseOk: false,
+      byteLength: null,
+      keypairOk: false,
+      matchesTreasury: false,
+      derivedPubkey: null,
+      expectedPubkey: expected,
+      ready: false,
+      reason:
+        'BONGA_TREASURY_SECRET_KEY is set but could not be parsed. Use base58 secret key (64 bytes), 32-byte seed, hex, or a JSON array of 64 numbers — not a seed phrase.',
+    };
+  }
+
+  const keypair = keypairFromSecretBytes(secret);
+  if (!keypair) {
+    return {
+      envPresent: true,
+      envName,
+      rawLength: stripWrappingQuotes(raw).length,
+      parseOk: true,
+      byteLength: secret.length,
+      keypairOk: false,
+      matchesTreasury: false,
+      derivedPubkey: null,
+      expectedPubkey: expected,
+      ready: false,
+      reason: 'Secret bytes parsed but could not build a Solana keypair.',
+    };
+  }
+
+  const derived = keypair.publicKey.toBase58();
+  const matches = derived === expected;
+  return {
+    envPresent: true,
+    envName,
+    rawLength: stripWrappingQuotes(raw).length,
+    parseOk: true,
+    byteLength: secret.length,
+    keypairOk: true,
+    matchesTreasury: matches,
+    derivedPubkey: derived,
+    expectedPubkey: expected,
+    ready: matches,
+    reason: matches
+      ? null
+      : `Treasury secret derives ${derived} but expected ${expected}. Use the Bonk Miner / GrokSight treasury private key for that wallet.`,
+  };
 }
 
 export function resolveTreasuryPublicKey(): PublicKey {
@@ -83,21 +234,13 @@ export function getTreasuryPublicKey(): string {
 }
 
 export function treasuryKeyMismatchError(): string | null {
-  const keypair = loadTreasuryKeypair();
-  if (!keypair) return null;
-
-  const expected = resolveTreasuryPublicKey();
-  if (!keypair.publicKey.equals(expected)) {
-    return `Treasury secret key does not match ${expected.toBase58()}. Use the Bonk Miner / GrokSight treasury key.`;
-  }
-
-  return null;
+  const status = getTreasuryKeyStatus();
+  if (status.ready) return null;
+  return status.reason;
 }
 
 export function isTreasuryPayoutsReady(): boolean {
-  const keypair = loadTreasuryKeypair();
-  if (!keypair) return false;
-  return keypair.publicKey.equals(resolveTreasuryPublicKey());
+  return getTreasuryKeyStatus().ready;
 }
 
 export function isTreasuryConfigured(): boolean {

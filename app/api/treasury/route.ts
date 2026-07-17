@@ -1,12 +1,17 @@
 import { NextResponse } from 'next/server';
 import { fetchTreasurySnapshot } from '@/lib/treasury-balances';
 import { treasuryPayoutsAllowed, treasuryPayoutsBlockedReason } from '@/lib/security/payout-guard';
-import { isTreasuryPayoutsReady, treasuryKeyMismatchError } from '@/lib/treasury';
+import {
+  getTreasuryKeyStatus,
+  isTreasuryPayoutsReady,
+  treasuryKeyMismatchError,
+} from '@/lib/treasury';
 
 export async function GET() {
   try {
     const snapshot = await fetchTreasurySnapshot();
-    const payoutsReady = isTreasuryPayoutsReady() && treasuryPayoutsAllowed();
+    const keyStatus = getTreasuryKeyStatus();
+    const payoutsReady = keyStatus.ready && treasuryPayoutsAllowed();
     const keyMismatch = treasuryKeyMismatchError();
 
     return NextResponse.json({
@@ -17,6 +22,18 @@ export async function GET() {
         treasuryPayoutsBlockedReason() ??
         keyMismatch ??
         (isTreasuryPayoutsReady() ? null : 'Treasury signing key not configured on server.'),
+      signingKey: {
+        envPresent: keyStatus.envPresent,
+        envName: keyStatus.envName,
+        rawLength: keyStatus.rawLength,
+        parseOk: keyStatus.parseOk,
+        byteLength: keyStatus.byteLength,
+        keypairOk: keyStatus.keypairOk,
+        matchesTreasury: keyStatus.matchesTreasury,
+        derivedPubkey: keyStatus.derivedPubkey,
+        expectedPubkey: keyStatus.expectedPubkey,
+        ready: keyStatus.ready,
+      },
       security: {
         treasuryNeverPaysSol: true,
         treasuryNeverCreatesTokenAccounts: true,
