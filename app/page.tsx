@@ -3,7 +3,7 @@
 import Image from 'next/image';
 import Link from 'next/link';
 import { useCallback, useEffect, useRef, useState } from 'react';
-import BonkBankBadge from '@/components/BonkBankBadge';
+import LandingHero from '@/components/LandingHero';
 import {
   DIFFICULTY_META,
   PLAYABLE_CHARACTERS,
@@ -57,7 +57,7 @@ function TutorialPanel({ open, onToggle, onDismiss }: { open: boolean; onToggle:
     return (
       <button
         onClick={onToggle}
-        className="art-btn mb-6 w-full py-3 text-[#f5e6c8]/80 hover:text-[#f5e6c8]"
+        className="landing-action-btn art-btn py-3 text-[#f5e6c8]/80 hover:text-[#f5e6c8]"
       >
         Show How to Play
       </button>
@@ -777,42 +777,35 @@ export default function Home() {
 
   if (phase === 'select') {
     return (
-      <div className="game-scene">
+      <div className="game-scene game-scene-landing">
+        <div className="landing-atmosphere" aria-hidden />
         <div className="game-scene-vignette" />
-        <div className="game-scene-content max-w-7xl mx-auto px-4 py-8">
-          <header className="mb-8">
-            <div className="flex flex-wrap justify-center items-center gap-4 mb-4">
-              <BonkBankBadge />
-              <Link href="/cashier" className="art-btn px-5 py-2 text-[#f0d878] text-base">
-                {BRAND.cashier}
-              </Link>
-            </div>
-            <h1 className="art-title text-center">{BRAND.name}</h1>
-            <p className="art-subtitle text-center">{BRAND.selectSubtitle}</p>
-            <p className="text-center text-base text-[#f5e6c8]/45 mt-3 max-w-2xl mx-auto italic">
-              {BRAND.selectHero}
-            </p>
-          </header>
+        <div className="game-scene-content max-w-7xl mx-auto px-4 py-6 md:py-10">
+          <LandingHero />
 
-          <FamLorePanel
-            open={showLore}
-            onToggle={() => setShowLore(v => !v)}
-            highlightId={previewId}
-          />
+          <div className="landing-actions">
+            <FamLorePanel
+              open={showLore}
+              onToggle={() => setShowLore(v => !v)}
+              highlightId={previewId}
+            />
+            <TutorialPanel
+              open={showTutorial}
+              onToggle={() => setShowTutorial(v => !v)}
+              onDismiss={dismissTutorial}
+            />
+          </div>
 
-          <TutorialPanel
-            open={showTutorial}
-            onToggle={() => setShowTutorial(v => !v)}
-            onDismiss={dismissTutorial}
-          />
-
-          <div className="art-frame mb-8">
+          <div className="art-frame landing-gallery-frame mb-8">
             <span className="art-frame-corners-tr" aria-hidden />
             <span className="art-frame-corners-bl" aria-hidden />
-            <div className="p-5 md:p-7">
-              <p className="font-display text-center text-lg tracking-[0.25em] uppercase text-[#d4af37]/60 mb-6">
-                — The Gallery of Champions —
-              </p>
+            <div className="landing-gallery-inner p-5 md:p-7">
+              <div className="landing-gallery-heading">
+                <span className="landing-gallery-heading-line" aria-hidden />
+                <h2 className="landing-gallery-title">The Gallery of Champions</h2>
+                <span className="landing-gallery-heading-line" aria-hidden />
+              </div>
+              <p className="landing-gallery-subhead">Six bloodlines await thy command</p>
               <div
                 className="character-gallery"
                 onMouseLeave={handleGalleryMouseLeave}
@@ -830,8 +823,8 @@ export default function Home() {
                     className={`character-card${previewId === char.id ? ' character-card-active' : ''}`}
                   >
                     <div className="flex gap-4 items-start relative z-10">
-                      <div className="art-portrait shrink-0">
-                        <div className="art-portrait-inner">
+                      <div className="character-card-portrait shrink-0">
+                        <div className="character-card-portrait-frame">
                           <Image
                             src={char.img}
                             alt={char.name}

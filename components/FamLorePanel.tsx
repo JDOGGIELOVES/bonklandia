@@ -43,7 +43,7 @@ export default function FamLorePanel({ open, onToggle, highlightId }: FamLorePan
 
   if (!open) {
     return (
-      <button type="button" onClick={onToggle} className="art-btn mb-6 w-full py-3 text-[#f5e6c8]/80 hover:text-[#f5e6c8]">
+      <button type="button" onClick={onToggle} className="landing-action-btn art-btn py-3 text-[#f5e6c8]/80 hover:text-[#f5e6c8]">
         Read {BRAND.chronicle}
       </button>
     );
