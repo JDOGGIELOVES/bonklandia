@@ -19,18 +19,22 @@ export function getAbilityMotionClass(abilityId: string): string {
 export function getEnemyMotionClass(enemyId: string): string {
   switch (enemyId) {
     case 'fudder':
+    case 'dooge':
       return 'motion-fud';
     case 'leverage':
     case 'flokir':
       return 'motion-liquidate';
     case 'scammer':
     case 'giga-shiba':
+    case 'hatdog':
       return 'motion-rug';
     case 'popcatto':
     case 'copycat-council':
+    case 'mewling':
       return 'motion-chaos';
     case 'pepe-unbothered':
     case 'mogger':
+    case 'based-brett':
       return 'motion-read';
     default:
       return 'motion-degen';

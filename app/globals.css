@@ -2190,8 +2190,40 @@ body {
   animation: fighter-lunge-shield 0.52s ease-out forwards;
 }
 
+.fighter-sprite.lunge.motion-read {
+  animation: fighter-lunge-send 0.48s cubic-bezier(0.2, 1, 0.35, 1) forwards;
+  filter: drop-shadow(0 0 14px rgba(96, 165, 250, 0.5));
+}
+
+.fighter-sprite.lunge.motion-bonk {
+  animation: fighter-lunge 0.55s cubic-bezier(0.22, 1, 0.36, 1) forwards;
+}
+
 .enemy-sprite.lunge.motion-fud {
   animation: enemy-lunge-fud 0.58s cubic-bezier(0.22, 1, 0.36, 1) forwards;
+}
+
+.enemy-sprite.lunge.motion-liquidate {
+  animation: enemy-lunge 0.5s cubic-bezier(0.15, 1, 0.3, 1) forwards;
+  filter: drop-shadow(0 0 16px rgba(248, 113, 113, 0.55));
+}
+
+.enemy-sprite.lunge.motion-rug {
+  animation: enemy-lunge-fud 0.52s cubic-bezier(0.22, 1.1, 0.36, 1) forwards;
+  filter: drop-shadow(0 0 14px rgba(251, 191, 36, 0.45));
+}
+
+.enemy-sprite.lunge.motion-chaos {
+  animation: fighter-lunge-chaos 0.55s cubic-bezier(0.22, 1.2, 0.4, 1) forwards;
+}
+
+.enemy-sprite.lunge.motion-read {
+  animation: enemy-lunge 0.48s ease-out forwards;
+  filter: drop-shadow(0 0 12px rgba(167, 139, 250, 0.5));
+}
+
+.enemy-sprite.lunge.motion-degen {
+  animation: enemy-lunge 0.55s cubic-bezier(0.22, 1, 0.36, 1) forwards;
 }
 
 .enemy-sprite.ko {
@@ -5479,6 +5511,63 @@ body {
   justify-content: center;
   gap: 1rem;
   margin-bottom: 1.25rem;
+}
+
+/* Compact arena so Depths reuses main combat motion + VFX classes */
+.depths-combat-arena {
+  min-height: 320px;
+  max-width: 720px;
+  margin: 0 auto 0.75rem;
+  border-radius: 12px;
+}
+
+.depths-combat-arena .depths-fighter-sprite {
+  left: 8%;
+  bottom: 36px;
+  width: min(42%, 180px);
+}
+
+.depths-combat-arena .depths-enemy-sprite {
+  right: 8%;
+  bottom: 36px;
+  width: min(40%, 160px);
+}
+
+.depths-combat-arena .fighter-img,
+.depths-combat-arena .enemy-img {
+  width: 100%;
+  height: auto;
+  max-height: 200px;
+  display: block;
+  margin: 0 auto;
+}
+
+.depths-bar-arena {
+  width: 100%;
+  max-width: 140px;
+  margin-top: 0.25rem;
+}
+
+.depths-arena-hp {
+  font-size: 0.75rem;
+  color: rgba(245, 230, 200, 0.75);
+  font-variant-numeric: tabular-nums;
+}
+
+.depths-arena-hp-enemy {
+  color: rgba(248, 180, 180, 0.8);
+}
+
+@media (max-width: 640px) {
+  .depths-combat-arena {
+    min-height: 260px;
+  }
+
+  .depths-combat-arena .depths-fighter-sprite,
+  .depths-combat-arena .depths-enemy-sprite {
+    width: 38%;
+    bottom: 28px;
+  }
 }
 
 .depths-fighter-panel,
