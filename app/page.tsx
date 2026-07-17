@@ -272,10 +272,20 @@ export default function Home() {
   const casinoTriggeredRef = useRef(false);
   const casinoTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const playerHPRef = useRef(playerHP);
+  const phaseRef = useRef(phase);
+  const waveRef = useRef(wave);
 
   useEffect(() => {
     playerHPRef.current = playerHP;
   }, [playerHP]);
+
+  useEffect(() => {
+    phaseRef.current = phase;
+  }, [phase]);
+
+  useEffect(() => {
+    waveRef.current = wave;
+  }, [wave]);
 
   useEffect(() => () => {
     if (casinoTimerRef.current) clearTimeout(casinoTimerRef.current);
@@ -313,6 +323,7 @@ export default function Home() {
       addLog(`${fighterChar.name} falls in Degen Valley...`);
       addLog(BONGACHILL_LORE.quote);
       addLog(`Consolation spins: ${session.spins}. Win the full run for up to 10 victory pulls.`);
+      addLog('Bonga Chill rigs the reels — no vault handshake required.');
     }
 
     const transitionMs = session.outcome === 'defeat'
@@ -335,42 +346,55 @@ export default function Home() {
       playDefeat,
       buildLocalSecureSession(session),
     );
-
-    void fetchServerCasinoSession(session).then(serverSecure => {
-      if (!serverSecure) return;
-      setCasinoSecureSession(serverSecure);
-      persistCasinoPending(serverSecure);
-    });
-  }, [launchCasinoNow, playDefeat, persistCasinoPending]);
+  }, [launchCasinoNow, playDefeat]);
 
   useEffect(() => {
     if (phase !== 'combat' || !fighter || playerHP > 0) return;
-    if (casinoTriggeredRef.current) return;
 
-    const timer = window.setTimeout(() => {
-      if (casinoTriggeredRef.current || playerHPRef.current > 0 || !fighter) return;
+    const primaryTimer = window.setTimeout(() => {
+      if (playerHPRef.current > 0 || !fighter || phaseRef.current !== 'combat') return;
+      if (casinoTriggeredRef.current) return;
       addLog('The Bonk Casino opens its doors...');
-      goToDefeatCasino(wave, fighter);
-    }, 600);
+      goToDefeatCasino(waveRef.current, fighter);
+    }, 400);
 
-    return () => window.clearTimeout(timer);
-  }, [phase, fighter, playerHP, wave, goToDefeatCasino, addLog]);
+    const recoveryTimer = window.setTimeout(() => {
+      if (playerHPRef.current > 0 || !fighter || phaseRef.current !== 'combat') return;
+      if (casinoTriggeredRef.current) {
+        casinoTriggeredRef.current = false;
+        setCasinoEntering(false);
+        if (casinoTimerRef.current) {
+          clearTimeout(casinoTimerRef.current);
+          casinoTimerRef.current = null;
+        }
+      }
+      addLog('The Bonk Casino opens its doors...');
+      goToDefeatCasino(waveRef.current, fighter);
+    }, 1800);
+
+    return () => {
+      window.clearTimeout(primaryTimer);
+      window.clearTimeout(recoveryTimer);
+    };
+  }, [phase, fighter, playerHP, goToDefeatCasino, addLog]);
 
   const claimVictorySpins = useCallback(() => {
     if (!fighter || casinoTriggeredRef.current) return;
     setShowVictory(false);
     const session = buildCasinoSession('victory', wave, fighter.difficulty);
+    launchCasinoNow(
+      session,
+      fighter,
+      playRunComplete,
+      buildLocalSecureSession(session),
+    );
 
-    void (async () => {
-      const serverSecure = await fetchServerCasinoSession(session);
-      launchCasinoNow(
-        session,
-        fighter,
-        playRunComplete,
-        serverSecure ?? buildLocalSecureSession(session),
-      );
-    })();
-  }, [fighter, wave, launchCasinoNow, playRunComplete]);
+    void fetchServerCasinoSession(session).then(serverSecure => {
+      if (!serverSecure || phaseRef.current !== 'casino') return;
+      setCasinoSecureSession(serverSecure);
+      persistCasinoPending(serverSecure);
+    });
+  }, [fighter, wave, launchCasinoNow, playRunComplete, persistCasinoPending]);
 
   const spawnEnemy = useCallback((nextWave: number, run = runNumber) => {
     const next = pickEnemyByWave(nextWave, run);
@@ -472,9 +496,53 @@ export default function Home() {
     setPlayerHP(newPlayerHP);
     setEnemyHP(newEnemyHP);
     addLog(`${ability.name} deals ${dmg} damage to ${enemy.name}!`);
-    addLog(enemy.hitReaction[Math.floor(Math.random() * enemy.hitReaction.length)]);
+    if (enemy.hitReaction.length > 0) {
+      addLog(enemy.hitReaction[Math.floor(Math.random() * enemy.hitReaction.length)]);
+    }
 
     return { newEnemyHP, newPlayerHP };
+  };
+
+  const clearPlayerAttackVfx = () => {
+    setFighterLunge(false);
+    setSpeedLines(false);
+    setCombatImpact(false);
+    setHealPulse(false);
+    setAttackBurst({ show: false, text: 'BONK!', variant: 'bonk' });
+    setEnemyHit(false);
+    setArenaShake(false);
+    setArenaFlash(false);
+    setDamagePopup({ show: false, value: 0, crit: false, target: 'enemy' });
+    setFighterWindUp(false);
+    setAbilityMotion('motion-bonk');
+    setBlockNextHit(false);
+  };
+
+  const handlePlayerDefeat = (
+    reachedWave: number,
+    fighterChar: PlayableCharacter,
+    enemyDefeated: boolean,
+  ) => {
+    if (playerHPRef.current > 0 || casinoTriggeredRef.current) return;
+
+    addLog(`${fighterChar.name} is bonked out! The casino beckons...`);
+    clearPlayerAttackVfx();
+    setIsAnimating(false);
+    setTurnPhase('player');
+
+    const runCleared = enemyDefeated && reachedWave >= DEGEN_ENEMIES.length;
+    if (enemyDefeated) {
+      addLog(enemy.defeatLine);
+      if (runCleared) {
+        addLog(`Double bonk! ${fighterChar.name} drops with the last degen — but the valley is CLEARED!`);
+        void playRunComplete();
+        setTimeout(() => setShowVictory(true), 400);
+        return;
+      }
+      addLog(`Double bonk! ${fighterChar.name} and ${enemy.name} KO each other — consolation spins await.`);
+    }
+
+    goToDefeatCasino(reachedWave, fighterChar);
   };
 
   const playEnemyTurn = async (blockActive: boolean) => {
@@ -568,7 +636,6 @@ export default function Home() {
     const playerDied = nextPlayerHP <= 0;
     playerHPRef.current = nextPlayerHP;
     setPlayerHP(nextPlayerHP);
-    if (playerDied) addLog(`${fighter.name} is bonked out! The casino beckons...`);
     setPlayerVibe(v => Math.max(0, v - special.vibeDrain - Math.round(counterDmg * 0.8)));
 
     await wait(550);
@@ -586,7 +653,7 @@ export default function Home() {
     setIsAnimating(false);
 
     if (playerDied) {
-      goToDefeatCasino(wave, fighter);
+      handlePlayerDefeat(wave, fighter, false);
       return;
     }
 
@@ -595,7 +662,7 @@ export default function Home() {
   };
 
   const useAbility = async (ability: CharacterAbility) => {
-    if (!fighter || enemyHP <= 0 || playerHP <= 0 || isAnimating || turnPhase !== 'player') return;
+    if (!fighter || enemyHP <= 0 || playerHPRef.current <= 0 || isAnimating || turnPhase !== 'player') return;
 
     if (ability.id === 'sonic-boom' && playerVibe < 15) {
       addLog('Not enough vibe for Sonic Boom! Need 15+ vibe.');
@@ -603,14 +670,13 @@ export default function Home() {
     }
 
     if (waveModifier.playerRegenPerTurn > 0) {
-      setPlayerHP(h => {
-        const healed = Math.min(fighter.hp, h + waveModifier.playerRegenPerTurn);
-        playerHPRef.current = healed;
-        if (healed > h) {
-          addLog(`${waveModifier.emoji} ${waveModifier.name} restores ${healed - h} HP.`);
-        }
-        return healed;
-      });
+      const beforeRegen = playerHPRef.current;
+      const healed = Math.min(fighter.hp, beforeRegen + waveModifier.playerRegenPerTurn);
+      playerHPRef.current = healed;
+      setPlayerHP(healed);
+      if (healed > beforeRegen) {
+        addLog(`${waveModifier.emoji} ${waveModifier.name} restores ${healed - beforeRegen} HP.`);
+      }
     }
 
     if (ability.blockNextHit) setBlockNextHit(true);
@@ -621,94 +687,81 @@ export default function Home() {
     setIsAnimating(true);
     setTurnPhase('player');
 
-    setAbilityMotion(getAbilityMotionClass(ability.id));
-    await wait(60);
-    setFighterWindUp(true);
-    await wait(160);
-    setFighterWindUp(false);
-    setSpeedLines(true);
-    setFighterLunge(true);
-    void playAttackWindup(ability.id);
+    try {
+      setAbilityMotion(getAbilityMotionClass(ability.id));
+      await wait(60);
+      setFighterWindUp(true);
+      await wait(160);
+      setFighterWindUp(false);
+      setSpeedLines(true);
+      setFighterLunge(true);
+      void playAttackWindup(ability.id);
 
-    await wait(280);
+      await wait(280);
 
-    const { dmg, isCrit } = resolveDamage(ability, enemyHP);
-    void playPlayerHit(ability.id, isCrit, dmg);
-    const isHealMove = Boolean(ability.healHp && ability.healHp >= 25 && dmg <= 40);
-    const burstVariant: BurstVariant = isHealMove ? 'heal' : isCrit ? 'crit' : 'bonk';
+      const { dmg, isCrit } = resolveDamage(ability, enemyHP);
+      void playPlayerHit(ability.id, isCrit, dmg);
+      const isHealMove = Boolean(ability.healHp && ability.healHp >= 25 && dmg <= 40);
+      const burstVariant: BurstVariant = isHealMove ? 'heal' : isCrit ? 'crit' : 'bonk';
 
-    setCombatImpact(true);
-    setImpactTarget('enemy');
-    setImpactKey(k => k + 1);
-    setHealPulse(isHealMove);
-    setAttackBurst({
-      show: true,
-      text: burstVariant === 'heal' ? 'BONK! ♥' : isCrit ? 'CRITICAL!' : 'BONK!',
-      variant: burstVariant,
-    });
-    setEnemyHit(true);
-    setArenaShake(true);
-    setArenaFlash(true);
-    if (dmg > 0) setDamagePopup({ show: true, value: dmg, crit: isCrit, target: 'enemy' });
+      setCombatImpact(true);
+      setImpactTarget('enemy');
+      setImpactKey(k => k + 1);
+      setHealPulse(isHealMove);
+      setAttackBurst({
+        show: true,
+        text: burstVariant === 'heal' ? 'BONK! ♥' : isCrit ? 'CRITICAL!' : 'BONK!',
+        variant: burstVariant,
+      });
+      setEnemyHit(true);
+      setArenaShake(true);
+      setArenaFlash(true);
+      if (dmg > 0) setDamagePopup({ show: true, value: dmg, crit: isCrit, target: 'enemy' });
 
-    const { newEnemyHP, newPlayerHP } = applyPlayerAttack(ability, dmg, playerHP);
-    const enemyDefeated = newEnemyHP <= 0;
-    const playerDefeated = newPlayerHP <= 0;
-    const runCleared = enemyDefeated && wave >= DEGEN_ENEMIES.length;
+      const { newEnemyHP, newPlayerHP } = applyPlayerAttack(ability, dmg, playerHPRef.current);
+      const enemyDefeated = newEnemyHP <= 0;
+      const playerDefeated = newPlayerHP <= 0;
+      const runCleared = enemyDefeated && wave >= DEGEN_ENEMIES.length;
 
-    await wait(isCrit ? 620 : 500);
+      if (playerDefeated) {
+        handlePlayerDefeat(wave, fighter, enemyDefeated);
+        return;
+      }
 
-    setFighterLunge(false);
-    setSpeedLines(false);
-    setCombatImpact(false);
-    setHealPulse(false);
-    setAttackBurst({ show: false, text: 'BONK!', variant: 'bonk' });
-    setEnemyHit(false);
-    setArenaShake(false);
-    setArenaFlash(false);
-    setDamagePopup({ show: false, value: 0, crit: false, target: 'enemy' });
+      await wait(isCrit ? 620 : 500);
 
-    if (enemyDefeated && !playerDefeated) {
-      setEnemyKo(true);
-      await wait(750);
-      setEnemyKo(false);
-    }
+      clearPlayerAttackVfx();
 
-    await wait(200);
-    setBlockNextHit(false);
-    setIsAnimating(false);
+      if (enemyDefeated && !playerDefeated) {
+        setEnemyKo(true);
+        await wait(750);
+        setEnemyKo(false);
+      }
 
-    if (enemyDefeated && playerDefeated) {
-      addLog(enemy.defeatLine);
-      if (runCleared) {
-        addLog(`Double bonk! ${fighter.name} drops with the last degen — but the valley is CLEARED!`);
-        void playRunComplete();
+      await wait(200);
+
+      if (enemyDefeated) {
+        addLog(enemy.defeatLine);
+        if (runCleared) {
+          void playRunComplete();
+        } else {
+          void playWaveClear();
+        }
         setTimeout(() => setShowVictory(true), 400);
-      } else {
-        addLog(`Double bonk! ${fighter.name} and ${enemy.name} KO each other — consolation spins await.`);
-        goToDefeatCasino(wave, fighter);
+        return;
       }
-      return;
-    }
 
-    if (enemyDefeated) {
-      addLog(enemy.defeatLine);
-      if (runCleared) {
-        void playRunComplete();
-      } else {
-        void playWaveClear();
+      await playEnemyTurn(blockEnemyAttack);
+    } catch (err) {
+      console.error('Combat ability error:', err);
+      if (playerHPRef.current <= 0 && fighter) {
+        handlePlayerDefeat(wave, fighter, enemyHP <= 0);
       }
-      setTimeout(() => setShowVictory(true), 400);
-      return;
+    } finally {
+      if (playerHPRef.current > 0) {
+        setIsAnimating(false);
+      }
     }
-
-    if (playerDefeated) {
-      addLog(`${fighter.name} is bonked out! The casino beckons...`);
-      goToDefeatCasino(wave, fighter);
-      return;
-    }
-
-    await playEnemyTurn(blockEnemyAttack);
   };
 
   const nextWave = () => {
