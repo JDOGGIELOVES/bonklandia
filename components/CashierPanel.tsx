@@ -33,9 +33,11 @@ export default function CashierPanel({ showBackLink = true }: CashierPanelProps)
     sessionId: string;
     settleToken: string;
     totalWinnings?: number;
+    localOnly?: boolean;
   } | null>(null);
   const [claiming, setClaiming] = useState(false);
 
+  // Exchange / cashier spends use server ledger when wallet is connected.
   const chips = connected && serverChips !== null ? serverChips : localChips;
   const { balances, loading: balancesLoading, error: balanceError, refresh: refreshBalances, hasAnyBalance } =
     useFamTokenBalances();
@@ -119,6 +121,15 @@ export default function CashierPanel({ showBackLink = true }: CashierPanelProps)
       return;
     }
 
+    if (pendingClaim.localOnly || pendingClaim.settleToken === 'local' || pendingClaim.sessionId.startsWith('local-')) {
+      setMessage({
+        ok: false,
+        text:
+          'This session is still local-only. Re-enter the casino with a live vault link (or win chips after the vault status shows live), then claim again. Local bank chips remain available for chip bets.',
+      });
+      return;
+    }
+
     setClaiming(true);
     setMessage(null);
     try {
@@ -142,7 +153,7 @@ export default function CashierPanel({ showBackLink = true }: CashierPanelProps)
       setServerChips(Number(data.chips) || 0);
       setMessage({
         ok: true,
-        text: `Claimed ${Number(data.credited).toLocaleString()} server-verified chips to your wallet.`,
+        text: `Claimed ${Number(data.credited).toLocaleString()} server-verified chips to your wallet ledger.`,
       });
     } catch {
       setMessage({ ok: false, text: 'Claim failed — try again.' });
@@ -294,34 +305,43 @@ export default function CashierPanel({ showBackLink = true }: CashierPanelProps)
               <p className="text-[#f5e6c8]/55 text-base mb-4">
                 Chips from Bonga Chill&apos;s casino are server-verified. Claim them here with your wallet, then exchange for real SPL tokens.
               </p>
-              {pendingClaim && connected && (
+              {pendingClaim && (
                 <div className="cashier-claim-banner mb-4">
                   <p className="text-sm text-[#f5e6c8]/70">
                     Unclaimed casino session detected
                     {pendingClaim.totalWinnings
                       ? ` — up to ${pendingClaim.totalWinnings.toLocaleString()} chips`
+                      : ''}
+                    {pendingClaim.localOnly || pendingClaim.sessionId.startsWith('local-')
+                      ? ' (local session — need vault-live session to claim)'
                       : ''}.
                   </p>
-                  <button
-                    type="button"
-                    className="art-btn py-2 px-4 text-sm mt-2"
-                    onClick={() => void handleClaimCasinoChips()}
-                    disabled={claiming}
-                  >
-                    {claiming ? 'Claiming…' : 'Claim verified chips'}
-                  </button>
+                  {connected ? (
+                    <button
+                      type="button"
+                      className="art-btn py-2 px-4 text-sm mt-2"
+                      onClick={() => void handleClaimCasinoChips()}
+                      disabled={claiming}
+                    >
+                      {claiming ? 'Claiming…' : 'Claim verified chips'}
+                    </button>
+                  ) : (
+                    <p className="text-sm text-amber-200/80 mt-2">Connect wallet above to claim.</p>
+                  )}
                 </div>
               )}
               <div className="cashier-stat-row">
                 <div className="cashier-stat">
                   <span className="cashier-stat-label">Bonk Chips</span>
                   <span className="cashier-stat-value cashier-stat-chips">
-                    {connected && serverChips !== null
-                      ? serverChips.toLocaleString()
-                      : chips.toLocaleString()}
+                    {chips.toLocaleString()}
                   </span>
-                  {connected && serverChips !== null && (
-                    <span className="cashier-stat-hint">Server-verified balance</span>
+                  {connected && serverChips !== null ? (
+                    <span className="cashier-stat-hint">
+                      Server {serverChips.toLocaleString()} · Local bank {localChips.toLocaleString()}
+                    </span>
+                  ) : (
+                    <span className="cashier-stat-hint">Local bank</span>
                   )}
                 </div>
                 <div className="cashier-stat">

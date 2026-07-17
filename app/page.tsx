@@ -323,6 +323,13 @@ export default function Home() {
     addLog(BONGACHILL_LORE.quote);
     addLog(`Consolation spins: ${session.spins}. Win the full run for up to 10 victory pulls.`);
     addLog('Bonga Chill rigs the reels — consolation spins ready!');
+
+    // Background vault link so cashier claims work without blocking the reels.
+    void fetchServerCasinoSession(session).then(serverSecure => {
+      if (!serverSecure || phaseRef.current !== 'casino') return;
+      setCasinoSecureSession(serverSecure);
+      persistCasinoPending(serverSecure);
+    });
   }, [addLog, persistCasinoPending, playDefeat]);
 
   const launchCasinoNow = useCallback((

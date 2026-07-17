@@ -60,9 +60,13 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: verified.error }, { status: 400 });
   }
 
-  const sessionUpdate = registerPaidSpinForSession(sessionId);
-  if (!sessionUpdate.ok) {
-    return NextResponse.json({ error: sessionUpdate.error }, { status: 400 });
+  // Local consolation sessions are client-only; still verify SOL payment, skip server ledger.
+  const isLocalSession = sessionId.startsWith('local-');
+  if (!isLocalSession) {
+    const sessionUpdate = registerPaidSpinForSession(sessionId);
+    if (!sessionUpdate.ok) {
+      return NextResponse.json({ error: sessionUpdate.error }, { status: 400 });
+    }
   }
 
   markSignatureUsed(signature, 'quarter-slot');
@@ -72,5 +76,6 @@ export async function POST(request: Request) {
     spinsGranted: 1,
     paidUsd: quote.usd,
     lamports: quote.lamports,
+    localSession: isLocalSession,
   });
 }

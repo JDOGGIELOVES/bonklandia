@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useState } from 'react';
 import { useConnection, useWallet } from '@solana/wallet-adapter-react';
+import { WalletMultiButton } from '@solana/wallet-adapter-react-ui';
 import { PublicKey, SystemProgram, Transaction } from '@solana/web3.js';
 import type { PaidSpinQuote } from '@/lib/sol-payment';
 
@@ -16,14 +17,28 @@ export default function PaidSpinButton({ disabled, sessionId, onSpinGranted }: P
   const { publicKey, sendTransaction, connected } = useWallet();
   const [quote, setQuote] = useState<PaidSpinQuote | null>(null);
   const [loading, setLoading] = useState(false);
+  const [quoteLoading, setQuoteLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  useEffect(() => {
+  const loadQuote = useCallback(() => {
+    setQuoteLoading(true);
+    setError(null);
     fetch('/api/casino/paid-spin')
-      .then(r => r.json())
-      .then(data => setQuote(data as PaidSpinQuote))
-      .catch(() => setError('Could not load spin price.'));
+      .then(async r => {
+        const data = await r.json();
+        if (!r.ok) throw new Error(data.error ?? 'Could not load spin price.');
+        setQuote(data as PaidSpinQuote);
+      })
+      .catch(err => {
+        setQuote(null);
+        setError(err instanceof Error ? err.message : 'Could not load spin price.');
+      })
+      .finally(() => setQuoteLoading(false));
   }, []);
+
+  useEffect(() => {
+    loadQuote();
+  }, [loadQuote]);
 
   const buySpin = useCallback(async () => {
     if (!connected || !publicKey || !quote) {
@@ -75,8 +90,6 @@ export default function PaidSpinButton({ disabled, sessionId, onSpinGranted }: P
     }
   }, [connected, publicKey, quote, connection, sendTransaction, onSpinGranted, sessionId]);
 
-  if (!quote) return null;
-
   return (
     <div className="paid-spin-panel">
       <div className="paid-spin-header">
@@ -84,20 +97,55 @@ export default function PaidSpinButton({ disabled, sessionId, onSpinGranted }: P
         <span className="paid-spin-price">25¢</span>
       </div>
       <p className="paid-spin-detail">
-        25 cents of Solana = 1 Spin (~{quote.solAmount.toFixed(4)} SOL @ ${quote.solUsdPrice.toFixed(0)}/SOL)
+        {quoteLoading
+          ? 'Loading live SOL price…'
+          : quote
+            ? `25 cents of Solana = 1 spin (~${quote.solAmount.toFixed(4)} SOL @ $${quote.solUsdPrice.toFixed(0)}/SOL)`
+            : 'Pay 25¢ in SOL for one extra pull.'}
       </p>
       <p className="paid-spin-detail">
         SOL goes to the shared treasury — treasury never pays SOL out.
       </p>
+
+      {!connected && (
+        <div className="paid-spin-wallet">
+          <p className="paid-spin-wallet-label">Connect wallet to buy spins</p>
+          <WalletMultiButton />
+        </div>
+      )}
+
+      {connected && publicKey && (
+        <p className="paid-spin-connected">
+          Wallet ready · {publicKey.toBase58().slice(0, 4)}…{publicKey.toBase58().slice(-4)}
+        </p>
+      )}
+
       {error && <p className="paid-spin-error">{error}</p>}
-      <button
-        type="button"
-        className="art-btn paid-spin-btn w-full py-2.5 text-[#f0d878]"
-        onClick={() => void buySpin()}
-        disabled={disabled || loading || !connected}
-      >
-        {loading ? 'Confirming…' : connected ? 'Quarter Slot · 25¢ SOL' : 'Connect wallet — 25¢ = 1 Spin'}
-      </button>
+
+      {!quote && !quoteLoading && (
+        <button
+          type="button"
+          className="art-btn paid-spin-btn w-full py-2.5 text-[#f0d878]"
+          onClick={loadQuote}
+        >
+          Retry price load
+        </button>
+      )}
+
+      {quote && (
+        <button
+          type="button"
+          className="art-btn paid-spin-btn w-full py-2.5 text-[#f0d878]"
+          onClick={() => void buySpin()}
+          disabled={disabled || loading || !connected}
+        >
+          {loading
+            ? 'Confirming on Solana…'
+            : connected
+              ? 'Quarter Slot · 25¢ SOL'
+              : 'Connect wallet above first'}
+        </button>
+      )}
     </div>
   );
 }

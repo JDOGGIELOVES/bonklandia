@@ -3,6 +3,8 @@
 import Image from 'next/image';
 import Link from 'next/link';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useWallet } from '@solana/wallet-adapter-react';
+import { WalletMultiButton } from '@solana/wallet-adapter-react-ui';
 import { useBonkBank } from '@/hooks/useBonkBank';
 import type { PlayableCharacter } from '@/lib/characters';
 import {
@@ -26,6 +28,7 @@ import {
   JACKPOT_LADDER_STEPS,
   getChipBetOption,
 } from '@/lib/casino-extras';
+import { fetchServerCasinoSession, type CasinoSecureSession } from '@/lib/casino-client';
 import { useCasinoAudio } from '@/hooks/useCasinoAudio';
 import {
   CASINO_AMBIENCE_CREDIT,
@@ -107,13 +110,6 @@ function SlotReel({
   );
 }
 
-type CasinoSecureSession = {
-  sessionId: string;
-  settleToken: string;
-  maxWinnings: number;
-  localOnly?: boolean;
-};
-
 type CasinoSlotProps = {
   session: CasinoSession;
   secureSession: CasinoSecureSession;
@@ -125,6 +121,7 @@ type CasinoSlotProps = {
 export default function CasinoSlot({ session, secureSession, fighter, onExit, onRunItBack }: CasinoSlotProps) {
   const { tier, paytableWave, spins: grantedSpins, outcome, chipMultiplier } = session;
   const isVictory = outcome === 'victory';
+  const { connected, publicKey } = useWallet();
 
   const [spinsLeft, setSpinsLeft] = useState(grantedSpins);
   const [spinning, setSpinning] = useState(false);
@@ -138,9 +135,14 @@ export default function CasinoSlot({ session, secureSession, fighter, onExit, on
   const [justLanded, setJustLanded] = useState(false);
   const [pawReady, setPawReady] = useState(false);
   const settledWinningsRef = useRef(0);
+  const localCreditedRef = useRef(0);
   const [settleError, setSettleError] = useState<string | null>(null);
   const [selectedBetChips, setSelectedBetChips] = useState(0);
   const [ladderSteps, setLadderSteps] = useState(0);
+  const [activeSecure, setActiveSecure] = useState<CasinoSecureSession>(secureSession);
+  const [vaultLinkStatus, setVaultLinkStatus] = useState<'local' | 'linking' | 'live'>(
+    secureSession.localOnly ? 'local' : 'live',
+  );
   const { spendChips, addChips, chips: bankChips } = useBonkBank();
   const {
     muted,
@@ -156,37 +158,82 @@ export default function CasinoSlot({ session, secureSession, fighter, onExit, on
   const displayReels = results ?? idleReels;
 
   useEffect(() => {
+    setActiveSecure(secureSession);
+    setVaultLinkStatus(secureSession.localOnly ? 'local' : 'live');
+  }, [secureSession]);
+
+  // Upgrade local consolation session to a claimable server session when possible.
+  useEffect(() => {
+    if (!activeSecure.localOnly) return;
+    let cancelled = false;
+    setVaultLinkStatus('linking');
+    void fetchServerCasinoSession(session).then(serverSecure => {
+      if (cancelled || !serverSecure) {
+        if (!cancelled) setVaultLinkStatus('local');
+        return;
+      }
+      setActiveSecure(serverSecure);
+      setVaultLinkStatus('live');
+      try {
+        sessionStorage.setItem(
+          'bonk-casino-pending',
+          JSON.stringify({ ...serverSecure, totalWinnings }),
+        );
+      } catch {
+        // private mode
+      }
+    });
+    return () => {
+      cancelled = true;
+    };
+    // Only on mount / session identity — avoid re-link loops.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [session.outcome, session.paytableWave, session.difficulty, session.chipMultiplier]);
+
+  useEffect(() => {
     const t = setTimeout(() => setPawReady(true), 600);
     return () => clearTimeout(t);
   }, []);
 
   useEffect(() => {
-    if (totalWinnings <= settledWinningsRef.current) return;
+    if (totalWinnings <= 0) return;
 
     const settle = async () => {
-      if (secureSession.localOnly) {
-        const delta = totalWinnings - settledWinningsRef.current;
-        if (delta > 0) {
-          addChips(delta);
-          settledWinningsRef.current = totalWinnings;
-        }
+      // Always credit local bank so chip bets / offline play work.
+      const localDelta = totalWinnings - localCreditedRef.current;
+      if (localDelta > 0) {
+        addChips(localDelta);
+        localCreditedRef.current = totalWinnings;
+      }
+
+      if (activeSecure.localOnly) {
         setSettleError(null);
+        try {
+          sessionStorage.setItem(
+            'bonk-casino-pending',
+            JSON.stringify({ ...activeSecure, totalWinnings, localOnly: true }),
+          );
+        } catch {
+          // private mode
+        }
         return;
       }
+
+      if (totalWinnings <= settledWinningsRef.current) return;
 
       try {
         const res = await fetch('/api/casino/settle', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
-            sessionId: secureSession.sessionId,
-            settleToken: secureSession.settleToken,
+            sessionId: activeSecure.sessionId,
+            settleToken: activeSecure.settleToken,
             totalWinnings,
           }),
         });
         const data = await res.json();
         if (!res.ok) {
-          setSettleError(data.error ?? 'Could not verify casino winnings.');
+          setSettleError(data.error ?? 'Could not verify casino winnings for claim.');
           return;
         }
         settledWinningsRef.current = totalWinnings;
@@ -194,17 +241,17 @@ export default function CasinoSlot({ session, secureSession, fighter, onExit, on
         sessionStorage.setItem(
           'bonk-casino-pending',
           JSON.stringify({
-            ...secureSession,
+            ...activeSecure,
             totalWinnings,
           }),
         );
       } catch {
-        setSettleError('Server settlement failed — winnings not yet secured.');
+        setSettleError('Server settlement failed — winnings not yet claimable at cashier.');
       }
     };
 
     void settle();
-  }, [totalWinnings, secureSession, addChips]);
+  }, [totalWinnings, activeSecure, addChips]);
 
   const ladderPrimed = ladderSteps >= JACKPOT_LADDER_STEPS;
   const selectedBet = getChipBetOption(selectedBetChips);
@@ -304,25 +351,44 @@ export default function CasinoSlot({ session, secureSession, fighter, onExit, on
 
       <div className="casino-content">
         <header className="casino-header">
-          <div className="casino-audio-bar">
-            <button
-              type="button"
-              className="casino-audio-btn"
-              onClick={() => void toggleMute()}
-              aria-label={muted ? 'Unmute casino audio' : 'Mute casino audio'}
-              title={CASINO_AMBIENCE_CREDIT}
-            >
-              {muted ? '🔇 Sound Off' : '🔊 Lobby Lounge'}
-            </button>
-            {!audioReady && (
+          <div className="casino-top-bar">
+            <div className="casino-audio-bar">
               <button
                 type="button"
-                className="casino-audio-unlock"
-                onClick={() => void unlockAudio()}
+                className="casino-audio-btn"
+                onClick={() => void toggleMute()}
+                aria-label={muted ? 'Unmute casino audio' : 'Mute casino audio'}
+                title={CASINO_AMBIENCE_CREDIT}
               >
-                Tap to enable sound
+                {muted ? '🔇 Sound Off' : '🔊 Lobby Lounge'}
               </button>
-            )}
+              {!audioReady && (
+                <button
+                  type="button"
+                  className="casino-audio-unlock"
+                  onClick={() => void unlockAudio()}
+                >
+                  Tap to enable sound
+                </button>
+              )}
+            </div>
+            <div className="casino-wallet-bar">
+              <div className="casino-wallet-connect">
+                <WalletMultiButton />
+              </div>
+              <p className="casino-wallet-status">
+                {connected && publicKey
+                  ? `Connected · ${publicKey.toBase58().slice(0, 4)}…${publicKey.toBase58().slice(-4)}`
+                  : 'Connect wallet for Quarter Slots & claims'}
+              </p>
+              <p className={`casino-vault-status casino-vault-status-${vaultLinkStatus}`}>
+                {vaultLinkStatus === 'live'
+                  ? 'Vault live — wins claimable at cashier'
+                  : vaultLinkStatus === 'linking'
+                    ? 'Linking vault for claims…'
+                    : 'Local reels — wins go to bank; vault links when available'}
+              </p>
+            </div>
           </div>
           {isVictory ? (
             <p className="casino-eyebrow casino-eyebrow-victory">Victory Spins — {fighter.name} cleared the valley</p>
@@ -398,7 +464,7 @@ export default function CasinoSlot({ session, secureSession, fighter, onExit, on
 
             <PaidSpinButton
               disabled={spinning}
-              sessionId={secureSession.sessionId}
+              sessionId={activeSecure.sessionId}
               onSpinGranted={grantPaidSpin}
             />
           </div>
@@ -534,7 +600,10 @@ export default function CasinoSlot({ session, secureSession, fighter, onExit, on
 
         {totalWinnings > 0 && !settleError && (
           <p className="casino-secure-note">
-            {totalWinnings.toLocaleString()} chips server-verified (max {secureSession.maxWinnings.toLocaleString()}) — claim at {BRAND.cashier} with your wallet.
+            {totalWinnings.toLocaleString()} chips in your bank
+            {activeSecure.localOnly
+              ? ' (local) — vault link enables cashier claim.'
+              : ` · vault-verified (max ${activeSecure.maxWinnings.toLocaleString()}) — claim at ${BRAND.cashier} with your wallet.`}
           </p>
         )}
 
@@ -553,7 +622,7 @@ export default function CasinoSlot({ session, secureSession, fighter, onExit, on
             <div className="casino-paid-spin-exit">
               <PaidSpinButton
                 disabled={spinning}
-                sessionId={secureSession.sessionId}
+                sessionId={activeSecure.sessionId}
                 onSpinGranted={grantPaidSpin}
               />
             </div>
