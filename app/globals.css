@@ -85,291 +85,384 @@ body {
   z-index: 2;
 }
 
-/* ── Landing hero (champion select) ── */
+/* ── Renaissance hall landing (champion select) ── */
 
 .game-scene-landing {
-  background:
-    radial-gradient(ellipse 90% 55% at 50% -8%, rgba(212, 175, 55, 0.14) 0%, transparent 58%),
-    radial-gradient(ellipse 70% 45% at 12% 88%, rgba(139, 41, 66, 0.28) 0%, transparent 52%),
-    radial-gradient(ellipse 65% 50% at 92% 78%, rgba(48, 24, 82, 0.35) 0%, transparent 48%),
-    radial-gradient(ellipse 120% 80% at 50% 0%, rgba(88, 28, 72, 0.35) 0%, transparent 55%),
-    radial-gradient(ellipse 80% 60% at 80% 100%, rgba(30, 16, 51, 0.5) 0%, transparent 50%),
-    linear-gradient(175deg, #0f0612 0%, #1a0a18 35%, #120810 70%, #0a050c 100%);
+  background: #08040a;
+  overflow-x: hidden;
 }
 
-.landing-atmosphere {
+.landing-vignette {
+  background:
+    radial-gradient(ellipse at 15% 40%, rgba(255, 160, 60, 0.12) 0%, transparent 42%),
+    radial-gradient(ellipse at 85% 40%, rgba(255, 140, 50, 0.1) 0%, transparent 42%),
+    radial-gradient(ellipse at center, transparent 25%, rgba(0, 0, 0, 0.72) 100%);
+  z-index: 3;
+}
+
+/* Scenery layers */
+.landing-scene {
   position: fixed;
   inset: 0;
-  pointer-events: none;
   z-index: 0;
+  pointer-events: none;
   overflow: hidden;
 }
 
-.landing-atmosphere::before,
-.landing-atmosphere::after {
-  content: "";
+.landing-scene-sky {
   position: absolute;
-  border-radius: 50%;
-  filter: blur(72px);
-  opacity: 0.45;
-  animation: landing-orb-drift 18s ease-in-out infinite alternate;
-}
-
-.landing-atmosphere::before {
-  width: 42vmin;
-  height: 42vmin;
-  top: 8%;
-  left: -8%;
-  background: radial-gradient(circle, rgba(212, 175, 55, 0.22) 0%, transparent 70%);
-}
-
-.landing-atmosphere::after {
-  width: 36vmin;
-  height: 36vmin;
-  bottom: 6%;
-  right: -6%;
-  background: radial-gradient(circle, rgba(139, 41, 66, 0.28) 0%, transparent 70%);
-  animation-delay: -9s;
-}
-
-@keyframes landing-orb-drift {
-  from { transform: translate(0, 0) scale(1); }
-  to { transform: translate(3vw, -2vh) scale(1.08); }
-}
-
-.landing-hero {
-  position: relative;
-  text-align: center;
-  padding: 1.5rem 1rem 2.5rem;
-  margin-bottom: 1.75rem;
-}
-
-.landing-hero-backdrop {
-  position: absolute;
-  inset: -1rem -0.5rem 0;
-  border-radius: 2px;
+  inset: 0;
   background:
-    linear-gradient(180deg, rgba(60, 24, 48, 0.55) 0%, rgba(18, 8, 16, 0.35) 55%, transparent 100%),
-    url("/assets/backgrounds/combat-bg.jpg") center 30% / cover no-repeat;
-  opacity: 0.22;
-  mask-image: linear-gradient(180deg, #000 0%, #000 72%, transparent 100%);
-  pointer-events: none;
+    linear-gradient(180deg, rgba(12, 6, 14, 0.55) 0%, rgba(8, 4, 10, 0.85) 45%, #08040a 100%),
+    url("/assets/backgrounds/combat-bg.jpg") center 20% / cover no-repeat;
+  opacity: 0.55;
 }
 
-.landing-hero-glow {
+.landing-scene-mural {
   position: absolute;
-  width: 280px;
-  height: 280px;
-  border-radius: 50%;
-  filter: blur(60px);
-  pointer-events: none;
+  inset: 0;
+  background:
+    radial-gradient(ellipse 80% 50% at 50% 15%, rgba(212, 175, 55, 0.08) 0%, transparent 60%),
+    url("/assets/backgrounds/tapestry-weave.svg") center / 180px repeat;
   opacity: 0.35;
+  mix-blend-mode: overlay;
 }
 
-.landing-hero-glow-left {
-  top: 10%;
-  left: 4%;
-  background: radial-gradient(circle, rgba(212, 175, 55, 0.35) 0%, transparent 70%);
-}
-
-.landing-hero-glow-right {
-  top: 18%;
-  right: 2%;
-  background: radial-gradient(circle, rgba(139, 41, 66, 0.4) 0%, transparent 70%);
-}
-
-.landing-hero-rays {
+.landing-scene-floor {
   position: absolute;
-  top: -10%;
-  left: 50%;
-  width: 140%;
-  height: 70%;
-  transform: translateX(-50%);
-  background: conic-gradient(
-    from 270deg at 50% 100%,
-    transparent 0deg,
-    rgba(212, 175, 55, 0.04) 18deg,
-    transparent 36deg,
-    rgba(212, 175, 55, 0.06) 54deg,
-    transparent 72deg,
-    rgba(212, 175, 55, 0.03) 90deg,
-    transparent 108deg
-  );
-  pointer-events: none;
-  animation: landing-rays-pulse 8s ease-in-out infinite;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  height: 28vh;
+  background:
+    linear-gradient(180deg, transparent 0%, rgba(0, 0, 0, 0.5) 40%, rgba(0, 0, 0, 0.85) 100%),
+    url("/assets/backgrounds/stone-block.svg") center bottom / 200px repeat;
+  opacity: 0.7;
 }
 
-@keyframes landing-rays-pulse {
-  0%, 100% { opacity: 0.55; }
+.landing-scene-tapestry {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  width: min(14vw, 110px);
+  background:
+    linear-gradient(90deg, rgba(0, 0, 0, 0.6), transparent),
+    url("/assets/backgrounds/tapestry-weave.svg") center / 80px repeat;
+  border-right: 2px solid rgba(212, 175, 55, 0.15);
+  opacity: 0.85;
+}
+
+.landing-scene-tapestry-left {
+  left: 0;
+  border-right: 3px solid rgba(139, 105, 20, 0.35);
+}
+
+.landing-scene-tapestry-right {
+  right: 0;
+  transform: scaleX(-1);
+  border-right: none;
+  border-left: 3px solid rgba(139, 105, 20, 0.35);
+}
+
+.landing-scene-pillar {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  width: 28px;
+  background: linear-gradient(90deg, #1a1018 0%, #2e2228 35%, #1a1018 100%);
+  box-shadow: inset 0 0 20px rgba(0, 0, 0, 0.6), 4px 0 16px rgba(0, 0, 0, 0.4);
+}
+
+.landing-scene-pillar-left { left: min(14vw, 108px); }
+.landing-scene-pillar-right { right: min(14vw, 108px); }
+
+.landing-scene-beam-top {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 18px;
+  background: linear-gradient(180deg, #3d2a1a 0%, #2a1c12 60%, #1a120c 100%);
+  border-bottom: 2px solid rgba(212, 175, 55, 0.25);
+  box-shadow: 0 6px 24px rgba(0, 0, 0, 0.5);
+}
+
+.landing-scene-torch {
+  position: absolute;
+  top: 12%;
+  width: 48px;
+  height: 120px;
+  z-index: 1;
+}
+
+.landing-scene-torch-left { left: max(2vw, 12px); }
+.landing-scene-torch-right { right: max(2vw, 12px); }
+
+.landing-scene-torch-bracket {
+  position: absolute;
+  bottom: 0;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 36px;
+  height: 48px;
+  background: linear-gradient(180deg, #4a3828 0%, #2a2018 100%);
+  border: 1px solid rgba(212, 175, 55, 0.3);
+  border-radius: 2px 2px 0 0;
+  clip-path: polygon(10% 0, 90% 0, 100% 100%, 0 100%);
+}
+
+.landing-scene-torch-flame {
+  position: absolute;
+  bottom: 44px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 22px;
+  height: 36px;
+  background: radial-gradient(ellipse at 50% 90%, #ff6b20 0%, #ffb040 35%, #fff0a0 55%, transparent 75%);
+  border-radius: 50% 50% 50% 50% / 60% 60% 40% 40%;
+  animation: torch-flicker 2.8s ease-in-out infinite;
+}
+
+.landing-scene-torch-glow {
+  position: absolute;
+  bottom: 20px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 180px;
+  height: 180px;
+  background: radial-gradient(circle, rgba(255, 150, 50, 0.35) 0%, rgba(255, 100, 30, 0.12) 40%, transparent 70%);
+  animation: torch-glow-pulse 2.8s ease-in-out infinite;
+}
+
+@keyframes torch-flicker {
+  0%, 100% { transform: translateX(-50%) scale(1) rotate(-2deg); opacity: 0.9; }
+  40% { transform: translateX(-50%) scale(1.08, 0.95) rotate(3deg); opacity: 1; }
+  70% { transform: translateX(-50%) scale(0.95, 1.05) rotate(-1deg); opacity: 0.85; }
+}
+
+@keyframes torch-glow-pulse {
+  0%, 100% { opacity: 0.7; }
   50% { opacity: 1; }
 }
 
-.landing-hero-nav {
+.landing-scene-bunting {
+  position: absolute;
+  top: 18px;
+  left: 10%;
+  right: 10%;
+  display: flex;
+  justify-content: space-between;
+  gap: 4px;
+  padding: 0 2%;
+}
+
+.landing-scene-bunting span {
+  flex: 1;
+  max-width: 72px;
+  height: 28px;
+  background: linear-gradient(180deg, #6b1a32 0%, #4a1024 100%);
+  border: 1px solid rgba(212, 175, 55, 0.35);
+  clip-path: polygon(0 0, 100% 0, 50% 100%);
+  opacity: 0.75;
+}
+
+.landing-scene-bunting span:nth-child(odd) {
+  background: linear-gradient(180deg, #5a3a12 0%, #3d2810 100%);
+}
+
+.renaissance-hall {
   position: relative;
-  z-index: 2;
+  z-index: 4;
+}
+
+.renaissance-hall-content {
+  position: relative;
+}
+
+/* Tavern entrance sign */
+.tavern-entrance {
+  text-align: center;
+  margin-bottom: 2rem;
+  padding-top: 0.5rem;
+}
+
+.tavern-entrance-nav {
   display: flex;
   flex-wrap: wrap;
   justify-content: center;
   align-items: center;
   gap: 0.75rem 1rem;
-  margin-bottom: 1.75rem;
+  margin-bottom: 1.5rem;
 }
 
-.landing-nav-link {
+.tavern-nav-plaque {
   font-family: var(--font-display), Georgia, serif;
-  font-size: 1rem;
-  letter-spacing: 0.08em;
-  padding: 0.55rem 1.25rem;
+  font-size: 0.95rem;
+  letter-spacing: 0.1em;
+  padding: 0.5rem 1.35rem;
   color: var(--gold-light);
-  background: linear-gradient(180deg, rgba(80, 40, 60, 0.75) 0%, rgba(40, 18, 32, 0.88) 100%);
-  border: 1px solid rgba(212, 175, 55, 0.35);
-  box-shadow: inset 0 1px 0 rgba(212, 175, 55, 0.12);
+  background:
+    linear-gradient(180deg, #4a3020 0%, #2a1c14 100%);
+  border: 2px solid rgba(212, 175, 55, 0.45);
+  box-shadow:
+    inset 0 2px 0 rgba(255, 220, 140, 0.12),
+    0 4px 12px rgba(0, 0, 0, 0.45);
   transition: all 0.25s ease;
 }
 
-.landing-nav-link:hover {
+.tavern-nav-plaque:hover {
   border-color: var(--gold);
-  box-shadow: 0 0 20px rgba(212, 175, 55, 0.15), inset 0 1px 0 rgba(212, 175, 55, 0.2);
+  box-shadow: 0 0 24px rgba(212, 175, 55, 0.2), inset 0 2px 0 rgba(255, 220, 140, 0.2);
 }
 
-.landing-hero-emblem {
+.tavern-sign {
   position: relative;
-  z-index: 2;
-  width: 4.5rem;
-  height: 4.5rem;
-  margin: 0 auto 1rem;
+  display: inline-block;
+  max-width: 100%;
+  margin: 0 auto;
+}
+
+.tavern-sign-chains {
+  display: flex;
+  justify-content: center;
+  gap: min(42vw, 280px);
+  margin-bottom: -4px;
+}
+
+.tavern-sign-chain {
+  display: block;
+  width: 3px;
+  height: 36px;
+  background: linear-gradient(180deg, #6a6a6a, #3a3a3a);
+  box-shadow: 1px 0 2px rgba(0, 0, 0, 0.5);
+}
+
+.tavern-sign-board {
+  position: relative;
+  padding: 1.75rem 2rem 1.5rem;
+  min-width: min(100%, 520px);
+  background:
+    linear-gradient(175deg, #5c3d28 0%, #3d2818 25%, #4a3220 50%, #352418 75%, #2a1c12 100%);
+  border: 4px solid #2a1c10;
+  outline: 2px solid rgba(212, 175, 55, 0.5);
+  box-shadow:
+    0 16px 48px rgba(0, 0, 0, 0.65),
+    inset 0 2px 0 rgba(255, 220, 150, 0.15),
+    inset 0 -8px 24px rgba(0, 0, 0, 0.4);
+}
+
+.tavern-sign-board::before {
+  content: "";
+  position: absolute;
+  inset: 8px;
+  border: 1px solid rgba(212, 175, 55, 0.2);
+  pointer-events: none;
+}
+
+.tavern-sign-crest {
+  position: relative;
+  width: 3.5rem;
+  height: 3.5rem;
+  margin: 0 auto 0.75rem;
   display: grid;
   place-items: center;
 }
 
-.landing-hero-emblem-ring {
+.tavern-sign-crest-ring {
   position: absolute;
   inset: 0;
-  border: 1px solid rgba(212, 175, 55, 0.45);
+  border: 2px solid rgba(212, 175, 55, 0.55);
   border-radius: 50%;
-  box-shadow:
-    0 0 24px rgba(212, 175, 55, 0.15),
-    inset 0 0 20px rgba(212, 175, 55, 0.08);
-  animation: landing-emblem-spin 24s linear infinite;
+  background: radial-gradient(circle, rgba(80, 40, 30, 0.8) 0%, rgba(40, 20, 15, 0.9) 100%);
+  box-shadow: inset 0 0 12px rgba(0, 0, 0, 0.5);
 }
 
-.landing-hero-emblem-ring::before {
-  content: "";
-  position: absolute;
-  inset: 6px;
-  border: 1px solid rgba(212, 175, 55, 0.2);
-  border-radius: 50%;
-}
-
-@keyframes landing-emblem-spin {
-  from { transform: rotate(0deg); }
-  to { transform: rotate(360deg); }
-}
-
-.landing-hero-emblem-core {
+.tavern-sign-crest-icon {
   position: relative;
-  font-size: 1.65rem;
+  font-size: 1.4rem;
   color: var(--gold-light);
-  text-shadow: 0 0 18px rgba(212, 175, 55, 0.65);
-  animation: landing-emblem-pulse 3s ease-in-out infinite;
+  text-shadow: 0 0 12px rgba(212, 175, 55, 0.6);
 }
 
-@keyframes landing-emblem-pulse {
-  0%, 100% { transform: scale(1); opacity: 0.85; }
-  50% { transform: scale(1.08); opacity: 1; }
-}
-
-.landing-hero-epigraph {
-  position: relative;
-  z-index: 2;
-  margin: 0 0 0.5rem;
-  font-size: 0.78rem;
-  letter-spacing: 0.38em;
+.tavern-sign-motto {
+  margin: 0 0 0.35rem;
+  font-size: 0.72rem;
+  letter-spacing: 0.42em;
   text-transform: uppercase;
-  color: rgba(212, 175, 55, 0.55);
+  color: rgba(245, 220, 160, 0.65);
 }
 
-.landing-hero-title {
-  position: relative;
-  z-index: 2;
+.tavern-sign-title {
   margin: 0;
   font-family: var(--font-display), Georgia, serif;
-  font-size: clamp(3rem, 9vw, 4.75rem);
+  font-size: clamp(2.75rem, 10vw, 4.5rem);
   font-weight: 700;
-  letter-spacing: 0.14em;
-  line-height: 1.05;
-  background: linear-gradient(
-    105deg,
-    #8b6914 0%,
-    #f0d878 22%,
-    #fff4c8 38%,
-    #d4af37 52%,
-    #f0d878 68%,
-    #8b6914 100%
-  );
-  background-size: 200% auto;
-  -webkit-background-clip: text;
-  background-clip: text;
-  color: transparent;
-  filter: drop-shadow(0 4px 16px rgba(212, 175, 55, 0.35));
-  animation: landing-title-shimmer 7s ease-in-out infinite;
+  letter-spacing: 0.16em;
+  line-height: 1;
+  color: #fff8e0;
+  text-shadow:
+    0 2px 0 #2a1c10,
+    0 4px 0 rgba(0, 0, 0, 0.4),
+    0 0 40px rgba(212, 175, 55, 0.35);
 }
 
-@keyframes landing-title-shimmer {
-  0%, 100% { background-position: 0% center; }
-  50% { background-position: 100% center; }
-}
-
-.landing-hero-divider {
-  position: relative;
-  z-index: 2;
+.tavern-sign-nails {
   display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 1rem;
-  margin: 1rem auto 1.15rem;
-  max-width: 28rem;
+  justify-content: space-between;
+  margin: 0.65rem 0 0.5rem;
+  padding: 0 0.25rem;
 }
 
-.landing-hero-divider-line {
-  flex: 1;
-  height: 1px;
-  background: linear-gradient(90deg, transparent, rgba(212, 175, 55, 0.55), transparent);
+.tavern-sign-nails span {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background: radial-gradient(circle at 35% 30%, #8a8a8a, #3a3a3a);
+  box-shadow: inset 0 -2px 3px rgba(0, 0, 0, 0.5);
 }
 
-.landing-hero-divider-gem {
-  font-size: 0.85rem;
-  color: rgba(212, 175, 55, 0.7);
-  letter-spacing: 0.2em;
-}
-
-.landing-hero-subtitle {
-  position: relative;
-  z-index: 2;
+.tavern-sign-sub {
   margin: 0;
   font-family: var(--font-body), Georgia, serif;
   font-style: italic;
-  font-size: clamp(1.2rem, 3.2vw, 1.55rem);
-  font-weight: 500;
-  color: rgba(245, 230, 200, 0.78);
+  font-size: clamp(1.05rem, 2.8vw, 1.35rem);
+  color: rgba(245, 230, 200, 0.82);
 }
 
-.landing-hero-tagline {
-  position: relative;
-  z-index: 2;
-  margin: 0.85rem auto 0;
-  max-width: 36rem;
+.tavern-sign-wax {
+  position: absolute;
+  bottom: -14px;
+  right: 12%;
+  width: 36px;
+  height: 36px;
+  display: grid;
+  place-items: center;
+  font-size: 0.9rem;
+  color: rgba(180, 40, 40, 0.9);
+  background: radial-gradient(circle at 40% 35%, #c94040, #6a1818);
+  border-radius: 50% 45% 50% 48%;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.5), inset 0 2px 4px rgba(255, 100, 100, 0.3);
+  transform: rotate(-12deg);
+}
+
+.tavern-entrance-prologue {
+  margin: 2rem auto 0;
+  max-width: 34rem;
+  padding: 0.85rem 1.25rem;
+  font-style: italic;
   font-size: 1rem;
   line-height: 1.65;
-  font-style: italic;
-  color: rgba(245, 230, 200, 0.42);
+  color: rgba(245, 230, 200, 0.55);
+  background: linear-gradient(90deg, transparent, rgba(0, 0, 0, 0.35), transparent);
+  border-top: 1px solid rgba(212, 175, 55, 0.15);
+  border-bottom: 1px solid rgba(212, 175, 55, 0.15);
 }
 
 .landing-actions {
   display: flex;
   flex-wrap: wrap;
   gap: 0.75rem;
-  margin-bottom: 1.75rem;
+  margin-bottom: 2rem;
 }
 
 .landing-actions > .tutorial-frame,
@@ -381,100 +474,422 @@ body {
 .landing-action-btn {
   flex: 1 1 12rem;
   min-width: 0;
+  background: linear-gradient(180deg, #4a3020 0%, #2a1c14 100%) !important;
+  border: 2px solid rgba(212, 175, 55, 0.35) !important;
 }
 
-.landing-gallery-frame {
-  background:
-    linear-gradient(160deg, rgba(28, 10, 22, 0.98) 0%, rgba(12, 5, 14, 0.99) 100%);
-  box-shadow:
-    0 0 0 1px rgba(212, 175, 55, 0.15),
-    0 0 0 4px rgba(26, 10, 20, 0.9),
-    0 0 0 5px var(--gold-dark),
-    0 24px 70px rgba(0, 0, 0, 0.65),
-    inset 0 1px 0 rgba(212, 175, 55, 0.14),
-    inset 0 0 80px rgba(212, 175, 55, 0.03);
-}
-
-.landing-gallery-inner {
+/* Hall of Champions stone alcove */
+.hall-of-champions {
   position: relative;
+  padding: 0 0 2rem;
 }
 
-.landing-gallery-inner::before {
-  content: "";
+.hall-of-champions-arch {
+  position: relative;
+  height: 56px;
+  margin: 0 auto 0;
+  max-width: 92%;
+  background:
+    url("/assets/backgrounds/stone-block.svg") center / 120px repeat;
+  border: 3px solid #2a2228;
+  border-bottom: none;
+  border-radius: 50% 50% 0 0 / 100% 100% 0 0;
+  box-shadow:
+    inset 0 8px 24px rgba(0, 0, 0, 0.5),
+    0 -4px 20px rgba(212, 175, 55, 0.06);
+}
+
+.hall-arch-keystone {
   position: absolute;
-  inset: 0;
-  background: radial-gradient(ellipse at 50% 0%, rgba(212, 175, 55, 0.06) 0%, transparent 55%);
-  pointer-events: none;
+  bottom: -1px;
+  left: 50%;
+  transform: translateX(-50%);
+  padding: 0.35rem 0.85rem;
+  font-family: var(--font-display), Georgia, serif;
+  font-size: 0.85rem;
+  letter-spacing: 0.2em;
+  color: rgba(212, 175, 55, 0.8);
+  background: linear-gradient(180deg, #3a3038 0%, #2a2228 100%);
+  border: 2px solid rgba(212, 175, 55, 0.35);
+  border-bottom: none;
 }
 
-.landing-gallery-heading {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 1.25rem;
-  margin-bottom: 0.35rem;
+.hall-of-champions-header {
+  text-align: center;
+  padding: 1.25rem 1rem 1.5rem;
+  background:
+    linear-gradient(180deg, rgba(30, 22, 28, 0.95) 0%, rgba(18, 12, 16, 0.98) 100%),
+    url("/assets/backgrounds/stone-block.svg") center / 160px repeat;
+  border-left: 4px solid #2a2228;
+  border-right: 4px solid #2a2228;
+  box-shadow: inset 0 0 60px rgba(0, 0, 0, 0.45);
 }
 
-.landing-gallery-heading-line {
-  flex: 1;
-  max-width: 8rem;
-  height: 1px;
-  background: linear-gradient(90deg, transparent, rgba(212, 175, 55, 0.45));
-}
-
-.landing-gallery-heading-line:last-child {
-  background: linear-gradient(90deg, rgba(212, 175, 55, 0.45), transparent);
-}
-
-.landing-gallery-title {
+.hall-of-champions-title {
   margin: 0;
   font-family: var(--font-display), Georgia, serif;
-  font-size: clamp(1.15rem, 3vw, 1.45rem);
-  font-weight: 600;
-  letter-spacing: 0.28em;
+  font-size: clamp(1.5rem, 4vw, 2.1rem);
+  font-weight: 700;
+  letter-spacing: 0.22em;
   text-transform: uppercase;
-  color: rgba(212, 175, 55, 0.75);
-  white-space: nowrap;
+  color: var(--gold-light);
+  text-shadow: 0 2px 12px rgba(212, 175, 55, 0.3);
 }
 
-.landing-gallery-subhead {
-  margin: 0 0 1.75rem;
-  text-align: center;
+.hall-of-champions-subtitle {
+  margin: 0.5rem 0 0;
   font-style: italic;
-  font-size: 1rem;
-  color: rgba(245, 230, 200, 0.38);
-  letter-spacing: 0.04em;
+  font-size: 1.05rem;
+  color: rgba(245, 230, 200, 0.45);
 }
 
-.character-card-portrait {
-  position: relative;
-}
-
-.character-card-portrait-frame {
-  position: relative;
-  padding: 4px;
-  background: linear-gradient(155deg, rgba(212, 175, 55, 0.45) 0%, rgba(139, 105, 20, 0.15) 40%, rgba(60, 24, 48, 0.5) 100%);
-  border: 1px solid rgba(212, 175, 55, 0.35);
+.hall-of-champions-body {
+  padding: 1.5rem 1.25rem 2rem;
+  background:
+    linear-gradient(180deg, rgba(16, 10, 14, 0.98) 0%, rgba(10, 6, 10, 1) 100%),
+    url("/assets/backgrounds/stone-block.svg") center / 140px repeat;
+  border: 4px solid #2a2228;
+  border-top: none;
   box-shadow:
-    0 8px 24px rgba(0, 0, 0, 0.45),
-    inset 0 1px 0 rgba(255, 230, 160, 0.15);
+    0 24px 60px rgba(0, 0, 0, 0.6),
+    inset 0 0 80px rgba(0, 0, 0, 0.35),
+    inset 0 0 40px rgba(212, 175, 55, 0.03);
 }
 
-.character-card-portrait-frame::before {
+/* Champion portrait plaques */
+.champion-hall-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 1.1rem;
+}
+
+@media (min-width: 900px) {
+  .champion-hall-grid {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 1.25rem;
+  }
+}
+
+.champion-plaque {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  padding: 0.85rem 0.75rem 1rem;
+  cursor: pointer;
+  background:
+    linear-gradient(180deg, #3d2e22 0%, #2a2018 8%, #1e1612 100%);
+  border: 3px solid #4a3828;
+  outline: 1px solid rgba(212, 175, 55, 0.25);
+  box-shadow:
+    0 10px 28px rgba(0, 0, 0, 0.5),
+    inset 0 1px 0 rgba(255, 220, 150, 0.1),
+    inset 0 -12px 24px rgba(0, 0, 0, 0.35);
+  transition: transform 0.3s ease, box-shadow 0.3s ease, border-color 0.3s ease;
+}
+
+.champion-plaque-nail {
+  position: absolute;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: radial-gradient(circle at 35% 30%, #7a7a7a, #2a2a2a);
+  box-shadow: inset 0 -1px 2px rgba(0, 0, 0, 0.6);
+  z-index: 2;
+}
+
+.champion-plaque-nail-tl { top: 6px; left: 6px; }
+.champion-plaque-nail-tr { top: 6px; right: 6px; }
+.champion-plaque-nail-bl { bottom: 6px; left: 6px; }
+.champion-plaque-nail-br { bottom: 6px; right: 6px; }
+
+.champion-plaque:hover,
+.champion-plaque-active {
+  transform: translateY(-4px);
+  border-color: rgba(212, 175, 55, 0.65);
+  box-shadow:
+    0 16px 40px rgba(0, 0, 0, 0.55),
+    0 0 36px rgba(212, 175, 55, 0.15),
+    inset 0 1px 0 rgba(255, 220, 150, 0.18);
+}
+
+.champion-plaque-active {
+  outline: 2px solid rgba(240, 216, 120, 0.55);
+  background:
+    linear-gradient(180deg, #4a3828 0%, #322418 8%, #261c14 100%);
+}
+
+.champion-plaque-portrait-wrap {
+  position: relative;
+  width: 100%;
+  margin-bottom: 0.5rem;
+}
+
+.champion-plaque-portrait {
+  position: relative;
+  margin: 0 auto;
+  padding: 6px;
+  max-width: 160px;
+  background:
+    linear-gradient(155deg, rgba(212, 175, 55, 0.5) 0%, rgba(100, 70, 30, 0.3) 50%, rgba(40, 28, 20, 0.8) 100%);
+  border: 3px solid rgba(212, 175, 55, 0.45);
+  box-shadow:
+    inset 0 0 20px rgba(0, 0, 0, 0.4),
+    0 8px 20px rgba(0, 0, 0, 0.45);
+}
+
+.champion-plaque-portrait::before {
   content: "";
   position: absolute;
   inset: 0;
-  background: linear-gradient(135deg, rgba(255, 240, 180, 0.12) 0%, transparent 45%);
+  background: linear-gradient(135deg, rgba(255, 240, 180, 0.15) 0%, transparent 50%);
   pointer-events: none;
 }
 
-.character-card:hover .character-card-portrait-frame,
-.character-card-active .character-card-portrait-frame {
-  border-color: rgba(240, 216, 120, 0.75);
+.champion-plaque-img {
+  width: 100%;
+  height: auto;
+  max-height: 200px;
+  display: block;
+  filter: drop-shadow(0 8px 16px rgba(0, 0, 0, 0.5));
+}
+
+.champion-plaque-difficulty {
+  position: absolute;
+  top: 4px;
+  right: 4px;
+  z-index: 2;
+}
+
+.champion-plaque-ribbon {
+  width: 100%;
+  padding: 0.35rem 0.5rem;
+  margin-bottom: 0.25rem;
+  background: linear-gradient(90deg, transparent, rgba(139, 41, 66, 0.45), transparent);
+  border-top: 1px solid rgba(212, 175, 55, 0.25);
+  border-bottom: 1px solid rgba(212, 175, 55, 0.25);
+}
+
+.champion-plaque-name {
+  margin: 0;
+  font-family: var(--font-display), Georgia, serif;
+  font-size: 1.45rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  color: var(--gold-light);
+  text-shadow: 0 2px 8px rgba(0, 0, 0, 0.5);
+}
+
+.champion-plaque-epithet {
+  margin: 0 0 0.35rem;
+  font-style: italic;
+  font-size: 0.95rem;
+  color: rgba(212, 175, 55, 0.75);
+}
+
+.champion-plaque-tagline {
+  margin: 0 0 0.65rem;
+  font-size: 0.82rem;
+  line-height: 1.4;
+  color: rgba(245, 230, 200, 0.42);
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+.champion-plaque-heraldry {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 0.35rem;
+  width: 100%;
+}
+
+.herald-shield {
+  padding: 0.3rem 0.15rem;
+  font-size: 0.68rem;
+  background: rgba(0, 0, 0, 0.35);
+  border: 1px solid rgba(212, 175, 55, 0.15);
+  clip-path: polygon(50% 0%, 100% 18%, 100% 82%, 50% 100%, 0% 82%, 0% 18%);
+}
+
+.herald-shield span {
+  display: block;
+  opacity: 0.65;
+  font-size: 0.6rem;
+  letter-spacing: 0.05em;
+}
+
+.herald-shield strong {
+  display: block;
+  font-size: 0.95rem;
+  color: #f5e6c8;
+}
+
+.herald-shield-pwr { border-color: rgba(239, 68, 68, 0.3); }
+.herald-shield-pwr strong { color: #fca5a5; }
+.herald-shield-def { border-color: rgba(59, 130, 246, 0.3); }
+.herald-shield-def strong { color: #93c5fd; }
+.herald-shield-vibe { border-color: rgba(168, 85, 247, 0.3); }
+.herald-shield-vibe strong { color: #d8b4fe; }
+.herald-shield-spd { border-color: rgba(34, 197, 94, 0.3); }
+.herald-shield-spd strong { color: #86efac; }
+
+.champion-plaque-footer {
+  margin-top: 0.5rem;
+  width: 100%;
+}
+
+.champion-plaque-hp {
+  font-family: var(--font-display), Georgia, serif;
+  font-size: 0.88rem;
+  letter-spacing: 0.06em;
+  color: rgba(110, 231, 183, 0.85);
+}
+
+/* Illuminated scroll preview */
+.illuminated-scroll {
+  position: relative;
+  padding: 0 0.5rem;
+  background: transparent !important;
+  border: none !important;
+  box-shadow: none !important;
+}
+
+.illuminated-scroll-rod {
+  height: 14px;
+  margin: 0 auto;
+  max-width: 96%;
+  background: linear-gradient(180deg, #5c4030 0%, #3d2818 40%, #2a1c12 100%);
+  border-radius: 7px;
   box-shadow:
-    0 0 28px rgba(212, 175, 55, 0.2),
-    0 10px 28px rgba(0, 0, 0, 0.5),
-    inset 0 1px 0 rgba(255, 230, 160, 0.25);
+    0 3px 8px rgba(0, 0, 0, 0.5),
+    inset 0 2px 0 rgba(255, 220, 150, 0.15);
+}
+
+.illuminated-scroll-body {
+  position: relative;
+  padding: 1.5rem 1.25rem 1.25rem;
+  background:
+    linear-gradient(180deg, #f5e6c8 0%, #e8d4b0 8%, #dcc8a0 100%);
+  border-left: 3px solid #c4a870;
+  border-right: 3px solid #c4a870;
+  box-shadow:
+    inset 0 0 40px rgba(139, 105, 20, 0.15),
+    inset 0 0 80px rgba(0, 0, 0, 0.08),
+    0 8px 32px rgba(0, 0, 0, 0.4);
+  color: #2a1c10;
+}
+
+.illuminated-scroll-body::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='p'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.04' numOctaves='3'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23p)' opacity='0.06'/%3E%3C/svg%3E");
+  pointer-events: none;
+  mix-blend-mode: multiply;
+}
+
+.illuminated-scroll-portrait {
+  float: right;
+  margin: 0 0 0.75rem 1rem;
+  padding: 4px;
+  background: linear-gradient(155deg, #8b6914, #d4af37);
+  border: 2px solid #6a5010;
+  box-shadow: 0 6px 16px rgba(0, 0, 0, 0.25);
+}
+
+.illuminated-scroll-portrait img {
+  width: 90px;
+  height: auto;
+  display: block;
+}
+
+.scroll-ink-label {
+  color: rgba(90, 60, 20, 0.65);
+}
+
+.scroll-ink-title {
+  color: #3a2410;
+}
+
+.scroll-ink-role {
+  color: #6a4818;
+}
+
+.scroll-ink-quote {
+  color: rgba(50, 32, 16, 0.78);
+}
+
+.scroll-ink-ability {
+  color: #5a3a14;
+}
+
+.scroll-ink-muted {
+  color: rgba(50, 32, 16, 0.62);
+}
+
+.scroll-ability-entry {
+  padding: 0.65rem 0.75rem;
+  margin-bottom: 0.5rem;
+  background: rgba(139, 105, 20, 0.08);
+  border-left: 3px solid rgba(139, 105, 20, 0.35);
+}
+
+.illuminated-scroll-empty {
+  text-align: center;
+  padding: 2.5rem 1.5rem !important;
+}
+
+.illuminated-scroll-seal {
+  display: block;
+  font-size: 2.5rem;
+  color: rgba(139, 41, 66, 0.55);
+  margin-bottom: 1rem;
+}
+
+.illuminated-scroll-empty .character-preview-empty {
+  color: rgba(60, 40, 20, 0.55) !important;
+}
+
+.heraldic-cta {
+  background: linear-gradient(180deg, #5c3d28 0%, #3d2818 100%) !important;
+  border: 2px solid #6a5010 !important;
+  color: #fff8e0 !important;
+}
+
+@media (max-width: 1023px) {
+  .landing-scene-tapestry,
+  .landing-scene-pillar {
+    display: none;
+  }
+
+  .landing-scene-torch {
+    top: 8%;
+    transform: scale(0.75);
+  }
+
+  .champion-hall-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 0.75rem;
+  }
+
+  .champion-plaque-img {
+    max-height: 150px;
+  }
+}
+
+@media (max-width: 480px) {
+  .champion-hall-grid {
+    grid-template-columns: 1fr;
+    max-width: 280px;
+    margin: 0 auto;
+  }
+
+  .tavern-sign-board {
+    padding: 1.25rem 1rem;
+  }
 }
 
 .art-frame {
@@ -766,6 +1181,9 @@ body {
 .character-preview-panel {
   min-height: 14rem;
   order: -1;
+}
+
+.character-preview-panel:not(.illuminated-scroll) {
   background:
     linear-gradient(145deg, rgba(24, 10, 20, 0.92) 0%, rgba(10, 4, 12, 0.95) 100%);
   border: 1px solid rgba(212, 175, 55, 0.28);
@@ -826,7 +1244,15 @@ body {
     z-index: 20;
     max-height: min(44vh, 24rem);
     overflow-y: auto;
+  }
+
+  .character-preview-panel:not(.illuminated-scroll) {
     box-shadow: 0 14px 36px rgba(0, 0, 0, 0.5);
+  }
+
+  .illuminated-scroll-body {
+    max-height: min(40vh, 22rem);
+    overflow-y: auto;
   }
 
   .character-preview-panel-dormant {

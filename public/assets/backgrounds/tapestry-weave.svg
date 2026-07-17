@@ -1,0 +1,14 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="120" height="120" viewBox="0 0 120 120">
+  <defs>
+    <pattern id="weave" width="12" height="12" patternUnits="userSpaceOnUse">
+      <rect width="12" height="12" fill="#2a0f18"/>
+      <path d="M0 6h12M6 0v12" stroke="#3d1828" stroke-width="0.5" opacity="0.6"/>
+    </pattern>
+    <pattern id="diamonds" width="24" height="24" patternUnits="userSpaceOnUse">
+      <path d="M12 2 L22 12 L12 22 L2 12 Z" fill="none" stroke="#c9a227" stroke-width="0.6" opacity="0.22"/>
+      <circle cx="12" cy="12" r="1.2" fill="#d4af37" opacity="0.18"/>
+    </pattern>
+  </defs>
+  <rect width="120" height="120" fill="url(#weave)"/>
+  <rect width="120" height="120" fill="url(#diamonds)"/>
+</svg>
