@@ -299,13 +299,44 @@ export default function Home() {
     }
   }, []);
 
+  const enterDefeatCasino = useCallback((reachedWave: number, fighterChar: PlayableCharacter) => {
+    if (phaseRef.current === 'casino') return;
+
+    if (casinoTimerRef.current) {
+      clearTimeout(casinoTimerRef.current);
+      casinoTimerRef.current = null;
+    }
+
+    const session = buildCasinoSession('defeat', reachedWave, fighterChar.difficulty);
+    const securePayload = buildLocalSecureSession(session);
+
+    casinoTriggeredRef.current = true;
+    phaseRef.current = 'casino';
+    setCasinoSession(session);
+    setCasinoSecureSession(securePayload);
+    persistCasinoPending(securePayload);
+    setCasinoEntering(false);
+    setPhase('casino');
+    void playDefeat();
+
+    addLog(`${fighterChar.name} falls in Degen Valley...`);
+    addLog(BONGACHILL_LORE.quote);
+    addLog(`Consolation spins: ${session.spins}. Win the full run for up to 10 victory pulls.`);
+    addLog('Bonga Chill rigs the reels — consolation spins ready!');
+  }, [addLog, persistCasinoPending, playDefeat]);
+
   const launchCasinoNow = useCallback((
     session: CasinoSession,
     fighterChar: PlayableCharacter,
     playTransitionSound: () => void,
     securePayload: CasinoSecureSession,
   ) => {
-    if (casinoTriggeredRef.current) return;
+    if (session.outcome === 'defeat') {
+      enterDefeatCasino(session.paytableWave, fighterChar);
+      return;
+    }
+
+    if (casinoTriggeredRef.current && phaseRef.current === 'casino') return;
     casinoTriggeredRef.current = true;
 
     if (casinoTimerRef.current) clearTimeout(casinoTimerRef.current);
@@ -316,67 +347,29 @@ export default function Home() {
     setCasinoEntering(true);
     void playTransitionSound();
 
-    if (session.outcome === 'victory') {
-      addLog(`${fighterChar.name} cleared Degen Valley — victory spins await!`);
-      addLog(`Bonga Chill rolls out the champion's bandit: ${session.spins} pulls at max payout.`);
-    } else {
-      addLog(`${fighterChar.name} falls in Degen Valley...`);
-      addLog(BONGACHILL_LORE.quote);
-      addLog(`Consolation spins: ${session.spins}. Win the full run for up to 10 victory pulls.`);
-      addLog('Bonga Chill rigs the reels — no vault handshake required.');
-    }
-
-    const transitionMs = session.outcome === 'defeat'
-      ? Math.min(session.tier.transitionMs, 700)
-      : session.tier.transitionMs;
+    addLog(`${fighterChar.name} cleared Degen Valley — victory spins await!`);
+    addLog(`Bonga Chill rolls out the champion's bandit: ${session.spins} pulls at max payout.`);
 
     casinoTimerRef.current = setTimeout(() => {
       setPhase('casino');
       setCasinoEntering(false);
       casinoTimerRef.current = null;
-    }, transitionMs);
-  }, [addLog, persistCasinoPending]);
-
-  const goToDefeatCasino = useCallback((reachedWave: number, fighterChar: PlayableCharacter) => {
-    if (casinoTriggeredRef.current) return;
-    const session = buildCasinoSession('defeat', reachedWave, fighterChar.difficulty);
-    launchCasinoNow(
-      session,
-      fighterChar,
-      playDefeat,
-      buildLocalSecureSession(session),
-    );
-  }, [launchCasinoNow, playDefeat]);
+    }, session.tier.transitionMs);
+  }, [addLog, persistCasinoPending, enterDefeatCasino]);
 
   useEffect(() => {
     if (phase !== 'combat' || !fighter || playerHP > 0) return;
 
-    const primaryTimer = window.setTimeout(() => {
-      if (playerHPRef.current > 0 || !fighter || phaseRef.current !== 'combat') return;
-      if (casinoTriggeredRef.current) return;
-      addLog('The Bonk Casino opens its doors...');
-      goToDefeatCasino(waveRef.current, fighter);
-    }, 400);
+    const runCleared = enemyHP <= 0 && wave >= DEGEN_ENEMIES.length;
+    if (runCleared) return;
 
-    const recoveryTimer = window.setTimeout(() => {
+    const timer = window.setTimeout(() => {
       if (playerHPRef.current > 0 || !fighter || phaseRef.current !== 'combat') return;
-      if (casinoTriggeredRef.current) {
-        casinoTriggeredRef.current = false;
-        setCasinoEntering(false);
-        if (casinoTimerRef.current) {
-          clearTimeout(casinoTimerRef.current);
-          casinoTimerRef.current = null;
-        }
-      }
-      addLog('The Bonk Casino opens its doors...');
-      goToDefeatCasino(waveRef.current, fighter);
-    }, 1800);
+      enterDefeatCasino(waveRef.current, fighter);
+    }, 50);
 
-    return () => {
-      window.clearTimeout(primaryTimer);
-      window.clearTimeout(recoveryTimer);
-    };
-  }, [phase, fighter, playerHP, goToDefeatCasino, addLog]);
+    return () => window.clearTimeout(timer);
+  }, [phase, fighter, playerHP, enemyHP, wave, enterDefeatCasino]);
 
   const claimVictorySpins = useCallback(() => {
     if (!fighter || casinoTriggeredRef.current) return;
@@ -523,7 +516,7 @@ export default function Home() {
     fighterChar: PlayableCharacter,
     enemyDefeated: boolean,
   ) => {
-    if (playerHPRef.current > 0 || casinoTriggeredRef.current) return;
+    if (playerHPRef.current > 0) return;
 
     addLog(`${fighterChar.name} is bonked out! The casino beckons...`);
     clearPlayerAttackVfx();
@@ -542,7 +535,7 @@ export default function Home() {
       addLog(`Double bonk! ${fighterChar.name} and ${enemy.name} KO each other — consolation spins await.`);
     }
 
-    goToDefeatCasino(reachedWave, fighterChar);
+    enterDefeatCasino(reachedWave, fighterChar);
   };
 
   const playEnemyTurn = async (blockActive: boolean) => {
