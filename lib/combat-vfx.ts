@@ -21,9 +21,17 @@ export function getEnemyMotionClass(enemyId: string): string {
     case 'fudder':
       return 'motion-fud';
     case 'leverage':
+    case 'flokir':
       return 'motion-liquidate';
     case 'scammer':
+    case 'giga-shiba':
       return 'motion-rug';
+    case 'popcatto':
+    case 'copycat-council':
+      return 'motion-chaos';
+    case 'pepe-unbothered':
+    case 'mogger':
+      return 'motion-read';
     default:
       return 'motion-degen';
   }

@@ -1,0 +1,22 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 300 300">
+  <ellipse cx="150" cy="275" rx="70" ry="10" fill="#000" opacity="0.3"/>
+  <g transform="translate(150,175)">
+    <ellipse cx="0" cy="40" rx="46" ry="52" fill="#fbbf24"/>
+    <ellipse cx="-18" cy="90" rx="13" ry="26" fill="#d97706"/>
+    <ellipse cx="18" cy="90" rx="13" ry="26" fill="#d97706"/>
+    <circle cx="0" cy="-28" r="48" fill="#fcd34d"/>
+    <path d="M-35 -55 L-45 -90 L-15 -65 Z" fill="#fbbf24"/>
+    <path d="M35 -55 L45 -90 L15 -65 Z" fill="#fbbf24"/>
+    <ellipse cx="-16" cy="-40" rx="10" ry="12" fill="white"/>
+    <ellipse cx="16" cy="-40" rx="10" ry="12" fill="white"/>
+    <circle cx="-14" cy="-38" r="5" fill="#111"/>
+    <circle cx="18" cy="-38" r="5" fill="#111"/>
+    <!-- giant POP mouth -->
+    <ellipse cx="0" cy="-5" rx="28" ry="32" fill="#111"/>
+    <ellipse cx="0" cy="0" rx="18" ry="20" fill="#ef4444"/>
+    <text x="-22" y="55" font-family="Arial Black" font-size="16" fill="#ef4444">POP</text>
+    <circle cx="55" cy="-50" r="18" fill="#fef08a" stroke="#eab308" stroke-width="2"/>
+    <text x="42" y="-45" font-family="Arial Black" font-size="10" fill="#854d0e">POP</text>
+  </g>
+  <text x="150" y="26" text-anchor="middle" font-family="Comic Sans MS,cursive" font-size="14" fill="#fbbf24" font-weight="bold">POPCATTO</text>
+</svg>

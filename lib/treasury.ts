@@ -16,9 +16,9 @@ import { treasuryPayoutsAllowed, treasuryPayoutsBlockedReason, recordPayoutAttem
 import {
   buildTreasurySplTransferOnly,
   checkTreasuryTxSafety,
-  recipientTokenAccountExists,
   simulateTreasuryTransfer,
 } from '@/lib/security/treasury-transfer';
+import { findWalletTokenAccount } from '@/lib/token-accounts';
 import { TREASURY_PUBLIC_KEY } from '@/lib/wallet/config';
 
 const TREASURY_SECRET_ENV_KEYS = [
@@ -316,10 +316,10 @@ export async function executeTokenExchange(
   }
 
   const treasuryAta = getAssociatedTokenAddressSync(mint, treasury.publicKey, false, TOKEN_PROGRAM_ID);
-  const recipientAta = getAssociatedTokenAddressSync(mint, recipient, false, TOKEN_PROGRAM_ID);
 
-  const recipientReady = await recipientTokenAccountExists(connection, recipientAta);
-  if (!recipientReady) {
+  // Accept any existing token account for this mint (not only the derived ATA).
+  const recipientToken = await findWalletTokenAccount(connection, recipient, mint);
+  if (!recipientToken) {
     return {
       ok: false,
       error: `Your wallet has no ${token.symbol} token account. Hold at least 1 ${token.symbol} first — the treasury never creates accounts or pays SOL rent.`,
@@ -353,6 +353,7 @@ export async function executeTokenExchange(
     mint,
     rawAmount,
     mintInfo.decimals,
+    recipientToken.address,
   );
 
   const safety = checkTreasuryTxSafety(

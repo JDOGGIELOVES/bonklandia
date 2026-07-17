@@ -3,12 +3,13 @@
 import { useCallback, useEffect, useState } from 'react';
 import { useConnection, useWallet } from '@solana/wallet-adapter-react';
 import { PublicKey } from '@solana/web3.js';
-import { getAccount, getAssociatedTokenAddressSync, getMint } from '@solana/spl-token';
+import { getMint } from '@solana/spl-token';
 import {
   FAM_TOKENS,
   formatTokenBalance,
   type FamCoinId,
 } from '@/lib/fam-tokens';
+import { loadWalletTokenBalancesByMint } from '@/lib/token-accounts';
 
 export type TokenBalance = {
   raw: bigint;
@@ -44,27 +45,43 @@ export function useFamTokenBalances() {
     setError(null);
 
     try {
-      const next: Partial<FamBalances> = {};
+      const mints = FAM_TOKENS.map(t => new PublicKey(t.mint));
+      const byMint = await loadWalletTokenBalancesByMint(connection, publicKey, mints);
 
+      // Decimals from mint accounts (or from scanned token amount when available)
+      const decimalsByMint = new Map<string, number>();
       await Promise.all(
         FAM_TOKENS.map(async token => {
-          const mint = new PublicKey(token.mint);
-          const mintInfo = await getMint(connection, mint);
-          const ata = getAssociatedTokenAddressSync(mint, publicKey);
-
+          const mintStr = token.mint;
+          const scanned = byMint.get(mintStr);
+          if (scanned && scanned.decimals > 0) {
+            decimalsByMint.set(mintStr, scanned.decimals);
+            return;
+          }
           try {
-            const account = await getAccount(connection, ata);
-            next[token.id] = {
-              raw: account.amount,
-              ui: formatTokenBalance(account.amount, mintInfo.decimals),
-              decimals: mintInfo.decimals,
-              accountExists: true,
-            };
+            const mintInfo = await getMint(connection, new PublicKey(mintStr));
+            decimalsByMint.set(mintStr, mintInfo.decimals);
           } catch {
-            next[token.id] = ZERO_BALANCE(mintInfo.decimals, false);
+            decimalsByMint.set(mintStr, 9);
           }
         }),
       );
+
+      const next: Partial<FamBalances> = {};
+      for (const token of FAM_TOKENS) {
+        const found = byMint.get(token.mint);
+        const decimals = decimalsByMint.get(token.mint) ?? 9;
+        if (found) {
+          next[token.id] = {
+            raw: found.amount,
+            ui: formatTokenBalance(found.amount, decimals),
+            decimals,
+            accountExists: true,
+          };
+        } else {
+          next[token.id] = ZERO_BALANCE(decimals, false);
+        }
+      }
 
       setBalances(next);
     } catch (err) {

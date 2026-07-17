@@ -1,5 +1,5 @@
 /** Bump when enemy portraits in public/assets/enemies/ are replaced */
-export const ENEMY_ASSET_VERSION = '20260716a';
+export const ENEMY_ASSET_VERSION = '20260717r';
 
 export function enemyImage(file: string): string {
   return `/assets/enemies/${file}?v=${ENEMY_ASSET_VERSION}`;
@@ -270,6 +270,17 @@ const ENEMY_ATTACK_SHOUTS: Record<string, string> = {
   copium: 'COPE!',
   leverage: 'REKT!',
   airdrop: 'DUMP!',
+  // Rival meme legion (Depths)
+  dooge: 'WOW!',
+  'pepe-unbothered': 'MEH!',
+  hatdog: 'HAT!',
+  flokir: 'VALHALLA!',
+  popcatto: 'POP!',
+  mewling: 'MEW!',
+  'based-brett': 'BASED!',
+  mogger: 'AURA!',
+  'giga-shiba': 'FAKE!',
+  'copycat-council': 'COPY!',
 };
 
 export function getEnemyAttackShout(enemy: Enemy): string {

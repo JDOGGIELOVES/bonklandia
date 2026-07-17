@@ -64,7 +64,7 @@ export const DEGEN_VALLEY_LORE = {
 export const CHARACTER_LORE: Record<string, CharacterLore> = {
   bonk: {
     id: 'bonk',
-    epithet: 'The Head Honcho',
+    epithet: 'Head of the Fam',
     backstory:
       'Bonk is the eldest spark of the First Bonk — born with the hammer-swing already in his bones. He does not strategize from the back; he leads from the front because that is where the degens are thickest. Every rally cry he shouts echoes off Bonk Hall and reminds the Fam why they fight.',
     legend:
@@ -73,45 +73,45 @@ export const CHARACTER_LORE: Record<string, CharacterLore> = {
   },
   bonga: {
     id: 'bonga',
-    epithet: 'Keeper of the Frequency',
+    epithet: "Bonk's Sister",
     backstory:
-      'Bonga hears what others miss — the vibration beneath FUD, the beat under jeet tears. She tuned the Bonk Hall bells to a frequency that restores vibe and melts cope. When the valley gets loud, she gets louder.',
+      "Bonga is Bonk's sister — she hears what others miss, the vibration beneath FUD, the beat under jeet tears. She tuned the Bonk Hall bells to a frequency that restores vibe and melts cope. When the valley gets loud, she gets louder.",
     legend:
       'Her Sonic Boom once shattered a Fudder\'s twelve-part Twitter thread mid-draft. The thread was never posted. Historians call it mercy.',
     quote: '"Feel the frequency. The chart is just dancing."',
   },
   bong: {
     id: 'bong',
-    epithet: 'Agent of Beautiful Chaos',
+    epithet: "Bonk's Brother",
     backstory:
-      'Nobody chose Bong. Bong happened. The Fam keeps him because every plan needs a paw that ignores the plan entirely. His damage is unpredictable, his courage unquestionable, and his regard for safety beautifully absent.',
+      "Bong is Bonk's brother — nobody chose him; Bong happened. The Fam keeps him because every plan needs a paw that ignores the plan entirely. His damage is unpredictable, his courage unquestionable, and his regard for safety beautifully absent.",
     legend:
       'During the Chaos Moon, Bong sent a counter-attack back at himself and still won the wave. The log entry simply reads: "acceptable."',
     quote: '"No plan. Just bonk. Trust the process."',
   },
   bink: {
     id: 'bink',
-    epithet: 'The Room Reader',
+    epithet: "Bonk's Sister",
     backstory:
-      'Bink bonks last and bonks right. She charted the valley before maps existed, memorized every degen tell, and developed diamond-handed blocking techniques the Fam still studies. Patience is her weapon; precision is her art.',
+      "Bink is Bonk's sister — she bonks last and bonks right. She charted the valley before maps existed, memorized every degen tell, and developed diamond-handed blocking techniques the Fam still studies. Patience is her weapon; precision is her art.",
     legend:
       'She once defeated Sir Jeets-A-Lot by waiting. Jeets sold. Bink bonked. The timeline corrected itself.',
     quote: '"I\'ve read the room. You\'re already cooked."',
   },
   bonnie: {
     id: 'bonnie',
-    epithet: 'Heart of the Fam',
+    epithet: "Bonk's Sister",
     backstory:
-      'Bonnie bonks with compassion and somehow it hurts more. She joined after the Cope Wars, when the Fam was fractured and tired. Her hugs restore HP. Her pep talks restore vibe. Her comfort bonks restore faith.',
+      "Bonnie is Bonk's sister — she bonks with compassion and somehow it hurts more. She joined after the Cope Wars, when the Fam was fractured and tired. Her hugs restore HP. Her pep talks restore vibe. Her comfort bonks restore faith.",
     legend:
       'The Fam Hug ended a feud between Bong and a mirror. Only Bonnie could bonk someone into self-acceptance.',
     quote: '"We bonk with love. Even degens need it."',
   },
   beng: {
     id: 'beng',
-    epithet: 'The Wall',
+    epithet: "Bonk's Sister",
     backstory:
-      'Beng stands where others fall. Built like Bonk Hall\'s front door, she absorbs counter-attacks that would bonk anyone else out of the valley. Slow, steady, immovable — the guardian every bloodline trusts at their back.',
+      "Beng is Bonk's sister — she stands where others fall. Built like Bonk Hall's front door, she absorbs counter-attacks that would bonk anyone else out of the valley. Slow, steady, immovable — the guardian every bloodline trusts at their back.",
     legend:
       'At the Bridge of Paper Hands, she took seventeen counter-attacks in a row and bonked once. The bridge collapsed from shame.',
     quote: '"Stand behind me. I bonk first."',

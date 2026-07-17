@@ -1,0 +1,21 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 300 300">
+  <ellipse cx="150" cy="275" rx="70" ry="10" fill="#000" opacity="0.3"/>
+  <g transform="translate(150,175)">
+    <ellipse cx="0" cy="35" rx="48" ry="55" fill="#4ade80"/>
+    <ellipse cx="-20" cy="90" rx="14" ry="28" fill="#22c55e"/>
+    <ellipse cx="20" cy="90" rx="14" ry="28" fill="#22c55e"/>
+    <ellipse cx="0" cy="-30" rx="50" ry="48" fill="#86efac"/>
+    <ellipse cx="-18" cy="-38" rx="14" ry="10" fill="#bbf7d0"/>
+    <ellipse cx="18" cy="-38" rx="14" ry="10" fill="#bbf7d0"/>
+    <ellipse cx="-18" cy="-36" rx="8" ry="4" fill="#14532d"/>
+    <ellipse cx="18" cy="-36" rx="8" ry="4" fill="#14532d"/>
+    <line x1="-12" y1="-12" x2="12" y2="-12" stroke="#14532d" stroke-width="3"/>
+    <ellipse cx="0" cy="5" rx="16" ry="10" fill="#166534"/>
+    <ellipse cx="55" cy="-20" rx="14" ry="18" fill="#86efac"/>
+    <circle cx="55" cy="-35" r="12" fill="#fef3c7" stroke="#d97706" stroke-width="2"/>
+    <rect x="52" y="-28" width="6" height="14" fill="#fef3c7"/>
+    <text x="-70" y="-60" font-family="Comic Sans MS,cursive" font-size="12" fill="#94a3b8">feels</text>
+    <text x="-72" y="-46" font-family="Comic Sans MS,cursive" font-size="12" fill="#94a3b8">nothing</text>
+  </g>
+  <text x="150" y="26" text-anchor="middle" font-family="Comic Sans MS,cursive" font-size="13" fill="#4ade80" font-weight="bold">PEPÉ UNBOTHERED</text>
+</svg>

@@ -7,6 +7,9 @@ export default function LandingHero() {
     <header className="tavern-entrance">
       <div className="tavern-entrance-nav">
         <BonkBankBadge />
+        <Link href="/depths" className="tavern-nav-plaque">
+          {BRAND.depths}
+        </Link>
         <Link href="/cashier" className="tavern-nav-plaque">
           {BRAND.cashier}
         </Link>

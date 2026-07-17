@@ -86,9 +86,13 @@ export function buildTreasurySplTransferOnly(
   mint: PublicKey,
   rawAmount: bigint,
   decimals: number,
+  /** Existing player token account (ATA or legacy). Must already exist — never created here. */
+  recipientTokenAccount?: PublicKey,
 ): { transaction: Transaction; treasuryAta: PublicKey; recipientAta: PublicKey } {
   const treasuryAta = getAssociatedTokenAddressSync(mint, treasury, false, TOKEN_PROGRAM_ID);
-  const recipientAta = getAssociatedTokenAddressSync(mint, recipient, false, TOKEN_PROGRAM_ID);
+  const recipientAta =
+    recipientTokenAccount ??
+    getAssociatedTokenAddressSync(mint, recipient, false, TOKEN_PROGRAM_ID);
 
   const tx = new Transaction().add(
     createTransferCheckedInstruction(

@@ -4,9 +4,8 @@ import { getFamToken, getSolanaRpcUrl, type FamCoinId } from '@/lib/fam-tokens';
 import { creditWalletChips, debitWalletChips } from '@/lib/security/chip-ledger';
 import { checkWalletExchangeLimit } from '@/lib/security/exchange-limits';
 import { checkRateLimit, getClientIp } from '@/lib/security/rate-limit';
-import { recipientTokenAccountExists } from '@/lib/security/treasury-transfer';
 import { executeTokenExchange } from '@/lib/treasury';
-import { getAssociatedTokenAddressSync, TOKEN_PROGRAM_ID } from '@solana/spl-token';
+import { walletHasTokenAccount } from '@/lib/token-accounts';
 
 const VALID_IDS: FamCoinId[] = ['bonk', 'bonga', 'bong', 'bink', 'bonnie', 'beng'];
 
@@ -60,12 +59,11 @@ export async function POST(request: Request) {
     try {
       const recipient = new PublicKey(walletAddress);
       const mint = new PublicKey(token.mint);
-      const recipientAta = getAssociatedTokenAddressSync(mint, recipient, false, TOKEN_PROGRAM_ID);
-      const exists = await recipientTokenAccountExists(connection, recipientAta);
+      const exists = await walletHasTokenAccount(connection, recipient, mint);
       if (!exists) {
         return NextResponse.json(
           {
-            error: `Your wallet has no ${token.symbol} token account. Hold at least 1 ${token.symbol} first — the treasury never creates accounts or pays SOL.`,
+            error: `Your wallet has no ${token.symbol} token account for mint ${token.mint.slice(0, 8)}…. Hold at least 1 ${token.symbol} in this connected wallet — the treasury never creates accounts or pays SOL.`,
             code: 'NO_TOKEN_ACCOUNT',
           },
           { status: 400 },

@@ -6,13 +6,42 @@ import { WalletMultiButton } from '@solana/wallet-adapter-react-ui';
 import { PublicKey, SystemProgram, Transaction } from '@solana/web3.js';
 import type { PaidSpinQuote } from '@/lib/sol-payment';
 
+type PaidSpinGranted = {
+  settleToken?: string;
+  maxWinnings?: number;
+};
+
 type PaidSpinButtonProps = {
   disabled?: boolean;
   sessionId: string;
-  onSpinGranted: () => void;
+  settleToken?: string;
+  onSpinGranted: (update?: PaidSpinGranted) => void;
 };
 
-export default function PaidSpinButton({ disabled, sessionId, onSpinGranted }: PaidSpinButtonProps) {
+function walletErrorMessage(err: unknown): string {
+  if (!(err instanceof Error)) return 'Payment failed.';
+  const msg = err.message || 'Payment failed.';
+  if (/User rejected|rejected the request|Approval Denied/i.test(msg)) {
+    return 'Wallet cancelled the payment.';
+  }
+  if (/blockhash|expired|not valid/i.test(msg)) {
+    return 'Network was slow — try the Quarter Slot again.';
+  }
+  if (/403|429|fetch|network|Failed to fetch|timeout/i.test(msg)) {
+    return 'Solana RPC is busy — wait a moment and try again.';
+  }
+  if (/insufficient|0x1/i.test(msg)) {
+    return 'Not enough SOL for the 25¢ spin plus network fees.';
+  }
+  return msg;
+}
+
+export default function PaidSpinButton({
+  disabled,
+  sessionId,
+  settleToken,
+  onSpinGranted,
+}: PaidSpinButtonProps) {
   const { connection } = useConnection();
   const { publicKey, sendTransaction, connected } = useWallet();
   const [quote, setQuote] = useState<PaidSpinQuote | null>(null);
@@ -63,7 +92,10 @@ export default function PaidSpinButton({ disabled, sessionId, onSpinGranted }: P
       tx.recentBlockhash = blockhash;
       tx.feePayer = publicKey;
 
-      const signature = await sendTransaction(tx, connection);
+      const signature = await sendTransaction(tx, connection, {
+        preflightCommitment: 'confirmed',
+        skipPreflight: false,
+      });
       await connection.confirmTransaction({ signature, blockhash, lastValidBlockHeight }, 'confirmed');
 
       const res = await fetch('/api/casino/paid-spin', {
@@ -73,22 +105,34 @@ export default function PaidSpinButton({ disabled, sessionId, onSpinGranted }: P
           signature,
           payerWallet: publicKey.toBase58(),
           sessionId,
+          settleToken,
         }),
       });
 
-      const data = await res.json();
+      const data = await res.json() as {
+        error?: string;
+        settleToken?: string;
+        maxWinnings?: number;
+      };
       if (!res.ok) {
-        setError(data.error ?? 'Payment verification failed.');
+        setError(
+          data.error
+            ? `${data.error} (tx ${signature.slice(0, 8)}… — payment may have landed; contact support with the signature if the spin was not granted.)`
+            : 'Payment verification failed.',
+        );
         return;
       }
 
-      onSpinGranted();
+      onSpinGranted({
+        settleToken: data.settleToken,
+        maxWinnings: data.maxWinnings,
+      });
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Payment failed.');
+      setError(walletErrorMessage(err));
     } finally {
       setLoading(false);
     }
-  }, [connected, publicKey, quote, connection, sendTransaction, onSpinGranted, sessionId]);
+  }, [connected, publicKey, quote, connection, sendTransaction, onSpinGranted, sessionId, settleToken]);
 
   return (
     <div className="paid-spin-panel">

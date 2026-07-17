@@ -231,17 +231,21 @@ export default function CasinoSlot({ session, secureSession, fighter, onExit, on
             totalWinnings,
           }),
         });
-        const data = await res.json();
+        const data = await res.json() as { error?: string; settleToken?: string };
         if (!res.ok) {
           setSettleError(data.error ?? 'Could not verify casino winnings for claim.');
           return;
         }
         settledWinningsRef.current = totalWinnings;
         setSettleError(null);
+        const nextSecure = data.settleToken
+          ? { ...activeSecure, settleToken: data.settleToken }
+          : activeSecure;
+        if (data.settleToken) setActiveSecure(nextSecure);
         sessionStorage.setItem(
           'bonk-casino-pending',
           JSON.stringify({
-            ...activeSecure,
+            ...nextSecure,
             totalWinnings,
           }),
         );
@@ -256,10 +260,29 @@ export default function CasinoSlot({ session, secureSession, fighter, onExit, on
   const ladderPrimed = ladderSteps >= JACKPOT_LADDER_STEPS;
   const selectedBet = getChipBetOption(selectedBetChips);
 
-  const grantPaidSpin = useCallback(() => {
+  const grantPaidSpin = useCallback((update?: { settleToken?: string; maxWinnings?: number }) => {
+    if (update?.settleToken) {
+      setActiveSecure(prev => {
+        const next = {
+          ...prev,
+          settleToken: update.settleToken!,
+          maxWinnings: update.maxWinnings ?? prev.maxWinnings,
+          localOnly: false,
+        };
+        try {
+          sessionStorage.setItem(
+            'bonk-casino-pending',
+            JSON.stringify({ ...next, totalWinnings }),
+          );
+        } catch {
+          // private mode
+        }
+        return next;
+      });
+    }
     setSpinsLeft(s => s + 1);
     setLastMessage('Quarter Slot Machine — 1 spin unlocked. Yank the lever!');
-  }, []);
+  }, [totalWinnings]);
 
   const pullLever = useCallback(() => {
     if (spinning || spinsLeft <= 0) return;
@@ -465,6 +488,7 @@ export default function CasinoSlot({ session, secureSession, fighter, onExit, on
             <PaidSpinButton
               disabled={spinning}
               sessionId={activeSecure.sessionId}
+              settleToken={activeSecure.settleToken}
               onSpinGranted={grantPaidSpin}
             />
           </div>
@@ -548,11 +572,23 @@ export default function CasinoSlot({ session, secureSession, fighter, onExit, on
               </div>
 
               <div className="slot-lever-column">
-                <div className="slot-lever-housing">
+                <div className="slot-lever-housing" aria-hidden>
+                  {/*
+                    One-armed bandit: fixed side socket is the hinge.
+                    Stick + red ball form a rigid arm that swings down when pulled.
+                  */}
                   <div className={`slot-lever-assembly ${leverPulled ? 'slot-lever-pulled' : ''}`}>
-                    <div className="slot-lever-ball" />
-                    <div className="slot-lever-stick" />
-                    <div className="slot-lever-socket" />
+                    <div className="slot-lever-arm">
+                      <div className="slot-lever-ball">
+                        <span className="slot-lever-ball-shine" />
+                      </div>
+                      <div className="slot-lever-stick">
+                        <span className="slot-lever-stick-ridge" />
+                      </div>
+                    </div>
+                    <div className="slot-lever-socket">
+                      <span className="slot-lever-socket-bolt" />
+                    </div>
                   </div>
                 </div>
                 <div className={`slot-bonga-wrap ${pawReady ? 'slot-bonga-ready' : ''}`}>
@@ -623,6 +659,7 @@ export default function CasinoSlot({ session, secureSession, fighter, onExit, on
               <PaidSpinButton
                 disabled={spinning}
                 sessionId={activeSecure.sessionId}
+                settleToken={activeSecure.settleToken}
                 onSpinGranted={grantPaidSpin}
               />
             </div>

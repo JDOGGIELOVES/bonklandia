@@ -1,5 +1,5 @@
 /** Bump when character portraits in public/assets/characters/ are replaced */
-export const CHARACTER_ASSET_VERSION = '20260715e';
+export const CHARACTER_ASSET_VERSION = '20260717a';
 
 export function characterImage(file: string): string {
   return `/assets/characters/${file}?v=${CHARACTER_ASSET_VERSION}`;
@@ -67,8 +67,8 @@ export const PLAYABLE_CHARACTERS: PlayableCharacter[] = [
   {
     id: 'bonk',
     name: 'Bonk',
-    role: 'Head Honcho',
-    tagline: 'Leads from the front. Heavy hits, pure conviction.',
+    role: 'Head of the Fam',
+    tagline: 'The original. Leads from the front — heavy hits, pure conviction.',
     img: characterImage('bonk.png'),
     hp: 180,
     power: 9,
@@ -107,8 +107,8 @@ export const PLAYABLE_CHARACTERS: PlayableCharacter[] = [
   {
     id: 'bonga',
     name: 'Bonga',
-    role: 'Sister of the Frequency',
-    tagline: 'She keeps the rhythm. Vibe specialist.',
+    role: "Bonk's Sister",
+    tagline: "Bonk's sister — she keeps the rhythm. Vibe specialist.",
     img: characterImage('bonga.png'),
     hp: 150,
     power: 6,
@@ -146,8 +146,8 @@ export const PLAYABLE_CHARACTERS: PlayableCharacter[] = [
   {
     id: 'bong',
     name: 'Bong',
-    role: 'Chaos Agent',
-    tagline: 'Unpredictable. Fast. Absolutely unhinged.',
+    role: "Bonk's Brother",
+    tagline: "Bonk's brother — unpredictable, fast, absolutely unhinged.",
     img: characterImage('bong.png'),
     hp: 140,
     power: 7,
@@ -184,8 +184,8 @@ export const PLAYABLE_CHARACTERS: PlayableCharacter[] = [
   {
     id: 'bink',
     name: 'Bink',
-    role: 'Strategist Sister',
-    tagline: 'She bonks with patience — calculated and diamond-handed.',
+    role: "Bonk's Sister",
+    tagline: "Bonk's sister — she bonks with patience, calculated and diamond-handed.",
     img: characterImage('bink.png'),
     hp: 200,
     power: 6,
@@ -223,8 +223,8 @@ export const PLAYABLE_CHARACTERS: PlayableCharacter[] = [
   {
     id: 'bonnie',
     name: 'Bonnie',
-    role: 'Heart of the Fam',
-    tagline: 'She heals the squad. Keeps everyone in the fight.',
+    role: "Bonk's Sister",
+    tagline: "Bonk's sister — she heals the squad and keeps everyone in the fight.",
     img: characterImage('bonnie.png'),
     hp: 160,
     power: 5,
@@ -265,8 +265,8 @@ export const PLAYABLE_CHARACTERS: PlayableCharacter[] = [
   {
     id: 'beng',
     name: 'Beng',
-    role: 'Guardian Sister',
-    tagline: 'The tank. She absorbs hits and crushes degens.',
+    role: "Bonk's Sister",
+    tagline: "Bonk's sister — the tank. She absorbs hits and crushes degens.",
     img: characterImage('beng.png'),
     hp: 220,
     power: 8,

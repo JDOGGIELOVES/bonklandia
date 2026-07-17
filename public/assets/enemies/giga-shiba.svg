@@ -1,0 +1,27 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 300 300">
+  <ellipse cx="150" cy="275" rx="78" ry="12" fill="#000" opacity="0.3"/>
+  <g transform="translate(150,165)">
+    <ellipse cx="0" cy="45" rx="58" ry="65" fill="#e8c84a"/>
+    <ellipse cx="-26" cy="105" rx="18" ry="36" fill="#b8860b"/>
+    <ellipse cx="26" cy="105" rx="18" ry="36" fill="#b8860b"/>
+    <circle cx="0" cy="-28" r="56" fill="#f0d878"/>
+    <ellipse cx="-32" cy="-70" rx="16" ry="22" fill="#e8c84a"/>
+    <ellipse cx="32" cy="-70" rx="16" ry="22" fill="#e8c84a"/>
+    <ellipse cx="-18" cy="-38" rx="13" ry="15" fill="white"/>
+    <ellipse cx="18" cy="-38" rx="13" ry="15" fill="white"/>
+    <circle cx="-15" cy="-35" r="6" fill="#111"/>
+    <circle cx="21" cy="-35" r="6" fill="#111"/>
+    <ellipse cx="0" cy="-15" rx="11" ry="8" fill="#5c4033"/>
+    <path d="M-20 -2 Q0 14 20 -2" stroke="#111" stroke-width="3" fill="none"/>
+    <!-- cracked gold paint -->
+    <path d="M-40 -20 L-20 10" stroke="#92400e" stroke-width="2" opacity="0.7"/>
+    <path d="M25 -50 L40 -10" stroke="#92400e" stroke-width="2" opacity="0.7"/>
+    <rect x="-48" y="15" width="96" height="20" fill="#7f1d1d" rx="3"/>
+    <text x="-42" y="29" font-family="Arial Black" font-size="9" fill="#fca5a5">IMPOSTOR</text>
+    <rect x="50" y="-40" width="45" height="55" fill="#fef3c7" stroke="#ca8a04" stroke-width="2" rx="3" transform="rotate(8)"/>
+    <text x="55" y="-20" font-family="Arial" font-size="7" fill="#854d0e" transform="rotate(8)">FAKE</text>
+    <text x="52" y="-8" font-family="Arial" font-size="7" fill="#854d0e" transform="rotate(8)">FIRST</text>
+    <text x="54" y="4" font-family="Arial" font-size="7" fill="#854d0e" transform="rotate(8)">BONK</text>
+  </g>
+  <text x="150" y="24" text-anchor="middle" font-family="Comic Sans MS,cursive" font-size="13" fill="#f0d878" font-weight="bold">GIGA SHIBA IMPOSTOR</text>
+</svg>

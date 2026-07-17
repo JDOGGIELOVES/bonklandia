@@ -71,38 +71,58 @@ function getTxSigner(tx: ParsedTransactionWithMeta): string | null {
   return signer?.pubkey.toBase58() ?? null;
 }
 
+const COMPUTE_BUDGET_PROGRAM = 'ComputeBudget111111111111111111111111111111';
+
+/** Wallets often inject ComputeBudget ixs — allow those, require exactly one SOL transfer. */
 function txOnlyTransfersSolToTreasury(
   tx: ParsedTransactionWithMeta,
   treasury: PublicKey,
 ): { ok: true } | { ok: false; error: string } {
-  if ((tx.meta?.innerInstructions?.length ?? 0) > 0) {
-    return { ok: false, error: 'Composite transactions are not accepted for Quarter Slot.' };
-  }
-
+  // Inner ixs can appear for unrelated runtime bookkeeping; still require balance proof below.
   const instructions = tx.transaction.message.instructions;
-  if (instructions.length < 1 || instructions.length > 2) {
-    return { ok: false, error: 'Quarter Slot payment must be a single SOL transfer.' };
+  if (instructions.length < 1 || instructions.length > 6) {
+    return { ok: false, error: 'Quarter Slot payment must be a simple SOL transfer.' };
   }
 
+  let transferCount = 0;
   for (const ix of instructions) {
+    const programId =
+      'programId' in ix && ix.programId
+        ? typeof ix.programId === 'string'
+          ? ix.programId
+          : (ix.programId as { toBase58?: () => string }).toBase58?.() ?? ''
+        : '';
+
+    if (programId === COMPUTE_BUDGET_PROGRAM || programId.startsWith('ComputeBudget')) {
+      continue;
+    }
+
+    const program = 'program' in ix ? String((ix as { program?: string }).program ?? '') : '';
+    if (program === 'spl-memo' || program === 'compute-budget') {
+      continue;
+    }
+
     if (!('parsed' in ix) || !ix.parsed || typeof ix.parsed !== 'object') {
       return { ok: false, error: 'Quarter Slot payment must be a parsed SOL transfer.' };
     }
 
-    const parsed = ix.parsed as { type?: string; info?: { destination?: string; lamports?: number } };
-    if (parsed.type !== 'transfer') {
+    const parsed = ix.parsed as {
+      type?: string;
+      info?: { destination?: string; lamports?: number };
+    };
+
+    if (parsed.type !== 'transfer' && parsed.type !== 'transferChecked') {
       return { ok: false, error: 'Only SOL transfer instructions are accepted.' };
     }
+
+    transferCount += 1;
     if (parsed.info?.destination && parsed.info.destination !== treasury.toBase58()) {
       return { ok: false, error: 'Payment must be sent to the shared treasury wallet.' };
     }
   }
 
-  const invoked = tx.meta?.logMessages?.some(line =>
-    line.includes(SystemProgram.programId.toBase58()),
-  );
-  if (invoked === false) {
-    return { ok: false, error: 'No system transfer detected.' };
+  if (transferCount !== 1) {
+    return { ok: false, error: 'Quarter Slot payment must include exactly one SOL transfer.' };
   }
 
   return { ok: true };

@@ -23,6 +23,16 @@ const ENEMY_SOUND: Record<string, EnemyAttackSound> = {
   astrologer: 'mystic',
   copium: 'cope',
   airdrop: 'dump',
+  dooge: 'cope',
+  'pepe-unbothered': 'fud',
+  hatdog: 'shill',
+  flokir: 'liquidation',
+  popcatto: 'dump',
+  mewling: 'panic',
+  'based-brett': 'shill',
+  mogger: 'mystic',
+  'giga-shiba': 'rug',
+  'copycat-council': 'fud',
 };
 
 export function getEnemySoundType(enemyId: string): EnemyAttackSound {

@@ -211,7 +211,7 @@ export default function CashierPanel({ showBackLink = true }: CashierPanelProps)
       if (!walletCanReceiveToken(balances[coinId])) {
         setMessage({
           ok: false,
-          text: `Your wallet has no ${token.symbol} token account yet. Hold at least 1 ${token.symbol} first — the cashier cannot create one for you.`,
+          text: `This connected wallet shows no ${token.symbol} account yet (mint ${token.mint.slice(0, 6)}…). Make sure the same wallet that holds ${token.symbol} is connected, then hit refresh. Cashier never creates token accounts.`,
         });
         return;
       }
@@ -276,6 +276,9 @@ export default function CashierPanel({ showBackLink = true }: CashierPanelProps)
           </p>
           {showBackLink && (
             <div className="cashier-nav mt-5 flex flex-wrap justify-center gap-4">
+              <Link href="/depths" className="art-btn px-6 py-2 text-[#f0d878] inline-block">
+                {BRAND.depths}
+              </Link>
               <Link href="/" className="art-btn px-6 py-2 text-[#f0d878] inline-block">
                 ← Back to {BRAND.name}
               </Link>

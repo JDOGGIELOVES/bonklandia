@@ -115,15 +115,65 @@ export class CasinoAudioEngine {
     this.unlocked = false;
   }
 
+  /**
+   * Iconic American one-armed-bandit lever:
+   * grip → engage clunk → ratchet scrape down → bottom thunk → spring return.
+   * Timed to the ~0.85s lever-arm-yank visual.
+   */
   async playLeverPull() {
     const ctx = await this.ensureContext();
     if (!ctx || !this.sfxBus) return;
     const t = ctx.currentTime;
+    const bus = this.sfxBus;
 
-    this.playNoiseBurst(ctx, this.sfxBus, t, 0.06, 180, 0.22, 'highpass');
-    this.playTone(ctx, this.sfxBus, t, 120, 'sine', 0.18, 0.09, 80);
-    this.playTone(ctx, this.sfxBus, t + 0.04, 880, 'triangle', 0.12, 0.05, 0.02);
-    this.playTone(ctx, this.sfxBus, t + 0.08, 2400, 'sine', 0.08, 0.04, 0.015, -400);
+    // 1. Hand on the red ball (soft grip)
+    this.playNoiseBurst(ctx, bus, t, 0.035, 1100, 0.1, 'bandpass');
+    this.playTone(ctx, bus, t, 210, 'sine', 0.07, 0.008, 0.04);
+
+    // 2. Mechanism engages — heavy “ka-chunk”
+    const engage = t + 0.06;
+    this.playTone(ctx, bus, engage, 78, 'sine', 0.42, 0.006, 0.14);
+    this.playTone(ctx, bus, engage, 155, 'triangle', 0.22, 0.008, 0.1);
+    this.playTone(ctx, bus, engage + 0.012, 310, 'square', 0.08, 0.004, 0.04, 0, 900);
+    this.playNoiseBurst(ctx, bus, engage, 0.055, 280, 0.32, 'lowpass');
+
+    // 3. Arm swings down — metal scrape + spring load
+    const swingStart = t + 0.1;
+    this.playLeverScrape(ctx, bus, swingStart, 0.26, 'down');
+    this.playTone(ctx, bus, swingStart, 55, 'sine', 0.14, 0.05, 0.22, 0, 140);
+    this.playTone(ctx, bus, swingStart, 140, 'triangle', 0.1, 0.04, 0.2, -80, 400);
+
+    // 4. Ratchet teeth clicking through the stroke
+    for (let i = 0; i < 8; i++) {
+      const rt = swingStart + 0.018 + i * 0.028;
+      this.playRatchetClick(ctx, bus, rt, 0.85 - i * 0.06);
+    }
+
+    // 5. Bottom stop — the iconic solid metal THUNK
+    const bottom = t + 0.36;
+    this.playTone(ctx, bus, bottom, 62, 'sine', 0.55, 0.004, 0.18);
+    this.playTone(ctx, bus, bottom, 118, 'triangle', 0.32, 0.005, 0.14);
+    this.playTone(ctx, bus, bottom + 0.01, 240, 'sine', 0.16, 0.004, 0.08);
+    this.playNoiseBurst(ctx, bus, bottom, 0.09, 180, 0.45, 'lowpass');
+    this.playNoiseBurst(ctx, bus, bottom + 0.015, 0.05, 900, 0.18, 'highpass');
+    this.playTone(ctx, bus, bottom + 0.03, 480, 'sine', 0.08, 0.01, 0.12, 0, 1200);
+
+    // 6. Spring tension at bottom of stroke
+    this.playTone(ctx, bus, bottom + 0.08, 90, 'sine', 0.06, 0.04, 0.16, 0, 200);
+
+    // 7. Spring return — arm flies back up
+    const ret = t + 0.54;
+    this.playLeverScrape(ctx, bus, ret, 0.2, 'up');
+    this.playSpringZing(ctx, bus, ret, 0.18);
+    for (let i = 0; i < 5; i++) {
+      this.playRatchetClick(ctx, bus, ret + 0.02 + i * 0.032, 0.35 - i * 0.04);
+    }
+
+    // 8. Settles home at the top
+    const home = t + 0.78;
+    this.playTone(ctx, bus, home, 130, 'sine', 0.2, 0.005, 0.08);
+    this.playTone(ctx, bus, home + 0.008, 260, 'triangle', 0.1, 0.004, 0.05);
+    this.playNoiseBurst(ctx, bus, home, 0.04, 500, 0.16, 'bandpass');
   }
 
   async playSpinSequence(spinDurationMs: number, spinStartDelayMs: number) {
@@ -316,6 +366,85 @@ export class CasinoAudioEngine {
     this.reelStopTimers = [];
   }
 
+  /** Short metallic ratchet tooth — the classic bandit “tick-tick” under the pull. */
+  private playRatchetClick(ctx: AudioContext, dest: GainNode, start: number, weight: number) {
+    const v = Math.max(0.04, weight);
+    this.playNoiseBurst(ctx, dest, start, 0.018, 1600 + weight * 400, 0.16 * v, 'bandpass');
+    this.playTone(ctx, dest, start, 900 + weight * 200, 'square', 0.07 * v, 0.002, 0.02, 0, 2800);
+    this.playTone(ctx, dest, start, 180 + weight * 40, 'triangle', 0.09 * v, 0.002, 0.03);
+  }
+
+  /**
+   * Metal-on-metal scrape of the arm in the housing.
+   * Filter sweeps with the stroke so the mass of the lever is audible.
+   */
+  private playLeverScrape(
+    ctx: AudioContext,
+    dest: GainNode,
+    start: number,
+    duration: number,
+    direction: 'down' | 'up',
+  ) {
+    const bufferSize = Math.floor(ctx.sampleRate * duration);
+    const buffer = ctx.createBuffer(1, bufferSize, ctx.sampleRate);
+    const data = buffer.getChannelData(0);
+    for (let i = 0; i < bufferSize; i++) {
+      // Slightly colored noise (less pure white) reads more like metal friction
+      data[i] = (Math.random() * 2 - 1) * (0.55 + 0.45 * Math.random());
+    }
+
+    const src = ctx.createBufferSource();
+    src.buffer = buffer;
+
+    const filter = ctx.createBiquadFilter();
+    filter.type = 'bandpass';
+    filter.Q.setValueAtTime(1.8, start);
+    const f0 = direction === 'down' ? 1400 : 400;
+    const f1 = direction === 'down' ? 380 : 1600;
+    filter.frequency.setValueAtTime(f0, start);
+    filter.frequency.exponentialRampToValueAtTime(Math.max(f1, 80), start + duration);
+
+    const gain = ctx.createGain();
+    gain.gain.setValueAtTime(0.0001, start);
+    gain.gain.exponentialRampToValueAtTime(0.22, start + 0.03);
+    gain.gain.setValueAtTime(0.2, start + duration * 0.55);
+    gain.gain.exponentialRampToValueAtTime(0.0001, start + duration);
+
+    src.connect(filter);
+    filter.connect(gain);
+    gain.connect(dest);
+    src.start(start);
+    src.stop(start + duration + 0.02);
+  }
+
+  /** Rising spring “zing” as the lever snaps back upright. */
+  private playSpringZing(ctx: AudioContext, dest: GainNode, start: number, duration: number) {
+    const osc = ctx.createOscillator();
+    const gain = ctx.createGain();
+    const filter = ctx.createBiquadFilter();
+
+    osc.type = 'triangle';
+    osc.frequency.setValueAtTime(220, start);
+    osc.frequency.exponentialRampToValueAtTime(980, start + duration);
+
+    filter.type = 'lowpass';
+    filter.frequency.setValueAtTime(2400, start);
+    filter.frequency.exponentialRampToValueAtTime(4200, start + duration);
+
+    gain.gain.setValueAtTime(0.0001, start);
+    gain.gain.exponentialRampToValueAtTime(0.14, start + 0.02);
+    gain.gain.exponentialRampToValueAtTime(0.0001, start + duration);
+
+    osc.connect(filter);
+    filter.connect(gain);
+    gain.connect(dest);
+    osc.start(start);
+    osc.stop(start + duration + 0.03);
+
+    // Harmonic shimmer over the spring
+    this.playTone(ctx, dest, start + 0.02, 660, 'sine', 0.05, 0.02, duration * 0.7, 0, 3000);
+  }
+
   private playTone(
     ctx: AudioContext,
     dest: GainNode,
@@ -392,5 +521,8 @@ export function getCasinoAudioEngine(): CasinoAudioEngine {
   return sharedEngine;
 }
 
-export const CASINO_SPIN_START_DELAY_MS = 480;
+/** Delay before reels start so the lever bottom-thunk can land first. */
+export const CASINO_SPIN_START_DELAY_MS = 420;
 export const CASINO_SPIN_DURATION_MS = 2600;
+/** Full lever pull SFX + visual cycle. */
+export const CASINO_LEVER_PULL_MS = 850;

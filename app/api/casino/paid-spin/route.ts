@@ -14,7 +14,7 @@ export async function GET() {
 export async function POST(request: Request) {
   const ip = getClientIp(request);
 
-  let body: { signature?: string; payerWallet?: string; sessionId?: string };
+  let body: { signature?: string; payerWallet?: string; sessionId?: string; settleToken?: string };
 
   try {
     body = await request.json();
@@ -25,6 +25,7 @@ export async function POST(request: Request) {
   const signature = body.signature?.trim();
   const payerWallet = body.payerWallet?.trim();
   const sessionId = body.sessionId?.trim();
+  const settleToken = body.settleToken?.trim();
 
   if (!signature) {
     return NextResponse.json({ error: 'Transaction signature required.' }, { status: 400 });
@@ -62,11 +63,22 @@ export async function POST(request: Request) {
 
   // Local consolation sessions are client-only; still verify SOL payment, skip server ledger.
   const isLocalSession = sessionId.startsWith('local-');
+  let nextSettleToken: string | undefined;
+  let maxWinnings: number | undefined;
+
   if (!isLocalSession) {
-    const sessionUpdate = registerPaidSpinForSession(sessionId);
+    if (!settleToken) {
+      return NextResponse.json(
+        { error: 'Casino vault token required for Quarter Slot (re-enter casino if this persists).' },
+        { status: 400 },
+      );
+    }
+    const sessionUpdate = registerPaidSpinForSession(sessionId, settleToken);
     if (!sessionUpdate.ok) {
       return NextResponse.json({ error: sessionUpdate.error }, { status: 400 });
     }
+    nextSettleToken = sessionUpdate.settleToken;
+    maxWinnings = sessionUpdate.maxWinnings;
   }
 
   markSignatureUsed(signature, 'quarter-slot');
@@ -77,5 +89,7 @@ export async function POST(request: Request) {
     paidUsd: quote.usd,
     lamports: quote.lamports,
     localSession: isLocalSession,
+    settleToken: nextSettleToken,
+    maxWinnings,
   });
 }
