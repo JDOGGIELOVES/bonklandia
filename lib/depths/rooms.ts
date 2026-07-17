@@ -86,11 +86,15 @@ export function buildDepthsFloor(floor: number, run = 1): DepthsRoom[] {
   ];
 }
 
+/**
+ * Flat chip drips are intentionally tiny — real rewards route through the
+ * Bonklandia Bandit (free victory pulls on floor clear, quarter slots on room wins).
+ */
 export const DEPTHS_CHIP_REWARDS = {
-  fight: 20,
-  elite: 40,
-  boss: 80,
+  fight: 0,
+  elite: 0,
+  boss: 0,
   rest: 0,
   event: 0,
-  clearBonus: 50,
+  clearBonus: 0,
 } as const;

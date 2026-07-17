@@ -116,9 +116,25 @@ type CasinoSlotProps = {
   fighter: PlayableCharacter;
   onExit: () => void;
   onRunItBack?: () => void;
+  /** Depths / custom continue (e.g. next chamber) — shown when free spins are spent. */
+  onContinue?: () => void;
+  continueLabel?: string;
+  exitLabel?: string;
+  /** When true, empty free spins still invite quarters (Depths room gate). */
+  quarterFirst?: boolean;
 };
 
-export default function CasinoSlot({ session, secureSession, fighter, onExit, onRunItBack }: CasinoSlotProps) {
+export default function CasinoSlot({
+  session,
+  secureSession,
+  fighter,
+  onExit,
+  onRunItBack,
+  onContinue,
+  continueLabel = 'Continue',
+  exitLabel = 'Back to Gallery',
+  quarterFirst = false,
+}: CasinoSlotProps) {
   const { tier, paytableWave, spins: grantedSpins, outcome, chipMultiplier } = session;
   const isVictory = outcome === 'victory';
   const { connected, publicKey } = useWallet();
@@ -520,7 +536,13 @@ export default function CasinoSlot({ session, secureSession, fighter, onExit, on
               <div className="slot-led-panel slot-led-panel-center">
                 <span className="slot-led-label">Status</span>
                 <span className="slot-led-value slot-led-status">
-                  {spinning ? 'SPINNING' : spinsLeft > 0 ? 'INSERT BONK' : 'GAME OVER'}
+                  {spinning
+                    ? 'SPINNING'
+                    : spinsLeft > 0
+                      ? 'INSERT BONK'
+                      : quarterFirst || grantedSpins === 0
+                        ? 'INSERT QUARTER'
+                        : 'GAME OVER'}
                 </span>
               </div>
               <div className="slot-led-panel">
@@ -617,8 +639,10 @@ export default function CasinoSlot({ session, secureSession, fighter, onExit, on
               <div className="slot-spins">
                 {spinsLeft > 0 ? (
                   <span>{spinsLeft} pull{spinsLeft !== 1 ? 's' : ''} remaining — yank the lever</span>
+                ) : quarterFirst || grantedSpins === 0 ? (
+                  <span>No free pulls — buy a 25¢ quarter spin to yank the {BRAND.slotMachine}</span>
                 ) : (
-                  <span>Payout complete — cash out at the {BRAND.cashier}</span>
+                  <span>Payout complete — keep spinning quarters or cash out at the {BRAND.cashier}</span>
                 )}
               </div>
             </div>
@@ -655,6 +679,12 @@ export default function CasinoSlot({ session, secureSession, fighter, onExit, on
 
         {!spinning && spinsLeft <= 0 && (
           <div className="casino-exit-actions">
+            {(quarterFirst || grantedSpins === 0) && (
+              <p className="casino-chips-summary casino-quarter-cta">
+                Feed the treasury: buy a <strong>25¢ quarter spin</strong>, pull the lever, then keep going if you want —
+                or continue when you&apos;re ready.
+              </p>
+            )}
             <div className="casino-paid-spin-exit">
               <PaidSpinButton
                 disabled={spinning}
@@ -667,6 +697,15 @@ export default function CasinoSlot({ session, secureSession, fighter, onExit, on
               You won <strong>{totalWinnings.toLocaleString()}</strong> Bonk Chips — cash them in at the {BRAND.cashier}.
             </p>
             <div className="casino-exit-buttons">
+              {onContinue && (
+                <button
+                  type="button"
+                  onClick={onContinue}
+                  className="art-btn casino-exit-btn casino-runitback-btn"
+                >
+                  {continueLabel}
+                </button>
+              )}
               <Link href="/cashier" className="art-btn casino-exit-btn casino-cashier-btn">
                 {BRAND.cashier} →
               </Link>
@@ -676,7 +715,7 @@ export default function CasinoSlot({ session, secureSession, fighter, onExit, on
                 </button>
               )}
               <button type="button" onClick={onExit} className="art-btn casino-exit-btn">
-                Back to Gallery
+                {exitLabel}
               </button>
             </div>
           </div>

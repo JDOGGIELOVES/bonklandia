@@ -9,7 +9,7 @@ export const RIVAL_MEME_ENEMIES: Enemy[] = [
     id: 'dooge',
     name: 'Sir Dooge of Much Wow',
     title: 'Still thinks 2013 is alpha',
-    hp: 300,
+    hp: 380,
     img: enemyImage('dooge.svg'),
     taunt: '"Much rival. Very bonk. Such jealousy. Wow."',
     hitReaction: [
@@ -19,13 +19,13 @@ export const RIVAL_MEME_ENEMIES: Enemy[] = [
     ],
     defeatLine: 'Sir Dooge went to zero. Still wow.',
     counterAttack: 'Dooge spams much-wow copypasta in the chat',
-    counterDmg: 14,
+    counterDmg: 18,
   },
   {
     id: 'pepe-unbothered',
     name: 'Pepé the Unbothered',
     title: 'Feels nothing. Posts anyway.',
-    hp: 320,
+    hp: 400,
     img: enemyImage('pepe-unbothered.svg'),
     taunt: '"feels nothing. chart is whatever."',
     hitReaction: [
@@ -35,13 +35,13 @@ export const RIVAL_MEME_ENEMIES: Enemy[] = [
     ],
     defeatLine: 'Pepé is still unbothered. He logs off though.',
     counterAttack: 'Pepé shrugs through your guard with pure apathy',
-    counterDmg: 16,
+    counterDmg: 20,
   },
   {
     id: 'hatdog',
     name: 'Wifless Walter',
     title: "Dog with a hat he didn't pay for",
-    hp: 280,
+    hp: 360,
     img: enemyImage('hatdog.svg'),
     taunt: '"The hat is the product. The dog is free."',
     hitReaction: [
@@ -51,13 +51,13 @@ export const RIVAL_MEME_ENEMIES: Enemy[] = [
     ],
     defeatLine: 'Wifless Walter was only here for the merch.',
     counterAttack: 'Walter flings free-hat coupons at your face',
-    counterDmg: 15,
+    counterDmg: 19,
   },
   {
     id: 'flokir',
     name: 'Flokir the Loud',
     title: 'Valhalla or zero',
-    hp: 340,
+    hp: 440,
     img: enemyImage('flokir.svg'),
     taunt: '"TO VALHALLA! Or the next candle. Same thing!"',
     hitReaction: [
@@ -67,13 +67,13 @@ export const RIVAL_MEME_ENEMIES: Enemy[] = [
     ],
     defeatLine: 'Flokir found Valhalla. It was a stop-loss.',
     counterAttack: 'Flokir overcommits with a full-send charge',
-    counterDmg: 22,
+    counterDmg: 28,
   },
   {
     id: 'popcatto',
     name: 'Popcatto Supremo',
     title: 'Only knows one animation',
-    hp: 260,
+    hp: 340,
     img: enemyImage('popcatto.svg'),
     taunt: '"POP. POP. POP. That is the whole thesis."',
     hitReaction: [
@@ -83,13 +83,13 @@ export const RIVAL_MEME_ENEMIES: Enemy[] = [
     ],
     defeatLine: 'Popcatto ran out of frames.',
     counterAttack: 'Popcatto POP-spams the entire arena',
-    counterDmg: 13,
+    counterDmg: 17,
   },
   {
     id: 'mewling',
     name: 'Mewling Max',
     title: 'Cat-coin tourist on Solana',
-    hp: 270,
+    hp: 350,
     img: enemyImage('mewling.svg'),
     taunt: '"I\'m multi-chain actually. This is just a layover."',
     hitReaction: [
@@ -99,13 +99,13 @@ export const RIVAL_MEME_ENEMIES: Enemy[] = [
     ],
     defeatLine: 'Mewling Max bridged himself out of the fight.',
     counterAttack: 'Max flees to another chain and snipes from afar',
-    counterDmg: 17,
+    counterDmg: 21,
   },
   {
     id: 'based-brett',
     name: 'Brett the Based',
     title: 'Says “based” until it isn’t',
-    hp: 360,
+    hp: 460,
     img: enemyImage('based-brett.svg'),
     taunt: '"Based. Based. Based. Wait — was that cringe?"',
     hitReaction: [
@@ -115,13 +115,13 @@ export const RIVAL_MEME_ENEMIES: Enemy[] = [
     ],
     defeatLine: 'Brett admitted one take was mid. Society healed.',
     counterAttack: 'Brett stacks “based” buffs and swings harder',
-    counterDmg: 18,
+    counterDmg: 23,
   },
   {
     id: 'mogger',
     name: 'Mogger Mike',
     title: 'Professional aura farmer',
-    hp: 310,
+    hp: 400,
     img: enemyImage('mogger.svg'),
     taunt: '"Check the aura. You wouldn’t get it."',
     hitReaction: [
@@ -131,13 +131,13 @@ export const RIVAL_MEME_ENEMIES: Enemy[] = [
     ],
     defeatLine: 'Mogger Mike got mogged by the Bonk Fam.',
     counterAttack: 'Mike drains your vibe with an aura check',
-    counterDmg: 16,
+    counterDmg: 20,
   },
   {
     id: 'giga-shiba',
     name: 'Giga Shiba Impostor',
     title: 'Claims he invented bonking',
-    hp: 420,
+    hp: 580,
     img: enemyImage('giga-shiba.svg'),
     taunt: '"I\'m the original bonker. You\'re just frequency LARPers."',
     hitReaction: [
@@ -147,13 +147,13 @@ export const RIVAL_MEME_ENEMIES: Enemy[] = [
     ],
     defeatLine: 'Giga Shiba admits it: your First Bonk was cooler.',
     counterAttack: 'Impostor mocks your conviction and swings harder',
-    counterDmg: 24,
+    counterDmg: 32,
   },
   {
     id: 'copycat-council',
     name: 'The Copycat Council',
     title: 'Three mascots. One original idea.',
-    hp: 520,
+    hp: 720,
     img: enemyImage('copycat-council.svg'),
     taunt: '"We voted. Your meme is derivative of our derivative."',
     hitReaction: [
@@ -163,7 +163,7 @@ export const RIVAL_MEME_ENEMIES: Enemy[] = [
     ],
     defeatLine: 'The Copycat Council dissolved into three group chats.',
     counterAttack: 'The Council rotates dog → frog → cat assaults',
-    counterDmg: 26,
+    counterDmg: 34,
   },
 ];
 
@@ -223,4 +223,6 @@ export const DEPTHS_LORE = {
   subtitle: 'Where copycat mascots hoard stolen frequency',
   intro:
     'Under Degen Valley, rival meme cultures dig for the roots of the First Bonk. Chart the Depths, bonk the copycats, and reclaim the frequency before they rebrand it.',
+  banditHook:
+    'Every chamber win opens the Bonklandia Bandit — drop a quarter (25¢ SOL) to pull the lever and grow the Bonga treasury. Clear the floor for free champion spins.',
 };

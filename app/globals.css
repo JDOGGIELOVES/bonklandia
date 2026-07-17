@@ -5644,6 +5644,20 @@ body {
   cursor: wait;
 }
 
+.depths-ability-btn.depths-ability-cd {
+  opacity: 0.45;
+  filter: grayscale(0.35);
+  cursor: not-allowed;
+}
+
+.casino-quarter-cta {
+  color: #f0d878 !important;
+  border: 1px solid rgba(240, 216, 120, 0.35);
+  border-radius: 8px;
+  padding: 0.75rem 1rem;
+  background: rgba(80, 50, 10, 0.35);
+}
+
 .depths-event-choices {
   display: grid;
   gap: 0.65rem;
