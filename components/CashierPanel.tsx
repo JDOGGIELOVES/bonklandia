@@ -39,8 +39,14 @@ export default function CashierPanel({ showBackLink = true }: CashierPanelProps)
 
   // Exchange / cashier spends use server ledger when wallet is connected.
   const chips = connected && serverChips !== null ? serverChips : localChips;
-  const { balances, loading: balancesLoading, error: balanceError, refresh: refreshBalances, hasAnyBalance } =
-    useFamTokenBalances();
+  const {
+    balances,
+    loading: balancesLoading,
+    error: balanceError,
+    refresh: refreshBalances,
+    hasAnyBalance,
+    source: balanceSource,
+  } = useFamTokenBalances();
 
   const [amounts, setAmounts] = useState<Record<FamCoinId, string>>({
     bonk: '1',
@@ -394,7 +400,9 @@ export default function CashierPanel({ showBackLink = true }: CashierPanelProps)
                         const ready = walletCanReceiveToken(bal);
                         return (
                           <div key={token.id} className="cashier-wallet-balance-row">
-                            <span className="text-[#f5e6c8]/60">{token.symbol}</span>
+                            <span className="text-[#f5e6c8]/60" title={token.mint}>
+                              {token.symbol}
+                            </span>
                             <span className="cashier-wallet-balance-end">
                               <span className="text-[#f0d878] font-bold">{bal?.ui ?? '0'}</span>
                               <span className={`cashier-account-badge ${ready ? 'ready' : 'missing'}`}>
@@ -406,6 +414,9 @@ export default function CashierPanel({ showBackLink = true }: CashierPanelProps)
                       })}
                     </div>
                   )}
+                  <p className="text-xs text-[#f5e6c8]/40 mt-2 break-all">
+                    Full address: {walletAddress}
+                  </p>
                   <button
                     type="button"
                     onClick={() => void refreshBalances()}
@@ -462,18 +473,36 @@ export default function CashierPanel({ showBackLink = true }: CashierPanelProps)
             </p>
 
             <div className="cashier-exchange-grid">
+              {connected && balancesLoading && (
+                <p className="text-center text-[#f5e6c8]/55 mb-4 text-sm">
+                  Reading Fam token accounts on Solana…
+                </p>
+              )}
+              {connected && balanceError && (
+                <p className="text-center text-amber-200/90 mb-4 text-sm">
+                  Balance lookup error: {balanceError}. Hit refresh after connecting.
+                </p>
+              )}
+              {connected && !balancesLoading && balanceSource && (
+                <p className="text-center text-[#f5e6c8]/40 mb-4 text-xs">
+                  Balances via {balanceSource === 'server' ? 'server RPC' : 'browser RPC'}
+                  {hasAnyBalance ? ' · Fam tokens detected' : ''}
+                </p>
+              )}
+
               {FAM_TOKENS.map(token => {
                 const tokenAmount = parseFloat(amounts[token.id]) || 0;
                 const chipCost = calculateChipCost(token.id, tokenAmount);
                 const bal = balances[token.id];
                 const walletReady = walletCanReceiveToken(bal);
                 const canAfford = chips >= chipCost && tokenAmount >= token.minTokens;
-                const walletBal = bal?.ui ?? '0';
+                const walletBal = balancesLoading ? '…' : bal?.ui ?? '—';
                 const isBusy = exchanging === token.id;
                 const canExchange =
                   canAfford &&
                   connected &&
                   walletReady &&
+                  !balancesLoading &&
                   treasuryReady !== false &&
                   serverChips !== null;
 
@@ -522,14 +551,16 @@ export default function CashierPanel({ showBackLink = true }: CashierPanelProps)
                       )}
                       {connected && (
                         <span className="cashier-held">
-                          Wallet: <strong>{walletBal}</strong>
+                          Wallet: <strong className={walletReady ? 'text-emerald-400' : undefined}>{walletBal}</strong>
+                          {walletReady && bal?.raw !== undefined && bal.raw > BigInt(0) ? ' ✓' : ''}
                         </span>
                       )}
                     </div>
 
-                    {connected && !walletReady && (
+                    {connected && !balancesLoading && !walletReady && (
                       <p className="cashier-coin-warning">
-                        No {token.symbol} token account in this wallet. Hold at least 1 {token.symbol} first.
+                        No {token.symbol} account for mint {formatMintAddress(token.mint)} on this connected wallet.
+                        Confirm Phantom is on the same address and holds this CA (not a lookalike token).
                       </p>
                     )}
 
