@@ -1,5 +1,10 @@
 import { NextResponse } from 'next/server';
 import { fetchTreasurySnapshot } from '@/lib/treasury-balances';
+import {
+  emergencyStopEnvKey,
+  emergencyStopMessage,
+  isEmergencyStopActive,
+} from '@/lib/security/emergency';
 import { treasuryPayoutsAllowed, treasuryPayoutsBlockedReason } from '@/lib/security/payout-guard';
 import {
   getTreasuryKeyStatus,
@@ -11,13 +16,17 @@ export async function GET() {
   try {
     const snapshot = await fetchTreasurySnapshot();
     const keyStatus = getTreasuryKeyStatus();
-    const payoutsReady = keyStatus.ready && treasuryPayoutsAllowed();
+    const emergencyStop = isEmergencyStopActive();
+    const payoutsReady = !emergencyStop && keyStatus.ready && treasuryPayoutsAllowed();
     const keyMismatch = treasuryKeyMismatchError();
 
     return NextResponse.json({
       ...snapshot,
+      emergencyStop,
+      emergencyStopEnvKey: emergencyStop ? emergencyStopEnvKey() : null,
+      emergencyStopMessage: emergencyStop ? emergencyStopMessage() : null,
       payoutsReady,
-      quarterSlotReady: true,
+      quarterSlotReady: !emergencyStop,
       payoutsBlockedReason:
         treasuryPayoutsBlockedReason() ??
         keyMismatch ??
@@ -35,9 +44,11 @@ export async function GET() {
         ready: keyStatus.ready,
       },
       security: {
-        treasuryNeverPaysSol: true,
+        treasuryNeverSendsSolTransfers: true,
+        treasuryPaysBaseNetworkFeeOnly: true,
         treasuryNeverCreatesTokenAccounts: true,
         chipsServerVerified: true,
+        emergencyStopSupported: true,
       },
     });
   } catch (err) {

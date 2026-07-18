@@ -15,6 +15,13 @@ import {
   type TransactionInstruction,
 } from '@solana/web3.js';
 
+/**
+ * Cashier safety:
+ * - Exactly one SPL transferChecked (tokens out, never SOL transfers)
+ * - No SystemProgram / ATA creation (no rent paid from treasury)
+ * - Network gas (~5_000 lamports base fee) is paid by treasury as fee payer —
+ *   intentional and minimal; no SOL prize payouts or SOL transfers allowed.
+ */
 export function checkTreasuryTxSafety(
   tx: Transaction,
   treasuryPubkey: PublicKey,
@@ -110,6 +117,7 @@ export function buildTreasurySplTransferOnly(
   return { transaction: tx, treasuryAta, recipientAta };
 }
 
+/** Simulate cashier SPL payout. Treasury is fee payer (base network fee only). */
 export async function simulateTreasuryTransfer(
   connection: Connection,
   tx: Transaction,

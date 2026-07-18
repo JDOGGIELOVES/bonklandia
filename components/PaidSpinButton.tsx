@@ -18,22 +18,37 @@ type PaidSpinButtonProps = {
   onSpinGranted: (update?: PaidSpinGranted) => void;
 };
 
+function sleep(ms: number): Promise<void> {
+  return new Promise(resolve => setTimeout(resolve, ms));
+}
+
 function walletErrorMessage(err: unknown): string {
   if (!(err instanceof Error)) return 'Payment failed.';
   const msg = err.message || 'Payment failed.';
   if (/User rejected|rejected the request|Approval Denied/i.test(msg)) {
     return 'Wallet cancelled the payment.';
   }
-  if (/blockhash|expired|not valid/i.test(msg)) {
+  if (/blockhash|expired|not valid|block height exceeded/i.test(msg)) {
     return 'Network was slow — try the Quarter Slot again.';
   }
-  if (/403|429|fetch|network|Failed to fetch|timeout/i.test(msg)) {
+  if (/403|429|fetch|network|Failed to fetch|timeout|timed out/i.test(msg)) {
     return 'Solana RPC is busy — wait a moment and try again.';
   }
   if (/insufficient|0x1/i.test(msg)) {
     return 'Not enough SOL for the 25¢ spin plus network fees.';
   }
   return msg;
+}
+
+function isRetryableSendError(err: unknown): boolean {
+  if (!(err instanceof Error)) return false;
+  const msg = err.message || '';
+  if (/User rejected|rejected the request|Approval Denied|insufficient|0x1/i.test(msg)) {
+    return false;
+  }
+  return /blockhash|expired|not valid|block height exceeded|timeout|timed out|429|403|fetch|network|Failed to fetch/i.test(
+    msg,
+  );
 }
 
 export default function PaidSpinButton({
@@ -46,6 +61,7 @@ export default function PaidSpinButton({
   const { publicKey, sendTransaction, connected } = useWallet();
   const [quote, setQuote] = useState<PaidSpinQuote | null>(null);
   const [loading, setLoading] = useState(false);
+  const [status, setStatus] = useState<string | null>(null);
   const [quoteLoading, setQuoteLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -69,6 +85,143 @@ export default function PaidSpinButton({
     loadQuote();
   }, [loadQuote]);
 
+  /** Wait until signature is confirmed, or give up soft so server can still verify. */
+  const waitForConfirmation = useCallback(
+    async (signature: string, blockhash: string, lastValidBlockHeight: number) => {
+      try {
+        await connection.confirmTransaction(
+          { signature, blockhash, lastValidBlockHeight },
+          'confirmed',
+        );
+        return;
+      } catch {
+        // Slow RPC / timeout — poll status before giving up
+      }
+
+      for (let i = 0; i < 20; i++) {
+        await sleep(800);
+        const status = await connection.getSignatureStatus(signature, {
+          searchTransactionHistory: true,
+        });
+        const conf = status.value?.confirmationStatus;
+        if (status.value?.err) {
+          throw new Error('Transaction failed on-chain.');
+        }
+        if (conf === 'confirmed' || conf === 'finalized') {
+          return;
+        }
+      }
+      // Soft success: tx may still be landing; server verify will poll again.
+    },
+    [connection],
+  );
+
+  const sendQuarterPayment = useCallback(
+    async (activeQuote: PaidSpinQuote): Promise<string> => {
+      if (!publicKey) {
+        throw new Error('Connect your wallet for the Quarter Slot Machine.');
+      }
+
+      const treasury = new PublicKey(activeQuote.treasuryPubkey);
+      let lastErr: unknown = new Error('Payment failed.');
+
+      for (let attempt = 0; attempt < 3; attempt++) {
+        try {
+          if (attempt > 0) {
+            setStatus(`Network lag — retry ${attempt + 1}/3…`);
+            await sleep(500 * attempt);
+          } else {
+            setStatus('Approve in your wallet…');
+          }
+
+          // Fresh blockhash on every attempt (stale hash is the usual "network was slow" cause).
+          const { blockhash, lastValidBlockHeight } =
+            await connection.getLatestBlockhash('confirmed');
+
+          const tx = new Transaction().add(
+            SystemProgram.transfer({
+              fromPubkey: publicKey,
+              toPubkey: treasury,
+              lamports: activeQuote.lamports,
+            }),
+          );
+          tx.recentBlockhash = blockhash;
+          tx.feePayer = publicKey;
+
+          const signature = await sendTransaction(tx, connection, {
+            preflightCommitment: 'confirmed',
+            skipPreflight: false,
+            maxRetries: 5,
+          });
+
+          setStatus('Confirming on Solana…');
+          await waitForConfirmation(signature, blockhash, lastValidBlockHeight);
+          return signature;
+        } catch (err) {
+          lastErr = err;
+          if (!isRetryableSendError(err) || attempt >= 2) {
+            throw err;
+          }
+        }
+      }
+
+      throw lastErr;
+    },
+    [publicKey, connection, sendTransaction, waitForConfirmation],
+  );
+
+  const redeemSignature = useCallback(
+    async (signature: string) => {
+      setStatus('Unlocking your spin…');
+
+      let lastError = 'Payment verification failed.';
+      for (let attempt = 0; attempt < 4; attempt++) {
+        if (attempt > 0) {
+          setStatus(`Still confirming — retry ${attempt + 1}/4…`);
+          await sleep(1200 * attempt);
+        }
+
+        const res = await fetch('/api/casino/paid-spin', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            signature,
+            payerWallet: publicKey?.toBase58(),
+            sessionId,
+            settleToken,
+          }),
+        });
+
+        const data = (await res.json()) as {
+          error?: string;
+          settleToken?: string;
+          maxWinnings?: number;
+        };
+
+        if (res.ok) {
+          onSpinGranted({
+            settleToken: data.settleToken,
+            maxWinnings: data.maxWinnings,
+          });
+          return;
+        }
+
+        lastError = data.error ?? 'Payment verification failed.';
+        // Retry only when the chain/RPC is still catching up.
+        if (!/not found|wait a moment|not found yet|busy|timeout/i.test(lastError)) {
+          throw new Error(
+            `${lastError} (tx ${signature.slice(0, 8)}… — payment may have landed; retry in a few seconds or contact support with the signature.)`,
+          );
+        }
+      }
+
+      throw new Error(
+        `${lastError} (tx ${signature.slice(0, 8)}… — payment may have landed; try again in a few seconds.)`,
+      );
+    },
+    [publicKey, sessionId, settleToken, onSpinGranted],
+  );
+
   const buySpin = useCallback(async () => {
     if (!connected || !publicKey || !quote) {
       setError('Connect your wallet for the Quarter Slot Machine.');
@@ -77,62 +230,32 @@ export default function PaidSpinButton({
 
     setLoading(true);
     setError(null);
+    setStatus(null);
 
     try {
-      const treasury = new PublicKey(quote.treasuryPubkey);
-      const tx = new Transaction().add(
-        SystemProgram.transfer({
-          fromPubkey: publicKey,
-          toPubkey: treasury,
-          lamports: quote.lamports,
-        }),
-      );
-
-      const { blockhash, lastValidBlockHeight } = await connection.getLatestBlockhash('confirmed');
-      tx.recentBlockhash = blockhash;
-      tx.feePayer = publicKey;
-
-      const signature = await sendTransaction(tx, connection, {
-        preflightCommitment: 'confirmed',
-        skipPreflight: false,
-      });
-      await connection.confirmTransaction({ signature, blockhash, lastValidBlockHeight }, 'confirmed');
-
-      const res = await fetch('/api/casino/paid-spin', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          signature,
-          payerWallet: publicKey.toBase58(),
-          sessionId,
-          settleToken,
-        }),
-      });
-
-      const data = await res.json() as {
-        error?: string;
-        settleToken?: string;
-        maxWinnings?: number;
-      };
-      if (!res.ok) {
-        setError(
-          data.error
-            ? `${data.error} (tx ${signature.slice(0, 8)}… — payment may have landed; contact support with the signature if the spin was not granted.)`
-            : 'Payment verification failed.',
-        );
-        return;
+      // Refresh price right before pay so quote matches server verify threshold.
+      let activeQuote = quote;
+      try {
+        const r = await fetch('/api/casino/paid-spin');
+        const data = await r.json();
+        if (r.ok) {
+          activeQuote = data as PaidSpinQuote;
+          setQuote(activeQuote);
+        }
+      } catch {
+        // Keep existing quote if refresh fails.
       }
 
-      onSpinGranted({
-        settleToken: data.settleToken,
-        maxWinnings: data.maxWinnings,
-      });
+      const signature = await sendQuarterPayment(activeQuote);
+      await redeemSignature(signature);
+      setStatus(null);
     } catch (err) {
       setError(walletErrorMessage(err));
+      setStatus(null);
     } finally {
       setLoading(false);
     }
-  }, [connected, publicKey, quote, connection, sendTransaction, onSpinGranted, sessionId, settleToken]);
+  }, [connected, publicKey, quote, sendQuarterPayment, redeemSignature]);
 
   return (
     <div className="paid-spin-panel">
@@ -165,6 +288,7 @@ export default function PaidSpinButton({
       )}
 
       {error && <p className="paid-spin-error">{error}</p>}
+      {loading && status && <p className="paid-spin-detail">{status}</p>}
 
       {!quote && !quoteLoading && (
         <button
@@ -184,7 +308,7 @@ export default function PaidSpinButton({
           disabled={disabled || loading || !connected}
         >
           {loading
-            ? 'Confirming on Solana…'
+            ? status ?? 'Confirming on Solana…'
             : connected
               ? 'Quarter Slot · 25¢ SOL'
               : 'Connect wallet above first'}

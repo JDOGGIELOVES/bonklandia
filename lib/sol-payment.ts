@@ -136,14 +136,19 @@ export async function verifyPaidSpinTransaction(
   const connection = new Connection(getSolanaRpcUrl(), 'confirmed');
   const treasury = new PublicKey(getTreasuryPublicKey());
 
+  // Public RPC is often slow after send — poll longer before failing a paid spin.
   let tx: ParsedTransactionWithMeta | null = null;
-  for (let i = 0; i < 8; i++) {
-    tx = await connection.getParsedTransaction(signature, {
-      maxSupportedTransactionVersion: 0,
-      commitment: 'confirmed',
-    });
-    if (tx) break;
-    await new Promise(r => setTimeout(r, 750));
+  for (let i = 0; i < 16; i++) {
+    try {
+      tx = await connection.getParsedTransaction(signature, {
+        maxSupportedTransactionVersion: 0,
+        commitment: 'confirmed',
+      });
+      if (tx) break;
+    } catch {
+      // Rate-limit / transient RPC — keep polling
+    }
+    await new Promise(r => setTimeout(r, 900 + i * 100));
   }
 
   if (!tx) {

@@ -356,6 +356,9 @@ export async function executeTokenExchange(
     recipientToken.address,
   );
 
+  // Base network fee only (~5_000 lamports) — treasury is fee payer; no SOL transfers.
+  built.transaction.feePayer = treasury.publicKey;
+
   const safety = checkTreasuryTxSafety(
     built.transaction,
     treasury.publicKey,

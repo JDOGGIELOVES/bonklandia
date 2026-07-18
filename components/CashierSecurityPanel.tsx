@@ -21,6 +21,8 @@ export type TreasurySnapshot = {
   fundedTokenCount: number;
   tokens: TreasuryTokenRow[];
   fetchedAt?: string;
+  emergencyStop?: boolean;
+  emergencyStopMessage?: string | null;
 };
 
 type CashierSecurityPanelProps = {
@@ -36,8 +38,9 @@ type CashierSecurityPanelProps = {
 const RULES = [
   {
     id: 'no-sol',
-    label: 'Treasury never pays SOL',
-    detail: 'All wallet fees and account rent are yours — the vault only sends SPL tokens.',
+    label: 'No SOL prizes / transfers',
+    detail:
+      'Treasury never SystemProgram-sends SOL. Cashier pays only the base network fee (~0.000005 SOL) when redeeming tokens; quarter slots deposit SOL in.',
   },
   {
     id: 'no-ata',
@@ -96,6 +99,17 @@ export default function CashierSecurityPanel({
             Refresh status
           </button>
         </div>
+
+        {treasury?.emergencyStop ? (
+          <div
+            className="mb-4 rounded-lg border border-red-500/60 bg-red-950/50 px-4 py-3 text-sm text-red-100"
+            role="alert"
+          >
+            <strong className="font-semibold">Emergency stop active.</strong>{' '}
+            {treasury.emergencyStopMessage ??
+              'All cashier, casino, and claim operations are offline.'}
+          </div>
+        ) : null}
 
         <div className="cashier-security-grid">
           <section className="cashier-security-section">

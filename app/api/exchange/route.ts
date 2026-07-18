@@ -2,6 +2,7 @@ import { Connection, PublicKey } from '@solana/web3.js';
 import { NextResponse } from 'next/server';
 import { getFamToken, getSolanaRpcUrl, type FamCoinId } from '@/lib/fam-tokens';
 import { creditWalletChips, debitWalletChips } from '@/lib/security/chip-ledger';
+import { blockIfEmergencyStopped } from '@/lib/security/emergency';
 import { checkWalletExchangeLimit } from '@/lib/security/exchange-limits';
 import { checkRateLimit, getClientIp } from '@/lib/security/rate-limit';
 import { executeTokenExchange } from '@/lib/treasury';
@@ -10,6 +11,9 @@ import { walletHasTokenAccount } from '@/lib/token-accounts';
 const VALID_IDS: FamCoinId[] = ['bonk', 'bonga', 'bong', 'bink', 'bonnie', 'beng'];
 
 export async function POST(request: Request) {
+  const stopped = blockIfEmergencyStopped();
+  if (stopped) return stopped;
+
   const ip = getClientIp(request);
 
   let body: {

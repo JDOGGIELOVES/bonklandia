@@ -1,8 +1,12 @@
 import { NextResponse } from 'next/server';
 import { settleCasinoWinnings } from '@/lib/security/casino-session';
+import { blockIfEmergencyStopped } from '@/lib/security/emergency';
 import { checkRateLimit, getClientIp } from '@/lib/security/rate-limit';
 
 export async function POST(request: Request) {
+  const stopped = blockIfEmergencyStopped();
+  if (stopped) return stopped;
+
   const ip = getClientIp(request);
   const limited = checkRateLimit(`settle:${ip}`, 120, 60 * 60 * 1000);
   if (!limited.ok) {

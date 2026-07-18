@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import type { Difficulty } from '@/lib/characters';
 import { createCasinoSession } from '@/lib/security/casino-session';
+import { blockIfEmergencyStopped } from '@/lib/security/emergency';
 import { consumeCasinoNonce } from '@/lib/security/nonce-store';
 import { checkRateLimit, getClientIp } from '@/lib/security/rate-limit';
 import type { CasinoOutcome } from '@/lib/slot-machine';
@@ -9,6 +10,9 @@ const VALID_OUTCOMES: CasinoOutcome[] = ['victory', 'defeat'];
 const VALID_DIFFICULTIES: Difficulty[] = ['easy', 'medium', 'hard'];
 
 export async function POST(request: Request) {
+  const stopped = blockIfEmergencyStopped();
+  if (stopped) return stopped;
+
   const ip = getClientIp(request);
   const limited = checkRateLimit(`session:${ip}`, 25, 60 * 60 * 1000);
   if (!limited.ok) {

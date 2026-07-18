@@ -1,8 +1,12 @@
 import { NextResponse } from 'next/server';
+import { blockIfEmergencyStopped } from '@/lib/security/emergency';
 import { issueCasinoNonce } from '@/lib/security/nonce-store';
 import { checkRateLimit, getClientIp } from '@/lib/security/rate-limit';
 
 export async function GET(request: Request) {
+  const stopped = blockIfEmergencyStopped();
+  if (stopped) return stopped;
+
   const ip = getClientIp(request);
   const limited = checkRateLimit(`nonce:${ip}`, 40, 60 * 60 * 1000);
   if (!limited.ok) {

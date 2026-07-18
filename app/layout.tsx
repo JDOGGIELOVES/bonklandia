@@ -1,5 +1,6 @@
 import type { Metadata, Viewport } from "next";
 import { Cormorant_Garamond, Playfair_Display } from "next/font/google";
+import { Analytics } from "@vercel/analytics/next";
 import "@solana/wallet-adapter-react-ui/styles.css";
 import "./globals.css";
 import { WalletProviderLazy } from "@/components/WalletProviderLazy";
@@ -54,6 +55,7 @@ export default function RootLayout({
         <WalletProviderLazy>
           {children}
         </WalletProviderLazy>
+        <Analytics />
       </body>
     </html>
   );

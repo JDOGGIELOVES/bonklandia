@@ -2,16 +2,23 @@ import { NextResponse } from 'next/server';
 import { PAID_SPIN_USD } from '@/lib/casino-extras';
 import { registerPaidSpinForSession } from '@/lib/security/casino-session';
 import { MAX_PAID_SPINS_PER_WALLET_PER_HOUR } from '@/lib/security/config';
+import { blockIfEmergencyStopped } from '@/lib/security/emergency';
 import { checkRateLimit, getClientIp } from '@/lib/security/rate-limit';
 import { isSignatureUsed, markSignatureUsed } from '@/lib/security/signature-store';
 import { getPaidSpinQuote, verifyPaidSpinTransaction } from '@/lib/sol-payment';
 
 export async function GET() {
+  const stopped = blockIfEmergencyStopped();
+  if (stopped) return stopped;
+
   const quote = await getPaidSpinQuote(PAID_SPIN_USD);
   return NextResponse.json(quote);
 }
 
 export async function POST(request: Request) {
+  const stopped = blockIfEmergencyStopped();
+  if (stopped) return stopped;
+
   const ip = getClientIp(request);
 
   let body: { signature?: string; payerWallet?: string; sessionId?: string; settleToken?: string };

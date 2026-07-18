@@ -1,3 +1,5 @@
+import { emergencyStopMessage, isEmergencyStopActive } from '@/lib/security/emergency';
+
 let autoPausedUntilMs = 0;
 let autoPauseReason = '';
 let recentPayoutCount = 0;
@@ -8,6 +10,7 @@ const VELOCITY_MAX_PAYOUTS = Number(process.env.TREASURY_VELOCITY_MAX_PAYOUTS ??
 const AUTO_PAUSE_MS = 15 * 60 * 1000;
 
 export function treasuryPayoutsAllowed(): boolean {
+  if (isEmergencyStopActive()) return false;
   if (process.env.CLAIMS_PAUSED === 'true') return false;
   if (process.env.CASHIER_PAYOUTS_ENABLED === 'false') return false;
   if (Date.now() < autoPausedUntilMs) return false;
@@ -15,6 +18,9 @@ export function treasuryPayoutsAllowed(): boolean {
 }
 
 export function treasuryPayoutsBlockedReason(): string | undefined {
+  if (isEmergencyStopActive()) {
+    return emergencyStopMessage();
+  }
   if (process.env.CLAIMS_PAUSED === 'true') {
     return 'Cashier payouts are temporarily paused.';
   }
