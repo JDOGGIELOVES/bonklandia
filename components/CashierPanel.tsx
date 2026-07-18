@@ -8,10 +8,7 @@ import { WalletMultiButton } from '@solana/wallet-adapter-react-ui';
 import { useBonkBank } from '@/hooks/useBonkBank';
 import { useFamTokenBalances } from '@/hooks/useFamTokenBalances';
 import { formatWalletAddress, loadBankState } from '@/lib/bank';
-
-function loadLocalChipCount(): number {
-  return loadBankState().chips;
-}
+import { loadChipLedgerToken, saveChipLedgerToken } from '@/lib/chip-ledger-client';
 import {
   FAM_TOKENS,
   calculateChipCost,
@@ -23,6 +20,10 @@ import {
 } from '@/lib/fam-tokens';
 import CashierSecurityPanel, { type TreasurySnapshot } from '@/components/CashierSecurityPanel';
 import { BRAND } from '@/lib/brand';
+
+function loadLocalChipCount(): number {
+  return loadBankState().chips;
+}
 
 type CashierPanelProps = {
   showBackLink?: boolean;
@@ -89,9 +90,17 @@ export default function CashierPanel({ showBackLink = true }: CashierPanelProps)
       return;
     }
     try {
-      const res = await fetch(`/api/chips/balance?wallet=${encodeURIComponent(walletAddress)}`);
-      const data = await res.json();
-      if (res.ok) setServerChips(Number(data.chips) || 0);
+      const ledgerToken = loadChipLedgerToken(walletAddress);
+      const res = await fetch('/api/chips/balance', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ wallet: walletAddress, ledgerToken }),
+      });
+      const data = await res.json() as { chips?: number; ledgerToken?: string };
+      if (res.ok) {
+        setServerChips(Number(data.chips) || 0);
+        if (data.ledgerToken) saveChipLedgerToken(walletAddress, data.ledgerToken);
+      }
     } catch {
       setServerChips(null);
     }
@@ -145,12 +154,18 @@ export default function CashierPanel({ showBackLink = true }: CashierPanelProps)
       chipSyncInFlight.current = true;
       setSyncingChips(true);
       try {
+        const ledgerToken = loadChipLedgerToken(walletAddress);
         const res = await fetch('/api/chips/sync', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ wallet: walletAddress, amount }),
+          body: JSON.stringify({ wallet: walletAddress, amount, ledgerToken }),
         });
-        const data = await res.json() as { error?: string; chips?: number; deposited?: number };
+        const data = await res.json() as {
+          error?: string;
+          chips?: number;
+          deposited?: number;
+          ledgerToken?: string;
+        };
         if (!res.ok) {
           if (!opts?.silent) {
             setMessage({ ok: false, text: data.error ?? 'Could not sync local chips to cashier ledger.' });
@@ -159,6 +174,7 @@ export default function CashierPanel({ showBackLink = true }: CashierPanelProps)
         }
 
         const deposited = Number(data.deposited) || amount;
+        if (data.ledgerToken) saveChipLedgerToken(walletAddress, data.ledgerToken);
         clearLocalChips(deposited);
         refreshLocalBank();
         const nextServer = Number(data.chips);
@@ -209,9 +225,15 @@ export default function CashierPanel({ showBackLink = true }: CashierPanelProps)
           sessionId: pendingClaim.sessionId,
           settleToken: pendingClaim.settleToken,
           wallet: walletAddress,
+          ledgerToken: loadChipLedgerToken(walletAddress),
         }),
       });
-      const data = await res.json();
+      const data = await res.json() as {
+        error?: string;
+        credited?: number;
+        chips?: number;
+        ledgerToken?: string;
+      };
       if (!res.ok) {
         // Fall back to local import so cashier still works.
         setMessage({ ok: false, text: data.error ?? 'Claim failed — syncing local bank instead…' });
@@ -220,6 +242,7 @@ export default function CashierPanel({ showBackLink = true }: CashierPanelProps)
       }
 
       const credited = Number(data.credited) || 0;
+      if (data.ledgerToken) saveChipLedgerToken(walletAddress, data.ledgerToken);
       // Avoid double-spend: local bank already holds the same winnings.
       if (credited > 0) {
         clearLocalChips(credited);
@@ -285,11 +308,17 @@ export default function CashierPanel({ showBackLink = true }: CashierPanelProps)
               sessionId: pending.sessionId,
               settleToken: pending.settleToken,
               wallet: walletAddress,
+              ledgerToken: loadChipLedgerToken(walletAddress),
             }),
           });
-          const data = await res.json();
+          const data = await res.json() as {
+            credited?: number;
+            chips?: number;
+            ledgerToken?: string;
+          };
           if (!cancelled && res.ok) {
             const credited = Number(data.credited) || 0;
+            if (data.ledgerToken) saveChipLedgerToken(walletAddress, data.ledgerToken);
             if (credited > 0) {
               clearLocalChips(credited);
               refreshLocalBank();
@@ -422,10 +451,18 @@ export default function CashierPanel({ showBackLink = true }: CashierPanelProps)
             tokenAmount,
             walletAddress,
             chipCost,
+            ledgerToken: loadChipLedgerToken(walletAddress),
           }),
         });
 
-        const data = await res.json();
+        const data = await res.json() as {
+          error?: string;
+          chipsRemaining?: number;
+          tokenAmount?: number;
+          symbol?: string;
+          signature?: string;
+          ledgerToken?: string;
+        };
         if (!res.ok) {
           showExchangeMessage({ ok: false, text: data.error ?? 'Exchange failed.' });
           // Balances can be stale after RPC lag — refresh so the next click is accurate.
@@ -434,12 +471,15 @@ export default function CashierPanel({ showBackLink = true }: CashierPanelProps)
           return;
         }
 
+        if (data.ledgerToken && walletAddress) {
+          saveChipLedgerToken(walletAddress, data.ledgerToken);
+        }
         setServerChips(Number(data.chipsRemaining) || 0);
         await refreshBalances();
         showExchangeMessage({
           ok: true,
-          text: `Sent ${data.tokenAmount.toLocaleString()} ${data.symbol} to your wallet.`,
-          txUrl: solscanTxUrl(data.signature),
+          text: `Sent ${Number(data.tokenAmount).toLocaleString()} ${data.symbol} to your wallet.`,
+          txUrl: data.signature ? solscanTxUrl(data.signature) : undefined,
         });
       } catch {
         showExchangeMessage({ ok: false, text: 'Network error — try again.' });

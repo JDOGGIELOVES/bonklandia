@@ -14,7 +14,7 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: limited.error }, { status: 429 });
   }
 
-  let body: { sessionId?: string; settleToken?: string; wallet?: string };
+  let body: { sessionId?: string; settleToken?: string; wallet?: string; ledgerToken?: string };
 
   try {
     body = await request.json();
@@ -25,6 +25,7 @@ export async function POST(request: Request) {
   const sessionId = body.sessionId?.trim();
   const settleToken = body.settleToken?.trim();
   const wallet = body.wallet?.trim();
+  const ledgerToken = body.ledgerToken?.trim();
 
   if (!sessionId || !settleToken || !wallet) {
     return NextResponse.json({ error: 'Session, token, and wallet required.' }, { status: 400 });
@@ -35,7 +36,7 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: claimed.error }, { status: 400 });
   }
 
-  const credited = creditWalletChips(wallet, claimed.chips);
+  const credited = creditWalletChips(wallet, claimed.chips, ledgerToken);
   if (!credited.ok) {
     return NextResponse.json({ error: credited.error }, { status: 500 });
   }
@@ -44,5 +45,6 @@ export async function POST(request: Request) {
     ok: true,
     chips: credited.record.chips,
     credited: claimed.chips,
+    ledgerToken: credited.record.ledgerToken,
   });
 }

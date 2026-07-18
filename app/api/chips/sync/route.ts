@@ -3,13 +3,11 @@ import { depositWalletChips, getWalletChipBalance } from '@/lib/security/chip-le
 import { blockIfEmergencyStopped } from '@/lib/security/emergency';
 import { checkRateLimit, getClientIp } from '@/lib/security/rate-limit';
 
-/** Cap a single import so a bad client can't flood the ledger in one shot. */
 const MAX_IMPORT_PER_REQUEST = Number(process.env.MAX_CHIP_IMPORT_PER_REQUEST ?? '5000000');
 
 /**
- * Move local-bank chips onto the server ledger for the connected wallet.
- * Called automatically from the cashier when a wallet connects so exchanges
- * can spend winnings without a manual "claim" step.
+ * Move local-bank chips onto the portable cashier ledger.
+ * Returns a sealed ledgerToken the browser must keep and resend.
  */
 export async function POST(request: Request) {
   const stopped = blockIfEmergencyStopped();
@@ -21,7 +19,7 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: ipLimited.error }, { status: 429 });
   }
 
-  let body: { wallet?: string; amount?: number };
+  let body: { wallet?: string; amount?: number; ledgerToken?: string };
   try {
     body = await request.json();
   } catch {
@@ -30,6 +28,7 @@ export async function POST(request: Request) {
 
   const wallet = body.wallet?.trim();
   const amount = Math.floor(Number(body.amount));
+  const ledgerToken = body.ledgerToken?.trim() || null;
 
   if (!wallet) {
     return NextResponse.json({ error: 'Wallet address required.' }, { status: 400 });
@@ -51,7 +50,7 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: walletReqLimited.error }, { status: 429 });
   }
 
-  const deposited = depositWalletChips(wallet, amount);
+  const deposited = depositWalletChips(wallet, amount, ledgerToken);
   if (!deposited.ok) {
     return NextResponse.json({ error: deposited.error }, { status: 400 });
   }
@@ -60,7 +59,8 @@ export async function POST(request: Request) {
     ok: true,
     deposited: deposited.deposited,
     chips: deposited.record.chips,
+    ledgerToken: deposited.record.ledgerToken,
     wallet,
-    balance: getWalletChipBalance(wallet),
+    balance: getWalletChipBalance(wallet, deposited.record.ledgerToken),
   });
 }
