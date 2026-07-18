@@ -412,6 +412,18 @@ export default function CasinoSlot({
       <div className="casino-neon-strip casino-neon-strip-bottom" />
 
       <div className="casino-content">
+        {!spinning && spinsLeft <= 0 && onContinue && (
+          <div className="casino-continue-sticky">
+            <button
+              type="button"
+              onClick={onContinue}
+              className="art-btn casino-continue-primary"
+            >
+              {continueLabel}
+            </button>
+          </div>
+        )}
+
         <header className="casino-header">
           <div className="casino-top-bar">
             <div className="casino-audio-bar">
@@ -662,10 +674,12 @@ export default function CasinoSlot({
               <div className="slot-spins">
                 {spinsLeft > 0 ? (
                   <span>{spinsLeft} pull{spinsLeft !== 1 ? 's' : ''} remaining — yank the lever</span>
+                ) : onContinue ? (
+                  <span>Free pulls done — continue below, or buy a 25¢ quarter for another yank</span>
                 ) : quarterFirst || grantedSpins === 0 ? (
                   <span>No free pulls — buy a 25¢ quarter spin to yank the {BRAND.slotMachine}</span>
                 ) : (
-                  <span>Payout complete — keep spinning quarters or cash out at the {BRAND.cashier}</span>
+                  <span>Payout complete — cash out at the {BRAND.cashier}</span>
                 )}
               </div>
             </div>
@@ -681,7 +695,72 @@ export default function CasinoSlot({
           <p className={`casino-result ${jackpotFlash ? 'casino-result-jackpot' : ''}`}>{lastMessage}</p>
         )}
 
-        {totalWinnings > 0 && !settleError && (
+        {/* After free spins: Continue is first / primary — quarters & cashier are optional. */}
+        {!spinning && spinsLeft <= 0 && (
+          <div className="casino-exit-actions">
+            {onContinue && (
+              <div className="casino-continue-hero">
+                <button
+                  type="button"
+                  onClick={onContinue}
+                  className="art-btn casino-continue-primary"
+                >
+                  {continueLabel}
+                </button>
+                <p className="casino-continue-hint">
+                  Next chamber is ready. Quarters and the cashier stay optional below.
+                </p>
+              </div>
+            )}
+
+            {totalWinnings > 0 && !settleError && (
+              <p className="casino-secure-note">
+                {totalWinnings.toLocaleString()} chips in your bank
+                {activeSecure.localOnly
+                  ? ' (local) — vault link enables cashier claim.'
+                  : ` · vault-verified (max ${activeSecure.maxWinnings.toLocaleString()}) — claim at ${BRAND.cashier} with your wallet.`}
+              </p>
+            )}
+
+            <p className="casino-chips-summary">
+              You won <strong>{totalWinnings.toLocaleString()}</strong> Bonk Chips
+              {onContinue ? ' — keep them and continue, or cash out later.' : ` — cash them in at the ${BRAND.cashier}.`}
+            </p>
+
+            <div className="casino-exit-buttons casino-exit-buttons-secondary">
+              <Link href="/cashier" className="art-btn casino-exit-btn casino-cashier-btn">
+                {BRAND.cashier} →
+              </Link>
+              {isVictory && onRunItBack && (
+                <button type="button" onClick={onRunItBack} className="art-btn casino-exit-btn casino-runitback-btn">
+                  Run It Back
+                </button>
+              )}
+              <button type="button" onClick={onExit} className="art-btn casino-exit-btn">
+                {exitLabel}
+              </button>
+            </div>
+
+            <div className="casino-optional-spins">
+              <p className="casino-optional-spins-label">Optional — more spins</p>
+              {(quarterFirst || grantedSpins === 0) && (
+                <p className="casino-chips-summary casino-quarter-cta">
+                  Want another pull? Feed the treasury a <strong>25¢ quarter spin</strong>, then continue when ready.
+                </p>
+              )}
+              <div className="casino-paid-spin-exit">
+                <PaidSpinButton
+                  disabled={spinning}
+                  sessionId={activeSecure.sessionId}
+                  settleToken={activeSecure.settleToken}
+                  onSpinGranted={grantPaidSpin}
+                />
+              </div>
+            </div>
+          </div>
+        )}
+
+        {totalWinnings > 0 && !settleError && spinsLeft > 0 && (
           <p className="casino-secure-note">
             {totalWinnings.toLocaleString()} chips in your bank
             {activeSecure.localOnly
@@ -698,50 +777,6 @@ export default function CasinoSlot({
 
         {canPull && !lastMessage && (
           <p className="casino-prompt">Bonga Chill reaches in — tap her to yank the lever</p>
-        )}
-
-        {!spinning && spinsLeft <= 0 && (
-          <div className="casino-exit-actions">
-            {(quarterFirst || grantedSpins === 0) && (
-              <p className="casino-chips-summary casino-quarter-cta">
-                Feed the treasury: buy a <strong>25¢ quarter spin</strong>, pull the lever, then keep going if you want —
-                or continue when you&apos;re ready.
-              </p>
-            )}
-            <div className="casino-paid-spin-exit">
-              <PaidSpinButton
-                disabled={spinning}
-                sessionId={activeSecure.sessionId}
-                settleToken={activeSecure.settleToken}
-                onSpinGranted={grantPaidSpin}
-              />
-            </div>
-            <p className="casino-chips-summary">
-              You won <strong>{totalWinnings.toLocaleString()}</strong> Bonk Chips — cash them in at the {BRAND.cashier}.
-            </p>
-            <div className="casino-exit-buttons">
-              {onContinue && (
-                <button
-                  type="button"
-                  onClick={onContinue}
-                  className="art-btn casino-exit-btn casino-runitback-btn"
-                >
-                  {continueLabel}
-                </button>
-              )}
-              <Link href="/cashier" className="art-btn casino-exit-btn casino-cashier-btn">
-                {BRAND.cashier} →
-              </Link>
-              {isVictory && onRunItBack && (
-                <button type="button" onClick={onRunItBack} className="art-btn casino-exit-btn casino-runitback-btn">
-                  Run It Back
-                </button>
-              )}
-              <button type="button" onClick={onExit} className="art-btn casino-exit-btn">
-                {exitLabel}
-              </button>
-            </div>
-          </div>
         )}
       </div>
     </div>
