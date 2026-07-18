@@ -142,7 +142,7 @@ export function debitWalletChips(
   if (prev.chips < chipCost) {
     return {
       ok: false,
-      error: `Need ${chipCost.toLocaleString()} cashier chips — you have ${prev.chips.toLocaleString()}.`,
+      error: `Need ${chipCost.toLocaleString()} Bonk Chips — you have ${prev.chips.toLocaleString()}.`,
     };
   }
 

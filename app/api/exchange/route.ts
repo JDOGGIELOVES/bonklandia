@@ -1,10 +1,16 @@
 import { Connection, PublicKey } from '@solana/web3.js';
 import { NextResponse } from 'next/server';
-import { getFamToken, getSolanaRpcUrl, type FamCoinId } from '@/lib/fam-tokens';
+import {
+  calculateChipCost,
+  getFamToken,
+  getSolanaRpcUrl,
+  type FamCoinId,
+} from '@/lib/fam-tokens';
 import {
   creditWalletChips,
   debitWalletChips,
   depositWalletChips,
+  getWalletChipBalance,
 } from '@/lib/security/chip-ledger';
 import { blockIfEmergencyStopped } from '@/lib/security/emergency';
 import { checkWalletExchangeLimit } from '@/lib/security/exchange-limits';
@@ -27,8 +33,10 @@ export async function POST(request: Request) {
     walletAddress?: string;
     chipCost?: number;
     ledgerToken?: string;
-    /** Local bank chips to import onto the ledger before debiting (atomic claim+spend). */
+    /** Chips currently in the player bank (localStorage) — imported before spend. */
     importLocalAmount?: number;
+    /** Total chips the client thinks it has (local + ledger) — used only for clearer errors. */
+    clientChipBalance?: number;
   };
 
   try {
@@ -42,17 +50,45 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: 'Invalid Fam token.' }, { status: 400 });
   }
 
+  const token = getFamToken(coinId);
+  if (!token) {
+    return NextResponse.json({ error: 'Unknown Fam token.' }, { status: 400 });
+  }
+
   const tokenAmount = Number(body.tokenAmount);
   const chipCost = Number(body.chipCost);
   const walletAddress = body.walletAddress?.trim();
   let ledgerToken = body.ledgerToken?.trim() || null;
-  const importLocal = Math.max(0, Math.floor(Number(body.importLocalAmount) || 0));
+  let importLocal = Math.max(0, Math.floor(Number(body.importLocalAmount) || 0));
+  const clientChipBalance = Math.max(0, Math.floor(Number(body.clientChipBalance) || 0));
 
   if (!walletAddress) {
     return NextResponse.json({ error: 'Wallet address is required.' }, { status: 400 });
   }
 
-  // Import local bank chips in the same request so exchange works without a prior sync hop.
+  if (!Number.isFinite(tokenAmount) || tokenAmount < token.minTokens) {
+    return NextResponse.json(
+      { error: `Minimum exchange is ${token.minTokens.toLocaleString()} ${token.symbol}.` },
+      { status: 400 },
+    );
+  }
+
+  const expectedCost = calculateChipCost(coinId, tokenAmount);
+  if (!Number.isFinite(chipCost) || chipCost !== expectedCost) {
+    return NextResponse.json(
+      { error: 'Chip cost mismatch — refresh the cashier and try again.' },
+      { status: 400 },
+    );
+  }
+
+  // If client has bank chips but forgot importLocal, still accept clientChipBalance as import.
+  if (importLocal <= 0 && clientChipBalance > 0) {
+    const existing = getWalletChipBalance(walletAddress, ledgerToken);
+    if (existing.chips < chipCost) {
+      importLocal = Math.min(clientChipBalance, MAX_IMPORT_PER_REQUEST);
+    }
+  }
+
   if (importLocal > 0) {
     if (importLocal > MAX_IMPORT_PER_REQUEST) {
       return NextResponse.json(
@@ -82,36 +118,38 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: dailyLimit.error }, { status: 429 });
   }
 
-  const token = getFamToken(coinId);
-  if (token) {
-    const connection = new Connection(getSolanaRpcUrl(), 'confirmed');
-    try {
-      const recipient = new PublicKey(walletAddress);
-      const mint = new PublicKey(token.mint);
-      const exists = await walletHasTokenAccount(connection, recipient, mint);
-      if (!exists) {
-        return NextResponse.json(
-          {
-            error: `Your wallet has no ${token.symbol} token account for mint ${token.mint.slice(0, 8)}…. Hold at least 1 ${token.symbol} in this connected wallet — the treasury never creates accounts or pays SOL.`,
-            code: 'NO_TOKEN_ACCOUNT',
-          },
-          { status: 400 },
-        );
-      }
-    } catch {
-      return NextResponse.json({ error: 'Invalid wallet address.' }, { status: 400 });
+  const connection = new Connection(getSolanaRpcUrl(), 'confirmed');
+  try {
+    const recipient = new PublicKey(walletAddress);
+    const mint = new PublicKey(token.mint);
+    const exists = await walletHasTokenAccount(connection, recipient, mint);
+    if (!exists) {
+      return NextResponse.json(
+        {
+          error: `Your connected wallet has no ${token.symbol} token account (mint ${token.mint.slice(0, 6)}…). Holding ${token.symbol} in Phantom is required to receive more — chips and ${token.symbol} are different. Make sure the same wallet is connected.`,
+          code: 'NO_TOKEN_ACCOUNT',
+        },
+        { status: 400 },
+      );
     }
+  } catch {
+    return NextResponse.json({ error: 'Invalid wallet address.' }, { status: 400 });
   }
 
+  const before = getWalletChipBalance(walletAddress, ledgerToken);
   const debit = debitWalletChips(walletAddress, chipCost, ledgerToken);
   if (!debit.ok) {
     return NextResponse.json(
-      { error: debit.error, code: 'INSUFFICIENT_CHIPS' },
+      {
+        error: `Not enough Bonk Chips for this exchange. Need ${chipCost.toLocaleString()} chips, balance is ${before.chips.toLocaleString()}. (Having ${token.symbol} in your wallet is separate from Bonk Chips — win chips in Depths/Bandit first.)`,
+        code: 'INSUFFICIENT_CHIPS',
+        chips: before.chips,
+        chipCost,
+      },
       { status: 400 },
     );
   }
 
-  const connection = new Connection(getSolanaRpcUrl(), 'confirmed');
   const result = await executeTokenExchange(connection, {
     coinId,
     tokenAmount,
@@ -123,7 +161,14 @@ export async function POST(request: Request) {
     creditWalletChips(walletAddress, chipCost, debit.record.ledgerToken);
     const status =
       result.code === 'TREASURY_MISSING' || result.code === 'PAYOUTS_PAUSED' ? 503 : 400;
-    return NextResponse.json({ error: result.error, code: result.code }, { status });
+    // Rewrite vague treasury messages
+    let error = result.error;
+    if (result.code === 'INSUFFICIENT_TREASURY') {
+      error = `The shared treasury is low on ${token.symbol} right now. Try a smaller amount later.`;
+    } else if (result.code === 'NO_TOKEN_ACCOUNT') {
+      error = `Your wallet still needs a ${token.symbol} token account before the cashier can send ${token.symbol}.`;
+    }
+    return NextResponse.json({ error, code: result.code }, { status });
   }
 
   return NextResponse.json({

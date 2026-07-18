@@ -53,9 +53,12 @@ export default function CashierPanel({ showBackLink = true }: CashierPanelProps)
   const [syncingChips, setSyncingChips] = useState(false);
   const chipSyncInFlight = useRef(false);
 
-  // One player-facing balance: bank chips + any portable ledger (merged invisibly).
-  const ledgerChips = serverChips ?? (walletAddress ? loadChipLedgerChips(walletAddress) : 0);
-  const chips = ledgerChips + localChips;
+  // Player-facing balance: bank wins (local) + any sealed ledger chips (merged, never shown as two systems).
+  const ledgerChips = Math.max(
+    serverChips ?? 0,
+    walletAddress ? loadChipLedgerChips(walletAddress) : 0,
+  );
+  const chips = localChips + ledgerChips;
   const {
     balances,
     loading: balancesLoading,
@@ -395,8 +398,8 @@ export default function CashierPanel({ showBackLink = true }: CashierPanelProps)
       setExchanging(coinId);
       setMessage(null);
 
-      // Import whatever is still in the local bank in the same request as the spend.
       const importLocalAmount = loadLocalChipCount();
+      const clientChipBalance = importLocalAmount + loadChipLedgerChips(walletAddress);
 
       try {
         const res = await fetch('/api/exchange', {
@@ -409,11 +412,14 @@ export default function CashierPanel({ showBackLink = true }: CashierPanelProps)
             chipCost,
             ledgerToken: loadChipLedgerToken(walletAddress),
             importLocalAmount,
+            clientChipBalance,
           }),
         });
 
         const data = await res.json() as {
           error?: string;
+          code?: string;
+          chips?: number;
           chipsRemaining?: number;
           tokenAmount?: number;
           symbol?: string;
@@ -428,23 +434,21 @@ export default function CashierPanel({ showBackLink = true }: CashierPanelProps)
           return;
         }
 
+        // Spend only the chip cost from the player bank; keep any leftover local chips.
+        // Server already imported all local into the ledger — zero local, set ledger to remaining.
         if (importLocalAmount > 0) {
           clearLocalChips(importLocalAmount);
           refreshLocalBank();
         }
+        const remaining = Number(data.chipsRemaining) || 0;
         if (data.ledgerToken && walletAddress) {
-          saveChipLedgerToken(
-            walletAddress,
-            data.ledgerToken,
-            Number(data.chipsRemaining) || 0,
-            { force: true },
-          );
+          saveChipLedgerToken(walletAddress, data.ledgerToken, remaining, { force: true });
         }
-        setServerChips(Number(data.chipsRemaining) || 0);
+        setServerChips(remaining);
         await refreshBalances();
         showExchangeMessage({
           ok: true,
-          text: `Sent ${Number(data.tokenAmount).toLocaleString()} ${data.symbol} to your wallet.`,
+          text: `Sent ${Number(data.tokenAmount).toLocaleString()} ${data.symbol} to your wallet. ${remaining.toLocaleString()} Bonk Chips left.`,
           txUrl: data.signature ? solscanTxUrl(data.signature) : undefined,
         });
       } catch {
@@ -472,7 +476,9 @@ export default function CashierPanel({ showBackLink = true }: CashierPanelProps)
       <div className="game-scene-vignette" />
       <div className="cashier-content max-w-6xl mx-auto px-4 py-8">
         <header className="cashier-header mb-8">
-          <p className="cashier-eyebrow">{BRAND.name} · Solana Mainnet · {BRAND.domain}</p>
+          <p className="cashier-eyebrow">
+            {BRAND.name} · Solana Mainnet · Build {BRAND.buildId}
+          </p>
           <h1 className="art-title text-center">{BRAND.cashier}</h1>
           <p className="art-subtitle text-center">
             Trade in-game Bonk Chips for real Fam SPL tokens — sent straight to your wallet
