@@ -4,6 +4,7 @@ import { useCallback, useEffect, useState } from 'react';
 import {
   BANK_CHANGE_EVENT,
   addChips as addChipsToBank,
+  clearLocalChips as clearLocalChipsFromBank,
   loadBankState,
   spendChips as spendChipsFromBank,
   type BankState,
@@ -39,6 +40,12 @@ export function useBonkBank() {
     return result;
   }, []);
 
+  const clearLocalChips = useCallback((amount?: number) => {
+    const next = clearLocalChipsFromBank(amount);
+    setState(next);
+    return next;
+  }, []);
+
   return {
     state,
     chips: state.chips,
@@ -46,6 +53,7 @@ export function useBonkBank() {
     lifetimeExchanges: state.lifetimeExchanges,
     addChips,
     spendChips,
+    clearLocalChips,
     refresh,
   };
 }

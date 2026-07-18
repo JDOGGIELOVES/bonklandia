@@ -51,6 +51,30 @@ export function creditWalletChips(
   return { ok: true, record: next };
 }
 
+/**
+ * Move chips onto the ledger without bumping lifetimeWon
+ * (used when importing local bank balance that was already counted as won client-side).
+ */
+export function depositWalletChips(
+  wallet: string,
+  amount: number,
+): { ok: true; record: WalletChipRecord; deposited: number } | { ok: false; error: string } {
+  const chips = Math.max(0, Math.floor(amount));
+  if (chips <= 0) return { ok: false, error: 'Invalid chip deposit.' };
+
+  const ledger = loadLedger();
+  const prev = getWalletChipBalance(wallet);
+  const next: WalletChipRecord = {
+    chips: prev.chips + chips,
+    lifetimeWon: prev.lifetimeWon,
+    lifetimeExchanged: prev.lifetimeExchanged,
+    updatedAt: new Date().toISOString(),
+  };
+  ledger[wallet] = next;
+  saveLedger(ledger);
+  return { ok: true, record: next, deposited: chips };
+}
+
 export function debitWalletChips(
   wallet: string,
   amount: number,

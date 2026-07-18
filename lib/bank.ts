@@ -82,6 +82,19 @@ export function spendChips(amount: number): { ok: true; state: BankState } | { o
   return { ok: true, state: next };
 }
 
+/** Remove chips from local bank without counting an exchange (e.g. after server sync). */
+export function clearLocalChips(amount?: number): BankState {
+  const state = loadBankState();
+  const remove =
+    amount === undefined ? state.chips : Math.min(state.chips, Math.max(0, Math.floor(amount)));
+  const next: BankState = {
+    ...state,
+    chips: state.chips - remove,
+  };
+  saveBankState(next);
+  return next;
+}
+
 export function formatWalletAddress(address: string): string {
   if (address.length <= 12) return address;
   return `${address.slice(0, 4)}…${address.slice(-4)}`;
