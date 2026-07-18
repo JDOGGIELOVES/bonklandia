@@ -4784,6 +4784,25 @@ body {
   margin-bottom: 0.65rem;
 }
 
+.cashier-coin-block-reason {
+  font-size: 0.8rem;
+  line-height: 1.4;
+  color: #fde68a;
+  margin: 0 0 0.5rem;
+  text-align: left;
+}
+
+.cashier-exchange-btn-blocked {
+  opacity: 0.92;
+  border-color: rgba(251, 191, 36, 0.45) !important;
+}
+
+.cashier-cost-have {
+  font-size: 0.85em;
+  color: rgba(245, 230, 200, 0.55);
+  font-weight: 400;
+}
+
 .cashier-scene {
   position: relative;
   min-height: 100vh;

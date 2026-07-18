@@ -1,10 +1,13 @@
 import {
   getAccount,
   getAssociatedTokenAddressSync,
+  TOKEN_2022_PROGRAM_ID,
   TOKEN_PROGRAM_ID,
   TokenAccountNotFoundError,
 } from '@solana/spl-token';
 import { Connection, PublicKey } from '@solana/web3.js';
+
+const TOKEN_PROGRAMS = [TOKEN_PROGRAM_ID, TOKEN_2022_PROGRAM_ID] as const;
 
 export type WalletTokenAccount = {
   address: PublicKey;
@@ -17,26 +20,27 @@ export type WalletTokenAccount = {
  * Find a wallet's SPL token account for a mint.
  * Prefers the canonical ATA; falls back to any token account for that mint
  * (some wallets hold balances outside the derived ATA — Phantom still shows them).
+ * Checks both classic Token and Token-2022 programs.
  */
 export async function findWalletTokenAccount(
   connection: Connection,
   owner: PublicKey,
   mint: PublicKey,
 ): Promise<WalletTokenAccount | null> {
-  const ata = getAssociatedTokenAddressSync(mint, owner, false, TOKEN_PROGRAM_ID);
-
-  try {
-    const account = await getAccount(connection, ata, 'confirmed', TOKEN_PROGRAM_ID);
-    return {
-      address: ata,
-      amount: account.amount,
-      decimals: 0, // filled by caller when needed
-      isAta: true,
-    };
-  } catch (err) {
-    if (!(err instanceof TokenAccountNotFoundError)) {
-      // Non-missing errors (RPC flakiness) — still try owner scan before giving up
-      console.warn('[token-accounts] ATA lookup failed, scanning owner accounts', err);
+  for (const programId of TOKEN_PROGRAMS) {
+    const ata = getAssociatedTokenAddressSync(mint, owner, false, programId);
+    try {
+      const account = await getAccount(connection, ata, 'confirmed', programId);
+      return {
+        address: ata,
+        amount: account.amount,
+        decimals: 0, // filled by caller when needed
+        isAta: true,
+      };
+    } catch (err) {
+      if (!(err instanceof TokenAccountNotFoundError)) {
+        console.warn('[token-accounts] ATA lookup failed, scanning owner accounts', err);
+      }
     }
   }
 
@@ -59,7 +63,9 @@ export async function findWalletTokenAccount(
         | undefined;
       const amount = BigInt(info?.tokenAmount?.amount ?? '0');
       const decimals = Number(info?.tokenAmount?.decimals ?? 0);
-      const isAta = pubkey.equals(ata);
+      const isAta = TOKEN_PROGRAMS.some(programId =>
+        pubkey.equals(getAssociatedTokenAddressSync(mint, owner, false, programId)),
+      );
       const candidate: WalletTokenAccount = {
         address: pubkey,
         amount,
@@ -102,63 +108,72 @@ export async function loadWalletTokenBalancesByMint(
   const mintSet = new Set(mints.map(m => m.toBase58()));
   const result = new Map<string, WalletTokenAccount>();
 
-  // Seed with ATA checks in parallel for speed when accounts are standard
+  // Seed with ATA checks (classic + Token-2022)
   await Promise.all(
-    mints.map(async mint => {
-      const ata = getAssociatedTokenAddressSync(mint, owner, false, TOKEN_PROGRAM_ID);
-      try {
-        const account = await getAccount(connection, ata, 'confirmed', TOKEN_PROGRAM_ID);
-        result.set(mint.toBase58(), {
-          address: ata,
-          amount: account.amount,
-          decimals: 0,
-          isAta: true,
-        });
-      } catch {
-        // filled by scan below if present elsewhere
-      }
-    }),
+    mints.flatMap(mint =>
+      TOKEN_PROGRAMS.map(async programId => {
+        const ata = getAssociatedTokenAddressSync(mint, owner, false, programId);
+        try {
+          const account = await getAccount(connection, ata, 'confirmed', programId);
+          const mintStr = mint.toBase58();
+          const existing = result.get(mintStr);
+          if (!existing || account.amount > existing.amount) {
+            result.set(mintStr, {
+              address: ata,
+              amount: account.amount,
+              decimals: 0,
+              isAta: true,
+            });
+          }
+        } catch {
+          // filled by scan below if present elsewhere
+        }
+      }),
+    ),
   );
 
   // Owner scan catches non-ATA holdings and fills gaps when ATA RPC failed
-  try {
-    const scanned = await connection.getParsedTokenAccountsByOwner(
-      owner,
-      { programId: TOKEN_PROGRAM_ID },
-      'confirmed',
-    );
+  for (const programId of TOKEN_PROGRAMS) {
+    try {
+      const scanned = await connection.getParsedTokenAccountsByOwner(
+        owner,
+        { programId },
+        'confirmed',
+      );
 
-    for (const { pubkey, account } of scanned.value) {
-      const info = account.data.parsed?.info as
-        | {
-            mint?: string;
-            tokenAmount?: { amount?: string; decimals?: number };
-          }
-        | undefined;
-      const mintStr = info?.mint;
-      if (!mintStr || !mintSet.has(mintStr)) continue;
+      for (const { pubkey, account } of scanned.value) {
+        const info = account.data.parsed?.info as
+          | {
+              mint?: string;
+              tokenAmount?: { amount?: string; decimals?: number };
+            }
+          | undefined;
+        const mintStr = info?.mint;
+        if (!mintStr || !mintSet.has(mintStr)) continue;
 
-      const amount = BigInt(info?.tokenAmount?.amount ?? '0');
-      const decimals = Number(info?.tokenAmount?.decimals ?? 0);
-      const existing = result.get(mintStr);
-      const isAta =
-        existing?.isAta && existing.address.equals(pubkey)
-          ? true
-          : pubkey.equals(getAssociatedTokenAddressSync(new PublicKey(mintStr), owner, false, TOKEN_PROGRAM_ID));
+        const amount = BigInt(info?.tokenAmount?.amount ?? '0');
+        const decimals = Number(info?.tokenAmount?.decimals ?? 0);
+        const existing = result.get(mintStr);
+        const isAta = TOKEN_PROGRAMS.some(pid =>
+          pubkey.equals(
+            getAssociatedTokenAddressSync(new PublicKey(mintStr), owner, false, pid),
+          ),
+        );
 
-      if (!existing || amount > existing.amount || (amount === existing.amount && isAta)) {
-        result.set(mintStr, {
-          address: pubkey,
-          amount,
-          decimals,
-          isAta,
-        });
-      } else if (existing && existing.decimals === 0 && decimals > 0) {
-        result.set(mintStr, { ...existing, decimals });
+        if (!existing || amount > existing.amount || (amount === existing.amount && isAta)) {
+          result.set(mintStr, {
+            address: pubkey,
+            amount,
+            decimals,
+            isAta,
+          });
+        } else if (existing && existing.decimals === 0 && decimals > 0) {
+          result.set(mintStr, { ...existing, decimals });
+        }
       }
+    } catch (err) {
+      console.warn('[token-accounts] bulk owner scan failed', err);
     }
-  } catch (err) {
-    console.warn('[token-accounts] bulk owner scan failed', err);
   }
 
   return result;

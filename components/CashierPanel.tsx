@@ -172,53 +172,82 @@ export default function CashierPanel({ showBackLink = true }: CashierPanelProps)
     setAmounts(prev => ({ ...prev, [id]: value }));
   };
 
+  const showExchangeMessage = useCallback((msg: { text: string; ok: boolean; txUrl?: string }) => {
+    setMessage(msg);
+    // Ensure the user sees why a click "did nothing" (disabled buttons felt broken).
+    requestAnimationFrame(() => {
+      document.getElementById('cashier-toast')?.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+    });
+  }, []);
+
+  const exchangeBlockReason = useCallback(
+    (coinId: FamCoinId): string | null => {
+      const token = FAM_TOKENS.find(t => t.id === coinId)!;
+      const tokenAmount = parseFloat(amounts[coinId]);
+      const chipCost = calculateChipCost(coinId, tokenAmount);
+
+      if (!connected || !walletAddress) {
+        return 'Connect your Solana wallet first.';
+      }
+      if (balancesLoading) {
+        return 'Still reading your token accounts — wait a moment, then try again.';
+      }
+      if (serverChips === null) {
+        return 'Loading server chip balance — wait a second, then try again.';
+      }
+      if (treasuryReady === false) {
+        return (
+          treasuryStatus?.payoutsBlockedReason ??
+          'Cashier payouts offline (treasury signing key / emergency stop).'
+        );
+      }
+      if (!Number.isFinite(tokenAmount) || tokenAmount < token.minTokens) {
+        return `Minimum is ${token.minTokens.toLocaleString()} ${token.symbol}.`;
+      }
+      if (chipCost <= 0 || chips < chipCost) {
+        const localHint =
+          localChips > chips
+            ? ` Local bank has ${localChips.toLocaleString()} chips — claim casino winnings above so they move to the server ledger.`
+            : '';
+        return `Need ${chipCost.toLocaleString()} chips (you have ${chips.toLocaleString()} on the server ledger).${localHint}`;
+      }
+      if (!walletCanReceiveToken(balances[coinId])) {
+        return `No ${token.symbol} token account on this wallet (mint ${formatMintAddress(token.mint)}). Hold a little ${token.symbol} first, then hit refresh.`;
+      }
+      const vault = treasuryTokenMap[coinId];
+      if (vault && !vault.accountExists) {
+        return `Treasury has no ${token.symbol} account funded yet.`;
+      }
+      return null;
+    },
+    [
+      amounts,
+      balances,
+      balancesLoading,
+      chips,
+      connected,
+      localChips,
+      serverChips,
+      treasuryReady,
+      treasuryStatus,
+      treasuryTokenMap,
+      walletAddress,
+    ],
+  );
+
   const handleExchange = useCallback(
     async (coinId: FamCoinId) => {
       const token = FAM_TOKENS.find(t => t.id === coinId)!;
       const tokenAmount = parseFloat(amounts[coinId]);
       const chipCost = calculateChipCost(coinId, tokenAmount);
 
-      if (!connected || !walletAddress) {
-        setMessage({ ok: false, text: 'Connect your Solana wallet to receive real SPL tokens.' });
-        return;
-      }
-      if (!Number.isFinite(tokenAmount) || tokenAmount < token.minTokens) {
-        setMessage({
-          ok: false,
-          text: `Minimum exchange is ${token.minTokens.toLocaleString()} ${token.symbol}.`,
-        });
-        return;
-      }
-      if (chipCost <= 0 || chips < chipCost) {
-        setMessage({
-          ok: false,
-          text: `Need ${chipCost.toLocaleString()} chips — you have ${chips.toLocaleString()}.`,
-        });
-        return;
-      }
-      if (treasuryReady === false) {
-        setMessage({
-          ok: false,
-          text:
-            treasuryStatus?.payoutsBlockedReason ??
-            'Cashier payouts offline. Set BONGA_TREASURY_SECRET_KEY (shared Bonk Miner / GrokSight treasury key).',
-        });
-        return;
-      }
-
-      const vault = treasuryTokenMap[coinId];
-      if (!vault?.accountExists) {
-        setMessage({
-          ok: false,
-          text: `Treasury has no ${token.symbol} token account yet. Fund the shared treasury wallet first.`,
-        });
-        return;
-      }
-      if (!walletCanReceiveToken(balances[coinId])) {
-        setMessage({
-          ok: false,
-          text: `This connected wallet shows no ${token.symbol} account yet (mint ${token.mint.slice(0, 6)}…). Make sure the same wallet that holds ${token.symbol} is connected, then hit refresh. Cashier never creates token accounts.`,
-        });
+      const blocked = exchangeBlockReason(coinId);
+      if (blocked) {
+        showExchangeMessage({ ok: false, text: blocked });
+        if (balancesLoading || serverChips === null) {
+          void refreshBalances();
+          void refreshServerChips();
+        }
         return;
       }
 
@@ -239,34 +268,35 @@ export default function CashierPanel({ showBackLink = true }: CashierPanelProps)
 
         const data = await res.json();
         if (!res.ok) {
-          setMessage({ ok: false, text: data.error ?? 'Exchange failed.' });
+          showExchangeMessage({ ok: false, text: data.error ?? 'Exchange failed.' });
+          // Balances can be stale after RPC lag — refresh so the next click is accurate.
+          void refreshBalances();
+          void refreshServerChips();
           return;
         }
 
         setServerChips(Number(data.chipsRemaining) || 0);
         await refreshBalances();
-        setMessage({
+        showExchangeMessage({
           ok: true,
           text: `Sent ${data.tokenAmount.toLocaleString()} ${data.symbol} to your wallet.`,
           txUrl: solscanTxUrl(data.signature),
         });
       } catch {
-        setMessage({ ok: false, text: 'Network error — try again.' });
+        showExchangeMessage({ ok: false, text: 'Network error — try again.' });
       } finally {
         setExchanging(null);
       }
     },
     [
       amounts,
-      chips,
-      connected,
+      exchangeBlockReason,
       walletAddress,
-      treasuryReady,
-      treasuryStatus,
-      treasuryTokenMap,
       refreshBalances,
-      balances,
       refreshServerChips,
+      showExchangeMessage,
+      balancesLoading,
+      serverChips,
     ],
   );
 
@@ -445,7 +475,10 @@ export default function CashierPanel({ showBackLink = true }: CashierPanelProps)
         />
 
         {message && (
-          <div className={`cashier-toast ${message.ok ? 'cashier-toast-ok' : 'cashier-toast-err'}`}>
+          <div
+            id="cashier-toast"
+            className={`cashier-toast ${message.ok ? 'cashier-toast-ok' : 'cashier-toast-err'}`}
+          >
             <div>
               {message.text}
               {message.txUrl && (
@@ -498,13 +531,9 @@ export default function CashierPanel({ showBackLink = true }: CashierPanelProps)
                 const canAfford = chips >= chipCost && tokenAmount >= token.minTokens;
                 const walletBal = balancesLoading ? '…' : bal?.ui ?? '—';
                 const isBusy = exchanging === token.id;
-                const canExchange =
-                  canAfford &&
-                  connected &&
-                  walletReady &&
-                  !balancesLoading &&
-                  treasuryReady !== false &&
-                  serverChips !== null;
+                const blockReason = exchangeBlockReason(token.id);
+                // Always clickable when not busy so users get a clear error instead of a dead button.
+                const canAttempt = !isBusy;
 
                 return (
                   <div key={token.id} className="cashier-coin-card">
@@ -578,20 +607,36 @@ export default function CashierPanel({ showBackLink = true }: CashierPanelProps)
                       </label>
                       <div className="cashier-cost">
                         Cost: <strong>{chipCost.toLocaleString()}</strong> chips
+                        {connected && (
+                          <span className="cashier-cost-have">
+                            {' '}
+                            · you have {chips.toLocaleString()}
+                          </span>
+                        )}
                       </div>
+                      {blockReason && connected && (
+                        <p className="cashier-coin-block-reason" role="status">
+                          {blockReason}
+                        </p>
+                      )}
                       <button
                         type="button"
                         onClick={() => void handleExchange(token.id)}
-                        disabled={!canExchange || isBusy}
-                        className="art-btn w-full py-2.5 text-[#f0d878] disabled:opacity-40"
+                        disabled={!canAttempt}
+                        title={blockReason ?? `Exchange chips for ${token.symbol}`}
+                        className={`art-btn w-full py-2.5 text-[#f0d878] disabled:opacity-40 ${
+                          blockReason ? 'cashier-exchange-btn-blocked' : ''
+                        }`}
                       >
                         {isBusy
                           ? 'Sending…'
                           : !connected
                             ? 'Connect wallet'
                             : !walletReady
-                              ? `Need ${token.symbol} account`
-                              : `Exchange for ${token.symbol}`}
+                              ? `Need ${token.symbol} account — tap for help`
+                              : !canAfford
+                                ? `Need ${chipCost.toLocaleString()} chips — tap for help`
+                                : `Exchange for ${token.symbol}`}
                       </button>
                     </div>
                   </div>
