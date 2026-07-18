@@ -54,8 +54,8 @@ const RULES = [
   },
   {
     id: 'chips',
-    label: 'Server-verified chips',
-    detail: 'Casino winnings are capped and settled on the server before you can cash out.',
+    label: 'Bonk Chips auto-credit',
+    detail: 'Winnings land in your bank automatically — connect a wallet and exchange for SPL tokens.',
   },
   {
     id: 'quarter',
@@ -207,13 +207,13 @@ export default function CashierSecurityPanel({
               <div className="cashier-security-account-row">
                 <span>Wallet connected</span>
                 <span className={connected ? 'text-emerald-400' : 'text-amber-400'}>
-                  {connected ? 'Yes' : 'No — connect to claim & exchange'}
+                  {connected ? 'Yes' : 'No — connect to exchange'}
                 </span>
               </div>
               <div className="cashier-security-account-row">
-                <span>Server-verified chips</span>
+                <span>Bonk Chips</span>
                 <strong className="text-[#f0d878]">
-                  {connected && serverChips !== null ? serverChips.toLocaleString() : '—'}
+                  {serverChips !== null ? serverChips.toLocaleString() : '—'}
                 </strong>
               </div>
               <div className="cashier-security-account-row">
@@ -222,25 +222,10 @@ export default function CashierSecurityPanel({
                   {connected ? `${walletTokenReadyCount} / ${FAM_TOKENS.length}` : '—'}
                 </span>
               </div>
-              <div className="cashier-security-account-row">
-                <span>Pending casino claim</span>
-                <span className={pendingClaim ? 'text-amber-300' : 'text-[#f5e6c8]/55'}>
-                  {pendingClaim
-                    ? pendingClaim.totalWinnings
-                      ? `Yes — up to ${pendingClaim.totalWinnings.toLocaleString()} chips`
-                      : 'Yes — claim above'
-                    : 'None'}
-                </span>
-              </div>
             </div>
             {!connected && (
               <p className="cashier-security-hint mt-3">
-                Connect your wallet to see verified chip balance and which Fam tokens you can receive.
-              </p>
-            )}
-            {connected && serverChips === 0 && pendingClaim && (
-              <p className="cashier-security-hint mt-3">
-                You have an unclaimed casino session — use <strong>Claim verified chips</strong> in {BRAND.bank} first.
+                Connect your wallet to exchange Bonk Chips for Fam SPL tokens.
               </p>
             )}
           </section>

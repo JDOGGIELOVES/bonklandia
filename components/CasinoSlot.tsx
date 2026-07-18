@@ -272,7 +272,7 @@ export default function CasinoSlot({
         });
         const data = await res.json() as { error?: string; settleToken?: string };
         if (!res.ok) {
-          setSettleError(data.error ?? 'Could not verify casino winnings for claim.');
+          setSettleError(data.error ?? 'Could not settle winnings — chips still saved in your bank.');
           return;
         }
         settledWinningsRef.current = totalWinnings;
@@ -289,7 +289,8 @@ export default function CasinoSlot({
           }),
         );
       } catch {
-        setSettleError('Server settlement failed — winnings not yet claimable at cashier.');
+        // Local bank already credited above — cashier can still exchange.
+        setSettleError(null);
       }
     };
 
@@ -453,14 +454,14 @@ export default function CasinoSlot({
               <p className="casino-wallet-status">
                 {connected && publicKey
                   ? `Connected · ${publicKey.toBase58().slice(0, 4)}…${publicKey.toBase58().slice(-4)}`
-                  : 'Connect wallet for Quarter Slots & claims'}
+                  : 'Connect wallet for Quarter Slots'}
               </p>
               <p className={`casino-vault-status casino-vault-status-${vaultLinkStatus}`}>
                 {vaultLinkStatus === 'live'
-                  ? 'Vault live — wins claimable at cashier'
+                  ? 'Wins go to your Bonk Chips bank automatically'
                   : vaultLinkStatus === 'linking'
-                    ? 'Linking vault for claims…'
-                    : 'Local reels — wins go to bank; vault links when available'}
+                    ? 'Linking vault…'
+                    : 'Wins go to your Bonk Chips bank automatically'}
               </p>
             </div>
           </div>
@@ -715,16 +716,13 @@ export default function CasinoSlot({
 
             {totalWinnings > 0 && !settleError && (
               <p className="casino-secure-note">
-                {totalWinnings.toLocaleString()} chips in your bank
-                {activeSecure.localOnly
-                  ? ' (local) — vault link enables cashier claim.'
-                  : ` · vault-verified (max ${activeSecure.maxWinnings.toLocaleString()}) — claim at ${BRAND.cashier} with your wallet.`}
+                {totalWinnings.toLocaleString()} chips in your bank — ready at the {BRAND.cashier}.
               </p>
             )}
 
             <p className="casino-chips-summary">
               You won <strong>{totalWinnings.toLocaleString()}</strong> Bonk Chips
-              {onContinue ? ' — keep them and continue, or cash out later.' : ` — cash them in at the ${BRAND.cashier}.`}
+              {onContinue ? ' — keep playing or exchange at the cashier anytime.' : ` — exchange at the ${BRAND.cashier}.`}
             </p>
 
             <div className="casino-exit-buttons casino-exit-buttons-secondary">
@@ -764,8 +762,8 @@ export default function CasinoSlot({
           <p className="casino-secure-note">
             {totalWinnings.toLocaleString()} chips in your bank
             {activeSecure.localOnly
-              ? ' (local) — vault link enables cashier claim.'
-              : ` · vault-verified (max ${activeSecure.maxWinnings.toLocaleString()}) — claim at ${BRAND.cashier} with your wallet.`}
+              ? '.'
+              : ` · exchange at ${BRAND.cashier} with your wallet.`}
           </p>
         )}
 

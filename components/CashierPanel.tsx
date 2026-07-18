@@ -50,14 +50,12 @@ export default function CashierPanel({ showBackLink = true }: CashierPanelProps)
     totalWinnings?: number;
     localOnly?: boolean;
   } | null>(null);
-  const [claiming, setClaiming] = useState(false);
   const [syncingChips, setSyncingChips] = useState(false);
-  const [chipSyncNote, setChipSyncNote] = useState<string | null>(null);
   const chipSyncInFlight = useRef(false);
 
-  // Spendable = portable ledger + anything still sitting in local bank (imported on exchange).
+  // One player-facing balance: bank chips + any portable ledger (merged invisibly).
   const ledgerChips = serverChips ?? (walletAddress ? loadChipLedgerChips(walletAddress) : 0);
-  const chips = connected ? ledgerChips + localChips : localChips;
+  const chips = ledgerChips + localChips;
   const {
     balances,
     loading: balancesLoading,
@@ -214,8 +212,7 @@ export default function CashierPanel({ showBackLink = true }: CashierPanelProps)
         if (Number.isFinite(nextServer)) setServerChips(nextServer);
         else await refreshServerChips();
 
-        const note = `Synced ${deposited.toLocaleString()} chips to your cashier ledger (balance ${Number.isFinite(nextServer) ? nextServer.toLocaleString() : '?'}).`;
-        setChipSyncNote(note);
+        const note = `Your chip balance is ready (${Number.isFinite(nextServer) ? nextServer.toLocaleString() : deposited.toLocaleString()} chips).`;
         if (!opts?.silent) {
           showExchangeMessage({ ok: true, text: note });
         }
@@ -243,153 +240,9 @@ export default function CashierPanel({ showBackLink = true }: CashierPanelProps)
   );
 
   /**
-   * One button for users: claim vault session if any, always import local bank,
-   * always show a toast (never a silent no-op).
+   * Invisible backend prep: claim any vault session + fold local bank into the
+   * portable ledger. Players never see this — they only see Bonk Chips + Exchange.
    */
-  const handleClaimCasinoChips = useCallback(async () => {
-    if (!connected || !walletAddress) {
-      showExchangeMessage({
-        ok: false,
-        text: 'Connect your Solana wallet first, then tap Claim verified chips.',
-      });
-      return;
-    }
-
-    setClaiming(true);
-    setMessage(null);
-
-    const parts: string[] = [];
-    let vaultCredited = 0;
-
-    try {
-      const pending = pendingClaim;
-      const canVaultClaim =
-        pending?.sessionId &&
-        pending.settleToken &&
-        !pending.localOnly &&
-        pending.settleToken !== 'local' &&
-        !pending.sessionId.startsWith('local-');
-
-      if (canVaultClaim && pending) {
-        try {
-          const res = await fetch('/api/chips/claim', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-              sessionId: pending.sessionId,
-              settleToken: pending.settleToken,
-              wallet: walletAddress,
-              ledgerToken: loadChipLedgerToken(walletAddress),
-            }),
-          });
-          const data = (await res.json()) as {
-            error?: string;
-            credited?: number;
-            chips?: number;
-            ledgerToken?: string;
-          };
-          if (res.ok) {
-            vaultCredited = Number(data.credited) || 0;
-            if (data.ledgerToken && Number.isFinite(Number(data.chips))) {
-              saveChipLedgerToken(walletAddress, data.ledgerToken, Number(data.chips), {
-                force: true,
-              });
-            }
-            if (vaultCredited > 0) {
-              clearLocalChips(vaultCredited);
-              refreshLocalBank();
-            }
-            if (Number.isFinite(Number(data.chips))) setServerChips(Number(data.chips));
-            parts.push(
-              vaultCredited > 0
-                ? `Claimed ${vaultCredited.toLocaleString()} vault chips.`
-                : 'Vault session already empty.',
-            );
-          } else {
-            parts.push(data.error ?? 'Vault claim failed (session may have expired).');
-          }
-        } catch {
-          parts.push('Vault claim network error.');
-        }
-      }
-
-      // Always clear pending session so the banner doesn't stick forever.
-      try {
-        sessionStorage.removeItem('bonk-casino-pending');
-      } catch {
-        // private mode
-      }
-      setPendingClaim(null);
-
-      const localBefore = loadLocalChipCount();
-      const syncResult = await syncLocalChipsToServer({ silent: true });
-      if (syncResult.deposited > 0) {
-        parts.push(`Synced ${syncResult.deposited.toLocaleString()} local chips.`);
-      } else if (localBefore > 0 && syncResult.error) {
-        parts.push(syncResult.error);
-      }
-
-      await refreshServerChips();
-      const ledgerNow = (() => {
-        // Prefer state after refresh; fall back to sync result
-        return syncResult.chips;
-      })();
-
-      // Re-read after refreshServerChips updated state — use token as source of truth
-      const token = loadChipLedgerToken(walletAddress);
-      let finalChips = ledgerNow;
-      try {
-        const balRes = await fetch('/api/chips/balance', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ wallet: walletAddress, ledgerToken: token }),
-        });
-        const bal = (await balRes.json()) as { chips?: number; ledgerToken?: string };
-        if (balRes.ok) {
-          finalChips = Math.max(Number(bal.chips) || 0, loadChipLedgerChips(walletAddress));
-          if (bal.ledgerToken && (Number(bal.chips) || 0) > 0) {
-            saveChipLedgerToken(walletAddress, bal.ledgerToken, Number(bal.chips));
-          }
-          setServerChips(finalChips);
-        }
-      } catch {
-        // keep previous
-      }
-
-      if (vaultCredited > 0 || syncResult.deposited > 0) {
-        showExchangeMessage({
-          ok: true,
-          text: `${parts.join(' ')} Cashier ledger: ${finalChips.toLocaleString()} chips — ready to exchange.`.trim(),
-        });
-      } else if (finalChips > 0) {
-        showExchangeMessage({
-          ok: true,
-          text: `Your cashier ledger already has ${finalChips.toLocaleString()} chips. You can exchange below.`,
-        });
-      } else {
-        showExchangeMessage({
-          ok: false,
-          text:
-            parts.length > 0
-              ? `${parts.join(' ')} No chips found to move. Win more at the Bandit / Depths, then return.`
-              : 'No chips found to claim. Local bank and vault session are empty — play for more chips first.',
-        });
-      }
-    } finally {
-      setClaiming(false);
-    }
-  }, [
-    connected,
-    walletAddress,
-    pendingClaim,
-    syncLocalChipsToServer,
-    clearLocalChips,
-    refreshLocalBank,
-    refreshServerChips,
-    showExchangeMessage,
-  ]);
-
-  // Auto-sync: claim vault session if any, then import local bank → server ledger.
   useEffect(() => {
     if (!connected || !walletAddress) return;
 
@@ -425,7 +278,7 @@ export default function CashierPanel({ showBackLink = true }: CashierPanelProps)
               ledgerToken: loadChipLedgerToken(walletAddress),
             }),
           });
-          const data = await res.json() as {
+          const data = (await res.json()) as {
             credited?: number;
             chips?: number;
             ledgerToken?: string;
@@ -437,23 +290,29 @@ export default function CashierPanel({ showBackLink = true }: CashierPanelProps)
                 force: true,
               });
             }
+            // Those chips were already in the local bank — remove them so total isn't doubled.
             if (credited > 0) {
               clearLocalChips(credited);
               refreshLocalBank();
             }
-            sessionStorage.removeItem('bonk-casino-pending');
-            setPendingClaim(null);
-            setServerChips(Number(data.chips) || 0);
+            if (Number.isFinite(Number(data.chips))) {
+              setServerChips(Number(data.chips) || 0);
+            }
           }
         } catch {
-          // fall through to local sync
+          // ignore — local chips still spendable via exchange import
         }
-      } else if (pending?.localOnly || pending?.sessionId?.startsWith('local-')) {
-        sessionStorage.removeItem('bonk-casino-pending');
-        if (!cancelled) setPendingClaim(null);
       }
 
+      try {
+        sessionStorage.removeItem('bonk-casino-pending');
+      } catch {
+        // private mode
+      }
+      if (!cancelled) setPendingClaim(null);
+
       if (cancelled) return;
+      // Silently fold local bank into portable ledger when possible.
       if (loadLocalChipCount() > 0) {
         await syncLocalChipsToServer({ silent: true });
       }
@@ -463,7 +322,6 @@ export default function CashierPanel({ showBackLink = true }: CashierPanelProps)
     return () => {
       cancelled = true;
     };
-    // Only when wallet connects / changes — not on every chip tick.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [connected, walletAddress]);
 
@@ -483,9 +341,6 @@ export default function CashierPanel({ showBackLink = true }: CashierPanelProps)
       if (balancesLoading) {
         return 'Still reading your token accounts — wait a moment, then try again.';
       }
-      if (syncingChips) {
-        return 'Moving chips — wait a second, then try again.';
-      }
       if (treasuryReady === false) {
         return (
           treasuryStatus?.payoutsBlockedReason ??
@@ -495,10 +350,9 @@ export default function CashierPanel({ showBackLink = true }: CashierPanelProps)
       if (!Number.isFinite(tokenAmount) || tokenAmount < token.minTokens) {
         return `Minimum is ${token.minTokens.toLocaleString()} ${token.symbol}.`;
       }
-      // Available = ledger + local (local is imported automatically on exchange).
-      const available = (serverChips ?? loadChipLedgerChips(walletAddress)) + localChips;
+      const available = ledgerChips + localChips;
       if (chipCost <= 0 || available < chipCost) {
-        return `Need ${chipCost.toLocaleString()} chips (you have ${available.toLocaleString()} available).`;
+        return `Need ${chipCost.toLocaleString()} chips (you have ${available.toLocaleString()}).`;
       }
       if (!walletCanReceiveToken(balances[coinId])) {
         return `No ${token.symbol} token account on this wallet (mint ${formatMintAddress(token.mint)}). Hold a little ${token.symbol} first, then hit refresh.`;
@@ -513,11 +367,9 @@ export default function CashierPanel({ showBackLink = true }: CashierPanelProps)
       amounts,
       balances,
       balancesLoading,
-      chips,
       connected,
       localChips,
-      serverChips,
-      syncingChips,
+      ledgerChips,
       treasuryReady,
       treasuryStatus,
       treasuryTokenMap,
@@ -677,40 +529,9 @@ export default function CashierPanel({ showBackLink = true }: CashierPanelProps)
             <div className="p-5 md:p-6">
               <h2 className="art-panel-title">🏦 {BRAND.bank}</h2>
               <p className="text-[#f5e6c8]/55 text-base mb-4">
-                Connect your wallet, then tap <strong>Claim verified chips</strong> to move winnings onto the cashier ledger for exchange.
+                Chips you win in {BRAND.depths} and the Bandit show up here automatically. Connect your wallet and
+                exchange them for Fam SPL tokens below.
               </p>
-
-              <div className="cashier-claim-banner mb-4">
-                <p className="text-sm text-[#f5e6c8]/70">
-                  {claiming || syncingChips
-                    ? 'Moving chips to your cashier ledger…'
-                    : chipSyncNote
-                      ? chipSyncNote
-                      : pendingClaim
-                        ? `Pending session${
-                            pendingClaim.totalWinnings
-                              ? ` (up to ${pendingClaim.totalWinnings.toLocaleString()} chips)`
-                              : ''
-                          }${localChips > 0 ? ` · local bank ${localChips.toLocaleString()}` : ''}.`
-                        : localChips > 0
-                          ? `${localChips.toLocaleString()} chips in local bank — claim to unlock exchange.`
-                          : connected && serverChips !== null && serverChips > 0
-                            ? `Ledger ready: ${serverChips.toLocaleString()} chips.`
-                            : 'Win chips at Depths / Bandit, then claim them here.'}
-                </p>
-                {connected ? (
-                  <button
-                    type="button"
-                    className="art-btn py-2.5 px-5 text-sm mt-3 w-full max-w-xs"
-                    onClick={() => void handleClaimCasinoChips()}
-                    disabled={claiming || syncingChips}
-                  >
-                    {claiming || syncingChips ? 'Working…' : 'Claim verified chips'}
-                  </button>
-                ) : (
-                  <p className="text-sm text-amber-200/80 mt-2">Connect wallet above, then claim.</p>
-                )}
-              </div>
 
               <div className="cashier-stat-row">
                 <div className="cashier-stat">
@@ -718,16 +539,13 @@ export default function CashierPanel({ showBackLink = true }: CashierPanelProps)
                   <span className="cashier-stat-value cashier-stat-chips">
                     {chips.toLocaleString()}
                   </span>
-                  {connected ? (
-                    <span className="cashier-stat-hint">
-                      Available {chips.toLocaleString()}
-                      {localChips > 0
-                        ? ` (ledger ${ledgerChips.toLocaleString()} + local ${localChips.toLocaleString()})`
-                        : ' · ready to exchange'}
-                    </span>
-                  ) : (
-                    <span className="cashier-stat-hint">Local bank — connect wallet to exchange</span>
-                  )}
+                  <span className="cashier-stat-hint">
+                    {connected
+                      ? chips > 0
+                        ? 'Ready to exchange'
+                        : 'Win chips in the Depths or Bandit, then come back'
+                      : 'Connect wallet to exchange for SPL tokens'}
+                  </span>
                 </div>
                 <div className="cashier-stat">
                   <span className="cashier-stat-label">Exchanges</span>
@@ -814,8 +632,8 @@ export default function CashierPanel({ showBackLink = true }: CashierPanelProps)
           treasury={treasuryStatus}
           treasuryLoading={treasuryLoading}
           connected={connected}
-          serverChips={serverChips}
-          pendingClaim={pendingClaim}
+          serverChips={chips}
+          pendingClaim={null}
           walletTokenReadyCount={walletTokenReadyCount}
           onRefresh={refreshSecurityStatus}
         />
