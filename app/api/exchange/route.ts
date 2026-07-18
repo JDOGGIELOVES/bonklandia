@@ -6,12 +6,6 @@ import {
   getSolanaRpcUrl,
   type FamCoinId,
 } from '@/lib/fam-tokens';
-import {
-  creditWalletChips,
-  debitWalletChips,
-  depositWalletChips,
-  getWalletChipBalance,
-} from '@/lib/security/chip-ledger';
 import { blockIfEmergencyStopped } from '@/lib/security/emergency';
 import { checkWalletExchangeLimit } from '@/lib/security/exchange-limits';
 import { checkRateLimit, getClientIp } from '@/lib/security/rate-limit';
@@ -19,8 +13,12 @@ import { executeTokenExchange } from '@/lib/treasury';
 import { walletHasTokenAccount } from '@/lib/token-accounts';
 
 const VALID_IDS: FamCoinId[] = ['bonk', 'bonga', 'bong', 'bink', 'bonnie', 'beng'];
-const MAX_IMPORT_PER_REQUEST = Number(process.env.MAX_CHIP_IMPORT_PER_REQUEST ?? '5000000');
 
+/**
+ * Cashier exchange: send SPL from treasury → player wallet.
+ * Bonk Chips are debited in the browser bank after success (player-facing source of truth).
+ * Server enforces rate limits + on-chain checks only — no separate "cashier ledger" gate.
+ */
 export async function POST(request: Request) {
   const stopped = blockIfEmergencyStopped();
   if (stopped) return stopped;
@@ -32,11 +30,8 @@ export async function POST(request: Request) {
     tokenAmount?: number;
     walletAddress?: string;
     chipCost?: number;
-    ledgerToken?: string;
-    /** Chips currently in the player bank (localStorage) — imported before spend. */
-    importLocalAmount?: number;
-    /** Total chips the client thinks it has (local + ledger) — used only for clearer errors. */
-    clientChipBalance?: number;
+    /** Client bank balance — for validation messaging only. */
+    bankChips?: number;
   };
 
   try {
@@ -58,9 +53,7 @@ export async function POST(request: Request) {
   const tokenAmount = Number(body.tokenAmount);
   const chipCost = Number(body.chipCost);
   const walletAddress = body.walletAddress?.trim();
-  let ledgerToken = body.ledgerToken?.trim() || null;
-  let importLocal = Math.max(0, Math.floor(Number(body.importLocalAmount) || 0));
-  const clientChipBalance = Math.max(0, Math.floor(Number(body.clientChipBalance) || 0));
+  const bankChips = Math.max(0, Math.floor(Number(body.bankChips) || 0));
 
   if (!walletAddress) {
     return NextResponse.json({ error: 'Wallet address is required.' }, { status: 400 });
@@ -74,33 +67,24 @@ export async function POST(request: Request) {
   }
 
   const expectedCost = calculateChipCost(coinId, tokenAmount);
-  if (!Number.isFinite(chipCost) || chipCost !== expectedCost) {
+  if (!Number.isFinite(chipCost) || chipCost !== expectedCost || chipCost <= 0) {
     return NextResponse.json(
       { error: 'Chip cost mismatch — refresh the cashier and try again.' },
       { status: 400 },
     );
   }
 
-  // If client has bank chips but forgot importLocal, still accept clientChipBalance as import.
-  if (importLocal <= 0 && clientChipBalance > 0) {
-    const existing = getWalletChipBalance(walletAddress, ledgerToken);
-    if (existing.chips < chipCost) {
-      importLocal = Math.min(clientChipBalance, MAX_IMPORT_PER_REQUEST);
-    }
-  }
-
-  if (importLocal > 0) {
-    if (importLocal > MAX_IMPORT_PER_REQUEST) {
-      return NextResponse.json(
-        { error: `Import too large (max ${MAX_IMPORT_PER_REQUEST.toLocaleString()} chips).` },
-        { status: 400 },
-      );
-    }
-    const deposited = depositWalletChips(walletAddress, importLocal, ledgerToken);
-    if (!deposited.ok) {
-      return NextResponse.json({ error: deposited.error, code: 'IMPORT_FAILED' }, { status: 400 });
-    }
-    ledgerToken = deposited.record.ledgerToken;
+  // Soft check: client must report enough bank chips (actual debit happens client-side after success).
+  if (bankChips < chipCost) {
+    return NextResponse.json(
+      {
+        error: `Not enough Bonk Chips. Need ${chipCost.toLocaleString()}, your bank shows ${bankChips.toLocaleString()}. (Wallet ${token.symbol} balance is separate from Bonk Chips.)`,
+        code: 'INSUFFICIENT_CHIPS',
+        chipCost,
+        bankChips,
+      },
+      { status: 400 },
+    );
   }
 
   const ipLimited = checkRateLimit(`exchange:ip:${ip}`, 60, 60 * 60 * 1000);
@@ -126,7 +110,7 @@ export async function POST(request: Request) {
     if (!exists) {
       return NextResponse.json(
         {
-          error: `Your connected wallet has no ${token.symbol} token account (mint ${token.mint.slice(0, 6)}…). Holding ${token.symbol} in Phantom is required to receive more — chips and ${token.symbol} are different. Make sure the same wallet is connected.`,
+          error: `This connected wallet (${walletAddress.slice(0, 4)}…${walletAddress.slice(-4)}) has no ${token.symbol} token account. Open Solflare/Phantom on this same address and hold a little ${token.symbol} first.`,
           code: 'NO_TOKEN_ACCOUNT',
         },
         { status: 400 },
@@ -134,20 +118,6 @@ export async function POST(request: Request) {
     }
   } catch {
     return NextResponse.json({ error: 'Invalid wallet address.' }, { status: 400 });
-  }
-
-  const before = getWalletChipBalance(walletAddress, ledgerToken);
-  const debit = debitWalletChips(walletAddress, chipCost, ledgerToken);
-  if (!debit.ok) {
-    return NextResponse.json(
-      {
-        error: `Not enough Bonk Chips for this exchange. Need ${chipCost.toLocaleString()} chips, balance is ${before.chips.toLocaleString()}. (Having ${token.symbol} in your wallet is separate from Bonk Chips — win chips in Depths/Bandit first.)`,
-        code: 'INSUFFICIENT_CHIPS',
-        chips: before.chips,
-        chipCost,
-      },
-      { status: 400 },
-    );
   }
 
   const result = await executeTokenExchange(connection, {
@@ -158,15 +128,13 @@ export async function POST(request: Request) {
   });
 
   if (!result.ok) {
-    creditWalletChips(walletAddress, chipCost, debit.record.ledgerToken);
     const status =
       result.code === 'TREASURY_MISSING' || result.code === 'PAYOUTS_PAUSED' ? 503 : 400;
-    // Rewrite vague treasury messages
     let error = result.error;
     if (result.code === 'INSUFFICIENT_TREASURY') {
-      error = `The shared treasury is low on ${token.symbol} right now. Try a smaller amount later.`;
+      error = `Treasury is low on ${token.symbol}. Try a smaller amount.`;
     } else if (result.code === 'NO_TOKEN_ACCOUNT') {
-      error = `Your wallet still needs a ${token.symbol} token account before the cashier can send ${token.symbol}.`;
+      error = `Your wallet needs a ${token.symbol} account before we can send more ${token.symbol}.`;
     }
     return NextResponse.json({ error, code: result.code }, { status });
   }
@@ -176,9 +144,7 @@ export async function POST(request: Request) {
     chipCost: result.chipCost,
     tokenAmount: result.tokenAmount,
     symbol: result.symbol,
-    chipsRemaining: debit.record.chips,
-    ledgerToken: debit.record.ledgerToken,
-    importedLocal: importLocal,
+    chipsRemaining: Math.max(0, bankChips - chipCost),
   });
 }
 
@@ -200,7 +166,7 @@ export async function GET() {
     security: {
       treasuryNeverPaysSol: true,
       treasuryNeverCreatesTokenAccounts: true,
-      chipsServerVerified: true,
+      bankChipsClientSide: true,
     },
   });
 }
