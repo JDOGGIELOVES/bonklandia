@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { depositWalletChips, getWalletChipBalance } from '@/lib/security/chip-ledger';
+import { depositWalletChips } from '@/lib/security/chip-ledger';
 import { blockIfEmergencyStopped } from '@/lib/security/emergency';
 import { checkRateLimit, getClientIp } from '@/lib/security/rate-limit';
 
@@ -55,12 +55,12 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: deposited.error }, { status: 400 });
   }
 
+  // Always return the sealed token from the deposit result (source of truth).
   return NextResponse.json({
     ok: true,
     deposited: deposited.deposited,
     chips: deposited.record.chips,
     ledgerToken: deposited.record.ledgerToken,
     wallet,
-    balance: getWalletChipBalance(wallet, deposited.record.ledgerToken),
   });
 }

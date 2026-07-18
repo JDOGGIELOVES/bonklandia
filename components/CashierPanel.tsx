@@ -8,7 +8,11 @@ import { WalletMultiButton } from '@solana/wallet-adapter-react-ui';
 import { useBonkBank } from '@/hooks/useBonkBank';
 import { useFamTokenBalances } from '@/hooks/useFamTokenBalances';
 import { formatWalletAddress, loadBankState } from '@/lib/bank';
-import { loadChipLedgerToken, saveChipLedgerToken } from '@/lib/chip-ledger-client';
+import {
+  loadChipLedgerChips,
+  loadChipLedgerToken,
+  saveChipLedgerToken,
+} from '@/lib/chip-ledger-client';
 import {
   FAM_TOKENS,
   calculateChipCost,
@@ -51,8 +55,9 @@ export default function CashierPanel({ showBackLink = true }: CashierPanelProps)
   const [chipSyncNote, setChipSyncNote] = useState<string | null>(null);
   const chipSyncInFlight = useRef(false);
 
-  // Exchange spends the server ledger; local bank auto-syncs onto it when wallet connects.
-  const chips = connected && serverChips !== null ? serverChips : localChips;
+  // Spendable = portable ledger + anything still sitting in local bank (imported on exchange).
+  const ledgerChips = serverChips ?? (walletAddress ? loadChipLedgerChips(walletAddress) : 0);
+  const chips = connected ? ledgerChips + localChips : localChips;
   const {
     balances,
     loading: balancesLoading,
@@ -89,6 +94,10 @@ export default function CashierPanel({ showBackLink = true }: CashierPanelProps)
       setServerChips(null);
       return;
     }
+    // Seed from browser-held ledger so UI is never stuck at 0 after a refresh.
+    const cached = loadChipLedgerChips(walletAddress);
+    if (cached > 0) setServerChips(cached);
+
     try {
       const ledgerToken = loadChipLedgerToken(walletAddress);
       const res = await fetch('/api/chips/balance', {
@@ -96,13 +105,20 @@ export default function CashierPanel({ showBackLink = true }: CashierPanelProps)
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ wallet: walletAddress, ledgerToken }),
       });
-      const data = await res.json() as { chips?: number; ledgerToken?: string };
+      const data = await res.json() as { chips?: number; ledgerToken?: string | null };
       if (res.ok) {
-        setServerChips(Number(data.chips) || 0);
-        if (data.ledgerToken) saveChipLedgerToken(walletAddress, data.ledgerToken);
+        const next = Number(data.chips) || 0;
+        // Prefer higher of server response vs cached (never drop without force debit).
+        const best = Math.max(next, loadChipLedgerChips(walletAddress));
+        setServerChips(best);
+        if (data.ledgerToken && next >= loadChipLedgerChips(walletAddress)) {
+          saveChipLedgerToken(walletAddress, data.ledgerToken, next);
+        } else if (data.ledgerToken && next > 0) {
+          saveChipLedgerToken(walletAddress, data.ledgerToken, next);
+        }
       }
     } catch {
-      setServerChips(null);
+      // keep cached
     }
   }, [walletAddress]);
 
@@ -189,14 +205,16 @@ export default function CashierPanel({ showBackLink = true }: CashierPanelProps)
         }
 
         const deposited = Number(data.deposited) || amount;
-        if (data.ledgerToken) saveChipLedgerToken(walletAddress, data.ledgerToken);
+        const nextServer = Number(data.chips);
+        if (data.ledgerToken && Number.isFinite(nextServer)) {
+          saveChipLedgerToken(walletAddress, data.ledgerToken, nextServer, { force: true });
+        }
         clearLocalChips(deposited);
         refreshLocalBank();
-        const nextServer = Number(data.chips);
         if (Number.isFinite(nextServer)) setServerChips(nextServer);
         else await refreshServerChips();
 
-        const note = `Synced ${deposited.toLocaleString()} chips to your cashier ledger.`;
+        const note = `Synced ${deposited.toLocaleString()} chips to your cashier ledger (balance ${Number.isFinite(nextServer) ? nextServer.toLocaleString() : '?'}).`;
         setChipSyncNote(note);
         if (!opts?.silent) {
           showExchangeMessage({ ok: true, text: note });
@@ -272,7 +290,11 @@ export default function CashierPanel({ showBackLink = true }: CashierPanelProps)
           };
           if (res.ok) {
             vaultCredited = Number(data.credited) || 0;
-            if (data.ledgerToken) saveChipLedgerToken(walletAddress, data.ledgerToken);
+            if (data.ledgerToken && Number.isFinite(Number(data.chips))) {
+              saveChipLedgerToken(walletAddress, data.ledgerToken, Number(data.chips), {
+                force: true,
+              });
+            }
             if (vaultCredited > 0) {
               clearLocalChips(vaultCredited);
               refreshLocalBank();
@@ -324,8 +346,10 @@ export default function CashierPanel({ showBackLink = true }: CashierPanelProps)
         });
         const bal = (await balRes.json()) as { chips?: number; ledgerToken?: string };
         if (balRes.ok) {
-          finalChips = Number(bal.chips) || 0;
-          if (bal.ledgerToken) saveChipLedgerToken(walletAddress, bal.ledgerToken);
+          finalChips = Math.max(Number(bal.chips) || 0, loadChipLedgerChips(walletAddress));
+          if (bal.ledgerToken && (Number(bal.chips) || 0) > 0) {
+            saveChipLedgerToken(walletAddress, bal.ledgerToken, Number(bal.chips));
+          }
           setServerChips(finalChips);
         }
       } catch {
@@ -408,7 +432,11 @@ export default function CashierPanel({ showBackLink = true }: CashierPanelProps)
           };
           if (!cancelled && res.ok) {
             const credited = Number(data.credited) || 0;
-            if (data.ledgerToken) saveChipLedgerToken(walletAddress, data.ledgerToken);
+            if (data.ledgerToken && Number.isFinite(Number(data.chips))) {
+              saveChipLedgerToken(walletAddress, data.ledgerToken, Number(data.chips), {
+                force: true,
+              });
+            }
             if (credited > 0) {
               clearLocalChips(credited);
               refreshLocalBank();
@@ -455,8 +483,8 @@ export default function CashierPanel({ showBackLink = true }: CashierPanelProps)
       if (balancesLoading) {
         return 'Still reading your token accounts — wait a moment, then try again.';
       }
-      if (serverChips === null || syncingChips) {
-        return 'Syncing your chips to the cashier ledger — wait a second, then try again.';
+      if (syncingChips) {
+        return 'Moving chips — wait a second, then try again.';
       }
       if (treasuryReady === false) {
         return (
@@ -467,12 +495,10 @@ export default function CashierPanel({ showBackLink = true }: CashierPanelProps)
       if (!Number.isFinite(tokenAmount) || tokenAmount < token.minTokens) {
         return `Minimum is ${token.minTokens.toLocaleString()} ${token.symbol}.`;
       }
-      if (chipCost <= 0 || chips < chipCost) {
-        const localHint =
-          localChips > 0
-            ? ` Local bank still shows ${localChips.toLocaleString()} chips — wait for auto-sync or tap “Sync chips now”.`
-            : '';
-        return `Need ${chipCost.toLocaleString()} chips (cashier ledger: ${chips.toLocaleString()}).${localHint}`;
+      // Available = ledger + local (local is imported automatically on exchange).
+      const available = (serverChips ?? loadChipLedgerChips(walletAddress)) + localChips;
+      if (chipCost <= 0 || available < chipCost) {
+        return `Need ${chipCost.toLocaleString()} chips (you have ${available.toLocaleString()} available).`;
       }
       if (!walletCanReceiveToken(balances[coinId])) {
         return `No ${token.symbol} token account on this wallet (mint ${formatMintAddress(token.mint)}). Hold a little ${token.symbol} first, then hit refresh.`;
@@ -503,26 +529,22 @@ export default function CashierPanel({ showBackLink = true }: CashierPanelProps)
     async (coinId: FamCoinId) => {
       const token = FAM_TOKENS.find(t => t.id === coinId)!;
       const tokenAmount = parseFloat(amounts[coinId]);
-
-      // Ensure local bank is on the ledger before spending.
-      if (connected && walletAddress && loadLocalChipCount() > 0) {
-        await syncLocalChipsToServer({ silent: true });
-      }
-
       const chipCost = calculateChipCost(coinId, tokenAmount);
       const blocked = exchangeBlockReason(coinId);
       if (blocked) {
         showExchangeMessage({ ok: false, text: blocked });
-        if (balancesLoading || serverChips === null || loadLocalChipCount() > 0) {
+        if (balancesLoading || serverChips === null) {
           void refreshBalances();
           void refreshServerChips();
-          void syncLocalChipsToServer({ silent: true });
         }
         return;
       }
 
       setExchanging(coinId);
       setMessage(null);
+
+      // Import whatever is still in the local bank in the same request as the spend.
+      const importLocalAmount = loadLocalChipCount();
 
       try {
         const res = await fetch('/api/exchange', {
@@ -534,6 +556,7 @@ export default function CashierPanel({ showBackLink = true }: CashierPanelProps)
             walletAddress,
             chipCost,
             ledgerToken: loadChipLedgerToken(walletAddress),
+            importLocalAmount,
           }),
         });
 
@@ -544,17 +567,26 @@ export default function CashierPanel({ showBackLink = true }: CashierPanelProps)
           symbol?: string;
           signature?: string;
           ledgerToken?: string;
+          importedLocal?: number;
         };
         if (!res.ok) {
           showExchangeMessage({ ok: false, text: data.error ?? 'Exchange failed.' });
-          // Balances can be stale after RPC lag — refresh so the next click is accurate.
           void refreshBalances();
           void refreshServerChips();
           return;
         }
 
+        if (importLocalAmount > 0) {
+          clearLocalChips(importLocalAmount);
+          refreshLocalBank();
+        }
         if (data.ledgerToken && walletAddress) {
-          saveChipLedgerToken(walletAddress, data.ledgerToken);
+          saveChipLedgerToken(
+            walletAddress,
+            data.ledgerToken,
+            Number(data.chipsRemaining) || 0,
+            { force: true },
+          );
         }
         setServerChips(Number(data.chipsRemaining) || 0);
         await refreshBalances();
@@ -573,13 +605,13 @@ export default function CashierPanel({ showBackLink = true }: CashierPanelProps)
       amounts,
       exchangeBlockReason,
       walletAddress,
-      connected,
       refreshBalances,
       refreshServerChips,
       showExchangeMessage,
       balancesLoading,
       serverChips,
-      syncLocalChipsToServer,
+      clearLocalChips,
+      refreshLocalBank,
     ],
   );
 
@@ -686,10 +718,12 @@ export default function CashierPanel({ showBackLink = true }: CashierPanelProps)
                   <span className="cashier-stat-value cashier-stat-chips">
                     {chips.toLocaleString()}
                   </span>
-                  {connected && serverChips !== null ? (
+                  {connected ? (
                     <span className="cashier-stat-hint">
-                      Cashier ledger {serverChips.toLocaleString()}
-                      {localChips > 0 ? ` · local ${localChips.toLocaleString()}` : ' · ready to exchange'}
+                      Available {chips.toLocaleString()}
+                      {localChips > 0
+                        ? ` (ledger ${ledgerChips.toLocaleString()} + local ${localChips.toLocaleString()})`
+                        : ' · ready to exchange'}
                     </span>
                   ) : (
                     <span className="cashier-stat-hint">Local bank — connect wallet to exchange</span>

@@ -16,7 +16,8 @@ export async function GET(request: Request) {
     chips: record.chips,
     lifetimeWon: record.lifetimeWon,
     lifetimeExchanged: record.lifetimeExchanged,
-    ledgerToken: record.ledgerToken,
+    // Echo the sealed token for this balance (do not invent empty tokens when none provided)
+    ledgerToken: ledgerToken && record.chips >= 0 ? record.ledgerToken : record.chips > 0 ? record.ledgerToken : null,
     serverVerified: true,
     portable: true,
   });
@@ -35,13 +36,18 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: 'Wallet address required.' }, { status: 400 });
   }
 
-  const record = getWalletChipBalance(wallet, body.ledgerToken ?? null);
+  const incoming = body.ledgerToken?.trim() || null;
+  const record = getWalletChipBalance(wallet, incoming);
   return NextResponse.json({
     wallet,
     chips: record.chips,
     lifetimeWon: record.lifetimeWon,
     lifetimeExchanged: record.lifetimeExchanged,
-    ledgerToken: record.ledgerToken,
+    // Only return a token when we actually have chips or client sent a prior token
+    ledgerToken:
+      record.chips > 0 || incoming
+        ? record.ledgerToken
+        : null,
     serverVerified: true,
     portable: true,
   });
