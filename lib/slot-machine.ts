@@ -183,7 +183,13 @@ export function spinReels(jackpotBias: number): [SlotSymbol, SlotSymbol, SlotSym
   ];
 }
 
-export type WinTier = 'jackpot' | 'fam-triple' | 'bonk-single' | 'degen-triple' | 'none';
+export type WinTier =
+  | 'jackpot'
+  | 'fam-triple'
+  | 'fam-any'
+  | 'bonk-single'
+  | 'degen-triple'
+  | 'none';
 
 export type PaytableRow = {
   tier: WinTier;
@@ -198,12 +204,17 @@ export type SpinResult = {
   winTier: WinTier;
   isJackpot: boolean;
   isFamMatch: boolean;
+  isFamAny: boolean;
   payout: number;
   message: string;
 };
 
 /** Scales chip payouts — tuned so casino runs fund real-token exchanges at the cashier. */
 const CHIP_BASE_PER_WAVE = 500;
+
+/** Fixed Fam line prizes (before victory / bet multipliers). */
+export const FAM_ANY_THREE_CHIPS = 10_000;
+export const FAM_SAME_THREE_CHIPS = 100_000;
 
 export function formatBonkChips(amount: number): string {
   return amount.toLocaleString('en-US');
@@ -226,9 +237,16 @@ export function getPaytable(wave: number, chipMultiplier = 1): PaytableRow[] {
     },
     {
       tier: 'fam-triple',
+      combo: 'Same Fam × 3',
+      detail: 'Same Bonk Fam member on every reel — mega Fam hit',
+      payout: scalePayout(FAM_SAME_THREE_CHIPS, chipMultiplier),
+      rowClass: 'paytable-row-fam',
+    },
+    {
+      tier: 'fam-any',
       combo: 'Fam · Fam · Fam',
-      detail: 'Same Bonk Fam member on every line',
-      payout: scalePayout(base * 50, chipMultiplier),
+      detail: 'Any three Bonk Fam members across the line',
+      payout: scalePayout(FAM_ANY_THREE_CHIPS, chipMultiplier),
       rowClass: 'paytable-row-fam',
     },
     {
@@ -270,7 +288,9 @@ function buildWinMessage(tier: WinTier, payout: number, famName?: string): strin
     case 'jackpot':
       return `BONK BONK BONK! MEGA JACKPOT — +${chips} Bonk Chips!`;
     case 'fam-triple':
-      return `Triple ${famName ?? 'Fam'}! +${chips} Bonk Chips.`;
+      return `Triple ${famName ?? 'Fam'}! Same champion ×3 — +${chips} Bonk Chips!`;
+    case 'fam-any':
+      return `Full Fam line! Three Bonk family members — +${chips} Bonk Chips!`;
     case 'bonk-single':
       return `BONK on the line! +${chips} Bonk Chips.`;
     case 'degen-triple':
@@ -288,10 +308,12 @@ export function evaluateSpin(
   const [a, b, c] = reels;
   const isJackpot = a.kind === 'jackpot' && b.kind === 'jackpot' && c.kind === 'jackpot';
   const isFamMatch = a.kind === 'fam' && b.id === c.id && a.id === b.id;
+  const isFamAny = a.kind === 'fam' && b.kind === 'fam' && c.kind === 'fam';
 
   let winTier: WinTier = 'none';
   if (isJackpot) winTier = 'jackpot';
   else if (isFamMatch) winTier = 'fam-triple';
+  else if (isFamAny) winTier = 'fam-any';
   else if (a.kind === 'jackpot' || b.kind === 'jackpot' || c.kind === 'jackpot') winTier = 'bonk-single';
   else if (a.kind === 'enemy' && b.kind === 'enemy' && c.kind === 'enemy') winTier = 'degen-triple';
 
@@ -303,6 +325,7 @@ export function evaluateSpin(
     winTier,
     isJackpot,
     isFamMatch,
+    isFamAny,
     payout,
     message,
   };

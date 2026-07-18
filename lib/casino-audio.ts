@@ -220,6 +220,10 @@ export class CasinoAudioEngine {
         this.playWinArpeggio(ctx, t, [523.25, 659.25, 783.99, 1046.5], 0.55);
         this.scheduleCoinShower(ctx, t + 0.2, 10, 0.08);
         break;
+      case 'fam-any':
+        this.playWinArpeggio(ctx, t, [523.25, 659.25, 783.99], 0.45);
+        this.scheduleCoinShower(ctx, t + 0.18, 8, 0.09);
+        break;
       case 'bonk-single':
         this.playWinArpeggio(ctx, t, [659.25, 830.61, 987.77], 0.38);
         this.scheduleCoinShower(ctx, t + 0.15, 6, 0.1);
