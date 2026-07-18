@@ -5513,45 +5513,66 @@ body {
   margin-bottom: 1.25rem;
 }
 
-/* Compact arena so Depths reuses main combat motion + VFX classes */
+/* Compact arena so Depths reuses main combat motion + VFX classes.
+   Tall portraits (Bonnie sword/head, etc.) need enough vertical room —
+   overflow:hidden + short min-height was clipping the top of fighters on mobile. */
 .depths-combat-arena {
-  min-height: 320px;
+  min-height: 380px;
   max-width: 720px;
   margin: 0 auto 0.75rem;
   border-radius: 12px;
+  /* Keep hidden for shake/VFX — room for tall art comes from min-height + image max-height */
+  overflow: hidden;
+  padding-top: 0.5rem;
+  padding-bottom: 0.25rem;
 }
 
 .depths-combat-arena .depths-fighter-sprite {
-  left: 8%;
-  bottom: 36px;
-  width: min(42%, 180px);
+  left: 6%;
+  bottom: 20px;
+  width: min(44%, 190px);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
 }
 
 .depths-combat-arena .depths-enemy-sprite {
-  right: 8%;
-  bottom: 36px;
-  width: min(40%, 160px);
+  right: 6%;
+  bottom: 20px;
+  width: min(42%, 170px);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
 }
 
 .depths-combat-arena .fighter-img,
 .depths-combat-arena .enemy-img {
   width: 100%;
   height: auto;
-  max-height: 200px;
+  max-height: 220px;
   display: block;
   margin: 0 auto;
+  object-fit: contain;
+  object-position: bottom center;
+}
+
+.depths-combat-arena .fighter-label,
+.depths-combat-arena .depths-enemy-sprite .font-display {
+  flex-shrink: 0;
 }
 
 .depths-bar-arena {
   width: 100%;
   max-width: 140px;
   margin-top: 0.25rem;
+  flex-shrink: 0;
 }
 
 .depths-arena-hp {
   font-size: 0.75rem;
   color: rgba(245, 230, 200, 0.75);
   font-variant-numeric: tabular-nums;
+  flex-shrink: 0;
 }
 
 .depths-arena-hp-enemy {
@@ -5560,13 +5581,48 @@ body {
 
 @media (max-width: 640px) {
   .depths-combat-arena {
-    min-height: 260px;
+    /* Room for full Bonnie-scale art + name + HP bar on small phones */
+    min-height: 360px;
+    padding-top: 0.75rem;
   }
 
   .depths-combat-arena .depths-fighter-sprite,
   .depths-combat-arena .depths-enemy-sprite {
-    width: 38%;
-    bottom: 28px;
+    width: 44%;
+    bottom: 14px;
+    max-width: none;
+  }
+
+  .depths-combat-arena .fighter-img,
+  .depths-combat-arena .enemy-img {
+    /* Keep entire portrait (head + sword) inside the arena */
+    max-height: min(48vw, 168px);
+  }
+
+  .depths-combat-arena .fighter-label {
+    font-size: 0.72rem;
+    margin-top: 0.1rem;
+    line-height: 1.1;
+  }
+
+  .depths-bar-arena {
+    max-width: 120px;
+    margin-top: 0.15rem;
+  }
+
+  .depths-arena-hp {
+    font-size: 0.68rem;
+  }
+}
+
+@media (max-width: 380px) {
+  .depths-combat-arena {
+    min-height: 340px;
+  }
+
+  .depths-combat-arena .fighter-img,
+  .depths-combat-arena .enemy-img {
+    max-height: min(46vw, 148px);
   }
 }
 
