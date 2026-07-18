@@ -22,36 +22,52 @@ export function depthsRoomPaytableWave(kind: DepthsRoomKind): number {
   }
 }
 
+/** Free bonus pulls for winning a chamber (before optional quarter spins). */
+export function depthsRoomBonusSpins(kind: DepthsRoomKind): number {
+  switch (kind) {
+    case 'boss':
+      return 2;
+    case 'elite':
+      return 2;
+    case 'fight':
+    default:
+      return 1;
+  }
+}
+
 /**
- * Room-clear Bandit: no free spins — pull via quarter slots (grows treasury).
- * Player can keep buying quarters or continue the Depths.
+ * Room-clear Bandit: free bonus spin(s) for the win, then optional quarter spins.
+ * Uses victory outcome so the cabinet reads as a win reward, not a consolation.
  */
 export function buildDepthsRoomBanditSession(
   roomKind: DepthsRoomKind,
   difficulty: Difficulty,
 ): CasinoSession {
   const paytableWave = depthsRoomPaytableWave(roomKind);
-  const baseTier = getCasinoTier(paytableWave, 'defeat');
+  const freeSpins = depthsRoomBonusSpins(roomKind);
+  const baseTier = getCasinoTier(paytableWave, 'victory');
+  const chipMult = roomKind === 'boss' ? 1.15 : roomKind === 'elite' ? 1.1 : 1.05;
 
   return {
-    outcome: 'defeat',
-    spins: 0,
+    outcome: 'victory',
+    spins: freeSpins,
     paytableWave,
     tier: {
       ...baseTier,
-      id: `depths-quarter-${roomKind}`,
+      id: `depths-win-${roomKind}`,
       name:
         roomKind === 'boss'
-          ? 'Depths Boss — Quarter Bandit'
+          ? 'Depths Boss Bonus — Bonklandia Bandit'
           : roomKind === 'elite'
-            ? 'Depths Elite — Quarter Bandit'
-            : 'Depths Win — Quarter Bandit',
-      jackpotBias: roomKind === 'boss' ? 0.1 : roomKind === 'elite' ? 0.07 : 0.05,
-      transitionMs: 600,
+            ? 'Depths Elite Bonus — Bonklandia Bandit'
+            : 'Depths Win Bonus — Bonklandia Bandit',
+      jackpotBias: roomKind === 'boss' ? 0.12 : roomKind === 'elite' ? 0.09 : 0.07,
+      transitionMs: 700,
       tagline:
-        'Chamber cleared. Drop a quarter (25¢ SOL) into the Bonklandia Bandit to pull — treasury grows, you spin. Keep feeding quarters or continue the Depths.',
+        `Chamber cleared! ${freeSpins} free bonus pull${freeSpins === 1 ? '' : 's'} on the ${'Bonklandia Bandit'}. ` +
+        'Yank the lever, then keep spinning with 25¢ quarters if you want — or continue the Depths.',
     },
-    chipMultiplier: 1,
+    chipMultiplier: chipMult,
     difficulty,
   };
 }

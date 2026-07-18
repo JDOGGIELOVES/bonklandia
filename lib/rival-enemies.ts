@@ -224,5 +224,5 @@ export const DEPTHS_LORE = {
   intro:
     'Under Degen Valley, rival meme cultures dig for the roots of the First Bonk. Chart the Depths, bonk the copycats, and reclaim the frequency before they rebrand it.',
   banditHook:
-    'Every chamber win opens the Bonklandia Bandit — drop a quarter (25¢ SOL) to pull the lever and grow the Bonga treasury. Clear the floor for free champion spins.',
+    'Win a chamber → free bonus pull(s) on the Bonklandia Bandit. Keep spinning with 25¢ quarters if you want. Clear the floor for full champion victory spins. Lose → consolation pulls.',
 };

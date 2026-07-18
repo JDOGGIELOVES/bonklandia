@@ -253,10 +253,13 @@ export default function DepthsGame() {
       if (!fighter || !room) return;
       setChambersCleared(c => c + 1);
       pushLog(room.enemy?.defeatLine ?? 'Chamber cleared!');
-      pushLog(`The ${BRAND.slotMachine} rises from the floor — quarter spins feed the Bonga treasury.`);
-      void playWaveClear();
       const kind = (room.kind === 'elite' || room.kind === 'boss' ? room.kind : 'fight') as DepthsRoomKind;
       const session = buildDepthsRoomBanditSession(kind, fighter.difficulty);
+      pushLog(
+        `Win bonus! The ${BRAND.slotMachine} opens — ${session.spins} free pull${session.spins === 1 ? '' : 's'}. ` +
+          'Then optional quarter spins, or continue the Depths.',
+      );
+      void playWaveClear();
       openBandit(session, 'room', true);
     },
     [fighter, openBandit, playWaveClear, pushLog],
@@ -546,7 +549,7 @@ export default function DepthsGame() {
         session={casinoSession}
         secureSession={casinoSecure}
         fighter={fighter}
-        quarterFirst={banditKind === 'room' || casinoSession.spins === 0}
+        quarterFirst={casinoSession.spins === 0}
         onContinue={handleBanditContinue}
         continueLabel={
           banditKind === 'room'
@@ -594,8 +597,8 @@ export default function DepthsGame() {
           <p className="depths-intro">{DEPTHS_LORE.intro}</p>
           <p className="depths-hint">{DEPTHS_LORE.banditHook}</p>
           <p className="depths-hint">
-            Combat is slower and meaner: heavy moves cool down, damage is tuned down, rivals hit harder.
-            Wins open the {BRAND.slotMachine} — quarters grow the treasury; floor clear unlocks free champion pulls.
+            Mix your kit (big moves cool down briefly). Win a chamber for free Bandit bonus pulls;
+            optional 25¢ quarters after; floor clear = full champion spins. Loss still gets consolation pulls.
           </p>
         </header>
 
@@ -695,7 +698,7 @@ export default function DepthsGame() {
               </div>
             )}
             <p className="depths-hint" style={{ marginTop: '0.75rem' }}>
-              Win → {BRAND.slotMachine} (quarter spins). Floor clear → free victory pulls.
+              Win → free {BRAND.slotMachine} bonus pull(s). Floor clear → champion victory spins.
             </p>
             <button
               type="button"

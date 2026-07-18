@@ -178,6 +178,29 @@ export default function CasinoSlot({
     setVaultLinkStatus(secureSession.localOnly ? 'local' : 'live');
   }, [secureSession]);
 
+  // New Depths session (win/loss) should reset free spin budget + reels.
+  useEffect(() => {
+    setSpinsLeft(grantedSpins);
+    setSpinning(false);
+    setLeverPulled(false);
+    setResults(null);
+    setLastMessage(
+      grantedSpins > 0
+        ? isVictory
+          ? `${grantedSpins} free victory pull${grantedSpins === 1 ? '' : 's'} — yank the lever!`
+          : `${grantedSpins} consolation pull${grantedSpins === 1 ? '' : 's'} — yank the lever!`
+        : null,
+    );
+    setLastWinTier(null);
+    setTotalWinnings(0);
+    setJackpotFlash(false);
+    setJustLanded(false);
+    setLadderSteps(0);
+    settledWinningsRef.current = 0;
+    localCreditedRef.current = 0;
+    setSettleError(null);
+  }, [secureSession.sessionId, grantedSpins, isVictory]);
+
   // Upgrade local consolation session to a claimable server session when possible.
   useEffect(() => {
     if (!activeSecure.localOnly) return;
