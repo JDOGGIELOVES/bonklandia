@@ -143,13 +143,27 @@ export default function CashierPanel({ showBackLink = true }: CashierPanelProps)
     }
   }, []);
 
-  /** Import local bank chips onto the server ledger (then clear local to avoid double spend). */
+  const showExchangeMessage = useCallback((msg: { text: string; ok: boolean; txUrl?: string }) => {
+    setMessage(msg);
+    requestAnimationFrame(() => {
+      document.getElementById('cashier-toast')?.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+    });
+  }, []);
+
+  /** Import local bank chips onto the portable ledger (then clear local to avoid double spend). */
   const syncLocalChipsToServer = useCallback(
-    async (opts?: { silent?: boolean }): Promise<number> => {
-      if (!connected || !walletAddress) return 0;
-      if (chipSyncInFlight.current) return 0;
+    async (opts?: { silent?: boolean }): Promise<{ deposited: number; chips: number; error?: string }> => {
+      if (!connected || !walletAddress) {
+        return { deposited: 0, chips: serverChips ?? 0, error: 'Connect wallet first.' };
+      }
+      if (chipSyncInFlight.current) {
+        return { deposited: 0, chips: serverChips ?? 0, error: 'Sync already in progress.' };
+      }
       const amount = loadLocalChipCount();
-      if (amount <= 0) return 0;
+      if (amount <= 0) {
+        await refreshServerChips();
+        return { deposited: 0, chips: serverChips ?? 0 };
+      }
 
       chipSyncInFlight.current = true;
       setSyncingChips(true);
@@ -167,10 +181,11 @@ export default function CashierPanel({ showBackLink = true }: CashierPanelProps)
           ledgerToken?: string;
         };
         if (!res.ok) {
+          const error = data.error ?? 'Could not sync local chips to cashier ledger.';
           if (!opts?.silent) {
-            setMessage({ ok: false, text: data.error ?? 'Could not sync local chips to cashier ledger.' });
+            showExchangeMessage({ ok: false, text: error });
           }
-          return 0;
+          return { deposited: 0, chips: serverChips ?? 0, error };
         }
 
         const deposited = Number(data.deposited) || amount;
@@ -181,88 +196,161 @@ export default function CashierPanel({ showBackLink = true }: CashierPanelProps)
         if (Number.isFinite(nextServer)) setServerChips(nextServer);
         else await refreshServerChips();
 
-        const note = `Synced ${deposited.toLocaleString()} chips from your local bank to the cashier ledger.`;
+        const note = `Synced ${deposited.toLocaleString()} chips to your cashier ledger.`;
         setChipSyncNote(note);
         if (!opts?.silent) {
-          setMessage({ ok: true, text: note });
+          showExchangeMessage({ ok: true, text: note });
         }
-        return deposited;
+        return { deposited, chips: Number.isFinite(nextServer) ? nextServer : deposited };
       } catch {
+        const error = 'Chip sync failed — try again.';
         if (!opts?.silent) {
-          setMessage({ ok: false, text: 'Chip sync failed — try again.' });
+          showExchangeMessage({ ok: false, text: error });
         }
-        return 0;
+        return { deposited: 0, chips: serverChips ?? 0, error };
       } finally {
         chipSyncInFlight.current = false;
         setSyncingChips(false);
       }
     },
-    [connected, walletAddress, clearLocalChips, refreshLocalBank, refreshServerChips],
+    [
+      connected,
+      walletAddress,
+      clearLocalChips,
+      refreshLocalBank,
+      refreshServerChips,
+      serverChips,
+      showExchangeMessage,
+    ],
   );
 
+  /**
+   * One button for users: claim vault session if any, always import local bank,
+   * always show a toast (never a silent no-op).
+   */
   const handleClaimCasinoChips = useCallback(async () => {
-    if (!connected || !walletAddress || !pendingClaim?.sessionId || !pendingClaim.settleToken) {
-      // No vault session — still move local bank chips automatically.
-      await syncLocalChipsToServer();
-      return;
-    }
-
-    if (pendingClaim.localOnly || pendingClaim.settleToken === 'local' || pendingClaim.sessionId.startsWith('local-')) {
-      // Local-only Bandit/Depths wins live in the bank — import them to the ledger.
-      sessionStorage.removeItem('bonk-casino-pending');
-      setPendingClaim(null);
-      await syncLocalChipsToServer();
+    if (!connected || !walletAddress) {
+      showExchangeMessage({
+        ok: false,
+        text: 'Connect your Solana wallet first, then tap Claim verified chips.',
+      });
       return;
     }
 
     setClaiming(true);
     setMessage(null);
+
+    const parts: string[] = [];
+    let vaultCredited = 0;
+
     try {
-      const res = await fetch('/api/chips/claim', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          sessionId: pendingClaim.sessionId,
-          settleToken: pendingClaim.settleToken,
-          wallet: walletAddress,
-          ledgerToken: loadChipLedgerToken(walletAddress),
-        }),
-      });
-      const data = await res.json() as {
-        error?: string;
-        credited?: number;
-        chips?: number;
-        ledgerToken?: string;
-      };
-      if (!res.ok) {
-        // Fall back to local import so cashier still works.
-        setMessage({ ok: false, text: data.error ?? 'Claim failed — syncing local bank instead…' });
-        await syncLocalChipsToServer({ silent: true });
-        return;
+      const pending = pendingClaim;
+      const canVaultClaim =
+        pending?.sessionId &&
+        pending.settleToken &&
+        !pending.localOnly &&
+        pending.settleToken !== 'local' &&
+        !pending.sessionId.startsWith('local-');
+
+      if (canVaultClaim && pending) {
+        try {
+          const res = await fetch('/api/chips/claim', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              sessionId: pending.sessionId,
+              settleToken: pending.settleToken,
+              wallet: walletAddress,
+              ledgerToken: loadChipLedgerToken(walletAddress),
+            }),
+          });
+          const data = (await res.json()) as {
+            error?: string;
+            credited?: number;
+            chips?: number;
+            ledgerToken?: string;
+          };
+          if (res.ok) {
+            vaultCredited = Number(data.credited) || 0;
+            if (data.ledgerToken) saveChipLedgerToken(walletAddress, data.ledgerToken);
+            if (vaultCredited > 0) {
+              clearLocalChips(vaultCredited);
+              refreshLocalBank();
+            }
+            if (Number.isFinite(Number(data.chips))) setServerChips(Number(data.chips));
+            parts.push(
+              vaultCredited > 0
+                ? `Claimed ${vaultCredited.toLocaleString()} vault chips.`
+                : 'Vault session already empty.',
+            );
+          } else {
+            parts.push(data.error ?? 'Vault claim failed (session may have expired).');
+          }
+        } catch {
+          parts.push('Vault claim network error.');
+        }
       }
 
-      const credited = Number(data.credited) || 0;
-      if (data.ledgerToken) saveChipLedgerToken(walletAddress, data.ledgerToken);
-      // Avoid double-spend: local bank already holds the same winnings.
-      if (credited > 0) {
-        clearLocalChips(credited);
-        refreshLocalBank();
+      // Always clear pending session so the banner doesn't stick forever.
+      try {
+        sessionStorage.removeItem('bonk-casino-pending');
+      } catch {
+        // private mode
       }
-
-      sessionStorage.removeItem('bonk-casino-pending');
       setPendingClaim(null);
-      setServerChips(Number(data.chips) || 0);
 
-      // Import any remaining local chips (other sessions / Depths drips).
-      await syncLocalChipsToServer({ silent: true });
+      const localBefore = loadLocalChipCount();
+      const syncResult = await syncLocalChipsToServer({ silent: true });
+      if (syncResult.deposited > 0) {
+        parts.push(`Synced ${syncResult.deposited.toLocaleString()} local chips.`);
+      } else if (localBefore > 0 && syncResult.error) {
+        parts.push(syncResult.error);
+      }
 
-      setMessage({
-        ok: true,
-        text: `Claimed ${credited.toLocaleString()} chips to your cashier ledger. Ready to exchange.`,
-      });
-    } catch {
-      setMessage({ ok: false, text: 'Claim failed — try again.' });
-      await syncLocalChipsToServer({ silent: true });
+      await refreshServerChips();
+      const ledgerNow = (() => {
+        // Prefer state after refresh; fall back to sync result
+        return syncResult.chips;
+      })();
+
+      // Re-read after refreshServerChips updated state — use token as source of truth
+      const token = loadChipLedgerToken(walletAddress);
+      let finalChips = ledgerNow;
+      try {
+        const balRes = await fetch('/api/chips/balance', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ wallet: walletAddress, ledgerToken: token }),
+        });
+        const bal = (await balRes.json()) as { chips?: number; ledgerToken?: string };
+        if (balRes.ok) {
+          finalChips = Number(bal.chips) || 0;
+          if (bal.ledgerToken) saveChipLedgerToken(walletAddress, bal.ledgerToken);
+          setServerChips(finalChips);
+        }
+      } catch {
+        // keep previous
+      }
+
+      if (vaultCredited > 0 || syncResult.deposited > 0) {
+        showExchangeMessage({
+          ok: true,
+          text: `${parts.join(' ')} Cashier ledger: ${finalChips.toLocaleString()} chips — ready to exchange.`.trim(),
+        });
+      } else if (finalChips > 0) {
+        showExchangeMessage({
+          ok: true,
+          text: `Your cashier ledger already has ${finalChips.toLocaleString()} chips. You can exchange below.`,
+        });
+      } else {
+        showExchangeMessage({
+          ok: false,
+          text:
+            parts.length > 0
+              ? `${parts.join(' ')} No chips found to move. Win more at the Bandit / Depths, then return.`
+              : 'No chips found to claim. Local bank and vault session are empty — play for more chips first.',
+        });
+      }
     } finally {
       setClaiming(false);
     }
@@ -273,6 +361,8 @@ export default function CashierPanel({ showBackLink = true }: CashierPanelProps)
     syncLocalChipsToServer,
     clearLocalChips,
     refreshLocalBank,
+    refreshServerChips,
+    showExchangeMessage,
   ]);
 
   // Auto-sync: claim vault session if any, then import local bank → server ledger.
@@ -352,14 +442,6 @@ export default function CashierPanel({ showBackLink = true }: CashierPanelProps)
   const setAmount = (id: FamCoinId, value: string) => {
     setAmounts(prev => ({ ...prev, [id]: value }));
   };
-
-  const showExchangeMessage = useCallback((msg: { text: string; ok: boolean; txUrl?: string }) => {
-    setMessage(msg);
-    // Ensure the user sees why a click "did nothing" (disabled buttons felt broken).
-    requestAnimationFrame(() => {
-      document.getElementById('cashier-toast')?.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
-    });
-  }, []);
 
   const exchangeBlockReason = useCallback(
     (coinId: FamCoinId): string | null => {
@@ -523,6 +605,26 @@ export default function CashierPanel({ showBackLink = true }: CashierPanelProps)
           )}
         </header>
 
+        {message && (
+          <div
+            id="cashier-toast"
+            className={`cashier-toast mb-6 ${message.ok ? 'cashier-toast-ok' : 'cashier-toast-err'}`}
+            role="status"
+          >
+            <div>
+              {message.text}
+              {message.txUrl && (
+                <a href={message.txUrl} target="_blank" rel="noopener noreferrer" className="cashier-tx-link">
+                  View on Solscan →
+                </a>
+              )}
+            </div>
+            <button type="button" onClick={() => setMessage(null)} className="cashier-toast-close" aria-label="Dismiss">
+              ✕
+            </button>
+          </div>
+        )}
+
         <div className="cashier-notice mb-8" role="note">
           <h2 className="cashier-notice-title">Token account required</h2>
           <p className="cashier-notice-body">
@@ -543,55 +645,41 @@ export default function CashierPanel({ showBackLink = true }: CashierPanelProps)
             <div className="p-5 md:p-6">
               <h2 className="art-panel-title">🏦 {BRAND.bank}</h2>
               <p className="text-[#f5e6c8]/55 text-base mb-4">
-                Connect your wallet and your Bonk Chips sync to the cashier ledger automatically — then exchange for real SPL tokens.
+                Connect your wallet, then tap <strong>Claim verified chips</strong> to move winnings onto the cashier ledger for exchange.
               </p>
-              {connected && (syncingChips || chipSyncNote || localChips > 0) && (
-                <div className="cashier-claim-banner mb-4">
-                  <p className="text-sm text-[#f5e6c8]/70">
-                    {syncingChips
-                      ? 'Syncing local bank chips to the cashier ledger…'
-                      : chipSyncNote
-                        ? chipSyncNote
+
+              <div className="cashier-claim-banner mb-4">
+                <p className="text-sm text-[#f5e6c8]/70">
+                  {claiming || syncingChips
+                    ? 'Moving chips to your cashier ledger…'
+                    : chipSyncNote
+                      ? chipSyncNote
+                      : pendingClaim
+                        ? `Pending session${
+                            pendingClaim.totalWinnings
+                              ? ` (up to ${pendingClaim.totalWinnings.toLocaleString()} chips)`
+                              : ''
+                          }${localChips > 0 ? ` · local bank ${localChips.toLocaleString()}` : ''}.`
                         : localChips > 0
-                          ? `${localChips.toLocaleString()} chips still in local bank — syncing to ledger for exchange…`
-                          : null}
-                  </p>
-                  {localChips > 0 && !syncingChips && (
-                    <button
-                      type="button"
-                      className="art-btn py-2 px-4 text-sm mt-2"
-                      onClick={() => void syncLocalChipsToServer()}
-                    >
-                      Sync chips now
-                    </button>
-                  )}
-                </div>
-              )}
-              {pendingClaim &&
-                !pendingClaim.localOnly &&
-                !pendingClaim.sessionId.startsWith('local-') && (
-                <div className="cashier-claim-banner mb-4">
-                  <p className="text-sm text-[#f5e6c8]/70">
-                    Vault session ready
-                    {pendingClaim.totalWinnings
-                      ? ` — up to ${pendingClaim.totalWinnings.toLocaleString()} chips`
-                      : ''}
-                    . Auto-claims when your wallet is connected.
-                  </p>
-                  {connected ? (
-                    <button
-                      type="button"
-                      className="art-btn py-2 px-4 text-sm mt-2"
-                      onClick={() => void handleClaimCasinoChips()}
-                      disabled={claiming || syncingChips}
-                    >
-                      {claiming ? 'Claiming…' : 'Claim now'}
-                    </button>
-                  ) : (
-                    <p className="text-sm text-amber-200/80 mt-2">Connect wallet above to claim.</p>
-                  )}
-                </div>
-              )}
+                          ? `${localChips.toLocaleString()} chips in local bank — claim to unlock exchange.`
+                          : connected && serverChips !== null && serverChips > 0
+                            ? `Ledger ready: ${serverChips.toLocaleString()} chips.`
+                            : 'Win chips at Depths / Bandit, then claim them here.'}
+                </p>
+                {connected ? (
+                  <button
+                    type="button"
+                    className="art-btn py-2.5 px-5 text-sm mt-3 w-full max-w-xs"
+                    onClick={() => void handleClaimCasinoChips()}
+                    disabled={claiming || syncingChips}
+                  >
+                    {claiming || syncingChips ? 'Working…' : 'Claim verified chips'}
+                  </button>
+                ) : (
+                  <p className="text-sm text-amber-200/80 mt-2">Connect wallet above, then claim.</p>
+                )}
+              </div>
+
               <div className="cashier-stat-row">
                 <div className="cashier-stat">
                   <span className="cashier-stat-label">Bonk Chips</span>
@@ -601,7 +689,7 @@ export default function CashierPanel({ showBackLink = true }: CashierPanelProps)
                   {connected && serverChips !== null ? (
                     <span className="cashier-stat-hint">
                       Cashier ledger {serverChips.toLocaleString()}
-                      {localChips > 0 ? ` · local ${localChips.toLocaleString()} (syncing)` : ' · synced'}
+                      {localChips > 0 ? ` · local ${localChips.toLocaleString()}` : ' · ready to exchange'}
                     </span>
                   ) : (
                     <span className="cashier-stat-hint">Local bank — connect wallet to exchange</span>
@@ -697,25 +785,6 @@ export default function CashierPanel({ showBackLink = true }: CashierPanelProps)
           walletTokenReadyCount={walletTokenReadyCount}
           onRefresh={refreshSecurityStatus}
         />
-
-        {message && (
-          <div
-            id="cashier-toast"
-            className={`cashier-toast ${message.ok ? 'cashier-toast-ok' : 'cashier-toast-err'}`}
-          >
-            <div>
-              {message.text}
-              {message.txUrl && (
-                <a href={message.txUrl} target="_blank" rel="noopener noreferrer" className="cashier-tx-link">
-                  View on Solscan →
-                </a>
-              )}
-            </div>
-            <button type="button" onClick={() => setMessage(null)} className="cashier-toast-close" aria-label="Dismiss">
-              ✕
-            </button>
-          </div>
-        )}
 
         <div className="art-frame">
           <span className="art-frame-corners-tr" aria-hidden />
