@@ -137,7 +137,7 @@ export const RIVAL_MEME_ENEMIES: Enemy[] = [
     id: 'giga-shiba',
     name: 'Giga Shiba Impostor',
     title: 'Claims he invented bonking',
-    hp: 580,
+    hp: 480,
     img: enemyImage('giga-shiba.svg'),
     taunt: '"I\'m the original bonker. You\'re just frequency LARPers."',
     hitReaction: [
@@ -147,13 +147,13 @@ export const RIVAL_MEME_ENEMIES: Enemy[] = [
     ],
     defeatLine: 'Giga Shiba admits it: your First Bonk was cooler.',
     counterAttack: 'Impostor mocks your conviction and swings harder',
-    counterDmg: 32,
+    counterDmg: 26,
   },
   {
     id: 'copycat-council',
     name: 'The Copycat Council',
     title: 'Three mascots. One original idea.',
-    hp: 720,
+    hp: 560,
     img: enemyImage('copycat-council.svg'),
     taunt: '"We voted. Your meme is derivative of our derivative."',
     hitReaction: [
@@ -163,7 +163,7 @@ export const RIVAL_MEME_ENEMIES: Enemy[] = [
     ],
     defeatLine: 'The Copycat Council dissolved into three group chats.',
     counterAttack: 'The Council rotates dog → frog → cat assaults',
-    counterDmg: 34,
+    counterDmg: 28,
   },
 ];
 

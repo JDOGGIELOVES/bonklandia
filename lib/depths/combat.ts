@@ -1,54 +1,95 @@
-import type { CharacterAbility } from '@/lib/characters';
+import type { CharacterAbility, Difficulty } from '@/lib/characters';
 import type { Enemy } from '@/lib/enemies';
 import type { DepthsRoomKind } from '@/lib/depths/rooms';
 
 /**
- * Depths combat — tuned ~halfway between original easy spam and the prior hard pass.
- * Still needs kit variety; not a one-button steamroll.
+ * Depths combat — easy mode must be clearable with Bonnie (healer, lower DPS).
+ * Medium / hard keep more teeth on elites and bosses.
  */
-export const DEPTHS_PLAYER_DMG_MULT = 0.74;
-export const DEPTHS_COUNTER_MULT = 1.18;
-export const DEPTHS_CRIT_MULT = 1.85;
+
+/** Global player damage before difficulty. */
+export const DEPTHS_PLAYER_DMG_MULT = 0.95;
+/** Global enemy counter after defense before difficulty. */
+export const DEPTHS_COUNTER_MULT = 0.92;
+export const DEPTHS_CRIT_MULT = 1.9;
 
 const ROOM_HP_MULT: Record<DepthsRoomKind, number> = {
-  fight: 1.25,
-  elite: 1.42,
-  boss: 1.65,
+  fight: 1.05,
+  elite: 1.18,
+  boss: 1.28,
   event: 1,
   rest: 1,
 };
 
 const ROOM_COUNTER_MULT: Record<DepthsRoomKind, number> = {
-  fight: 1.08,
-  elite: 1.15,
-  boss: 1.22,
+  fight: 0.95,
+  elite: 1.02,
+  boss: 1.08,
   event: 1,
   rest: 1,
 };
 
-/** Scale a rival for the Depths chamber. */
-export function scaleDepthsEnemy(enemy: Enemy, roomKind: DepthsRoomKind): Enemy {
-  const hpMult = ROOM_HP_MULT[roomKind] ?? 1.25;
-  const dmgMult = ROOM_COUNTER_MULT[roomKind] ?? 1.08;
+/** Easy champions hit harder / take less; hard mode is the real test. */
+const DIFF_PLAYER_DMG: Record<Difficulty, number> = {
+  easy: 1.12,
+  medium: 1,
+  hard: 0.9,
+};
+
+const DIFF_COUNTER: Record<Difficulty, number> = {
+  easy: 0.78,
+  medium: 0.95,
+  hard: 1.12,
+};
+
+const DIFF_ENEMY_HP: Record<Difficulty, number> = {
+  easy: 0.82,
+  medium: 0.95,
+  hard: 1.08,
+};
+
+/** Scale a rival for the Depths chamber (room kind + champion difficulty). */
+export function scaleDepthsEnemy(
+  enemy: Enemy,
+  roomKind: DepthsRoomKind,
+  difficulty: Difficulty = 'medium',
+): Enemy {
+  const hpMult = (ROOM_HP_MULT[roomKind] ?? 1.05) * DIFF_ENEMY_HP[difficulty];
+  const dmgMult = (ROOM_COUNTER_MULT[roomKind] ?? 0.95) * DIFF_COUNTER[difficulty];
   return {
     ...enemy,
-    hp: Math.round(enemy.hp * hpMult),
-    counterDmg: Math.max(6, Math.round(enemy.counterDmg * dmgMult)),
+    hp: Math.max(40, Math.round(enemy.hp * hpMult)),
+    counterDmg: Math.max(4, Math.round(enemy.counterDmg * dmgMult)),
   };
 }
 
-export function scaleDepthsPlayerDamage(base: number): number {
-  return Math.max(1, Math.round(base * DEPTHS_PLAYER_DMG_MULT));
+export function scaleDepthsPlayerDamage(
+  base: number,
+  difficulty: Difficulty = 'medium',
+): number {
+  return Math.max(
+    1,
+    Math.round(base * DEPTHS_PLAYER_DMG_MULT * DIFF_PLAYER_DMG[difficulty]),
+  );
 }
 
-export function scaleDepthsCounter(base: number): number {
-  return Math.max(1, Math.round(base * DEPTHS_COUNTER_MULT));
+export function scaleDepthsCounter(
+  base: number,
+  difficulty: Difficulty = 'medium',
+): number {
+  return Math.max(1, Math.round(base * DEPTHS_COUNTER_MULT * DIFF_COUNTER[difficulty]));
 }
 
 /**
  * Light cooldowns on true signature moves only — not every strong attack.
+ * Easy mode: no ability cooldowns (Bonnie / Beng should feel forgiving).
  */
-export function depthsAbilityCooldownTurns(ability: CharacterAbility): number {
+export function depthsAbilityCooldownTurns(
+  ability: CharacterAbility,
+  difficulty: Difficulty = 'medium',
+): number {
+  if (difficulty === 'easy') return 0;
+
   if (
     ability.id === 'chaos-bonk' ||
     ability.id === 'send-it' ||
@@ -61,6 +102,18 @@ export function depthsAbilityCooldownTurns(ability: CharacterAbility): number {
     return 1;
   }
   return 0;
+}
+
+/** Rest camp heal fraction of max HP. */
+export function depthsRestHealFraction(difficulty: Difficulty): number {
+  switch (difficulty) {
+    case 'easy':
+      return 0.55;
+    case 'hard':
+      return 0.3;
+    default:
+      return 0.4;
+  }
 }
 
 export function tickCooldowns(cds: Record<string, number>): Record<string, number> {

@@ -225,9 +225,10 @@ const ENEMY_ABILITIES: Record<string, (ctx: EnemyAbilityContext) => EnemyAbility
       ctx.playerHP < ctx.playerMaxHP * 0.4
         ? 'Impostor smells low conviction — heavy fake-bonk!'
         : 'Giga Shiba Impostor swings a counterfeit First Bonk!',
-    counterMult: ctx.playerHP < ctx.playerMaxHP * 0.4 ? 1.5 : 1.2,
-    flatBonusDamage: 6,
-    vibeDrain: 6,
+    // Softened execute — still scarier low HP, not a one-shot spiral
+    counterMult: ctx.playerHP < ctx.playerMaxHP * 0.4 ? 1.28 : 1.1,
+    flatBonusDamage: 3,
+    vibeDrain: 4,
     enemyHealPercent: 0,
     ignoreBlock: false,
   }),
@@ -237,9 +238,9 @@ const ENEMY_ABILITIES: Record<string, (ctx: EnemyAbilityContext) => EnemyAbility
       return {
         name: 'Dog Motion',
         flavor: 'Council dog head: much committee, very bite!',
-        counterMult: 1.2,
-        flatBonusDamage: 4,
-        vibeDrain: 8,
+        counterMult: 1.1,
+        flatBonusDamage: 2,
+        vibeDrain: 5,
         enemyHealPercent: 0,
         ignoreBlock: false,
       };
@@ -248,20 +249,21 @@ const ENEMY_ABILITIES: Record<string, (ctx: EnemyAbilityContext) => EnemyAbility
       return {
         name: 'Frog Motion',
         flavor: 'Council frog head shrugs past your block.',
-        counterMult: 1.1,
-        flatBonusDamage: 2,
-        vibeDrain: 4,
+        counterMult: 1.0,
+        flatBonusDamage: 1,
+        vibeDrain: 3,
         enemyHealPercent: 0,
-        ignoreBlock: true,
+        // Rare pierce so blocks still matter most of the time
+        ignoreBlock: Math.random() < 0.28,
       };
     }
     return {
       name: 'Cat Motion',
       flavor: 'Council cat head POP-slaps the agenda!',
-      counterMult: 1,
-      flatBonusDamage: 10,
-      vibeDrain: 6,
-      enemyHealPercent: 0.04,
+      counterMult: 0.95,
+      flatBonusDamage: 5,
+      vibeDrain: 4,
+      enemyHealPercent: 0.02,
       ignoreBlock: false,
     };
   },

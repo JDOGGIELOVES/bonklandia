@@ -19,6 +19,7 @@ import {
   DEPTHS_CRIT_MULT,
   depthsAbilityCooldownTurns,
   isAbilityOnCooldown,
+  depthsRestHealFraction,
   scaleDepthsCounter,
   scaleDepthsEnemy,
   scaleDepthsPlayerDamage,
@@ -218,7 +219,7 @@ export default function DepthsGame() {
     }
     if (room.enemy) {
       const kind = room.kind as DepthsRoomKind;
-      const scaled = scaleDepthsEnemy(room.enemy, kind);
+      const scaled = scaleDepthsEnemy(room.enemy, kind, fighter.difficulty);
       setEnemy(scaled);
       setEnemyHP(scaled.hp);
       setEnemyMotion(getEnemyMotionClass(scaled.id));
@@ -275,10 +276,12 @@ export default function DepthsGame() {
 
   const doRest = () => {
     if (!fighter) return;
-    const heal = Math.round(fighter.hp * 0.28);
+    const frac = depthsRestHealFraction(fighter.difficulty);
+    const heal = Math.round(fighter.hp * frac);
+    const vibeGain = fighter.difficulty === 'easy' ? 28 : 18;
     setPlayerHP(h => Math.min(fighter.hp, h + heal));
-    setPlayerVibe(v => Math.min(100, v + 18));
-    pushLog(`Frequency Camp restores ${heal} HP and 18 vibe.`);
+    setPlayerVibe(v => Math.min(100, v + vibeGain));
+    pushLog(`Frequency Camp restores ${heal} HP and ${vibeGain} vibe.`);
     advanceAfterBandit();
   };
 
@@ -345,21 +348,23 @@ export default function DepthsGame() {
         pushLog('CRITICAL BONK!');
       }
       dmg = Math.round(dmg * (1 + fighter.power * 0.025));
-      dmg = scaleDepthsPlayerDamage(dmg);
+      dmg = scaleDepthsPlayerDamage(dmg, fighter.difficulty);
 
       pushLog(ability.flavor);
 
       let hp = playerHP;
-      if (ability.healHp) hp = Math.min(fighter.hp, hp + Math.round(ability.healHp * 0.75));
+      // Full kit heals in Depths — Bonnie's identity is keeping you alive to the boss.
+      if (ability.healHp) hp = Math.min(fighter.hp, hp + ability.healHp);
       if (ability.healVibe) setPlayerVibe(v => Math.min(100, v + ability.healVibe!));
       if (ability.id === 'sonic-boom') setPlayerVibe(v => Math.max(0, v - 15));
       if (ability.id === 'send-it') {
-        hp = Math.max(0, hp - 20);
-        pushLog(`${fighter.name} takes 20 recoil!`);
+        const recoil = fighter.difficulty === 'easy' ? 12 : 20;
+        hp = Math.max(0, hp - recoil);
+        pushLog(`${fighter.name} takes ${recoil} recoil!`);
       }
       if (ability.blockNextHit) setBlockNext(true);
 
-      const cdTurns = depthsAbilityCooldownTurns(ability);
+      const cdTurns = depthsAbilityCooldownTurns(ability, fighter.difficulty);
       if (cdTurns > 0) {
         setCooldowns({ ...ticked, [ability.id]: cdTurns });
         pushLog(`${ability.name} goes on cooldown (${cdTurns} turn${cdTurns > 1 ? 's' : ''}).`);
@@ -457,7 +462,7 @@ export default function DepthsGame() {
 
       let counter = calcCounterDamage(enemy.counterDmg, fighter.defense);
       counter = Math.round(counter * abilityRes.counterMult + abilityRes.flatBonusDamage);
-      counter = scaleDepthsCounter(counter);
+      counter = scaleDepthsCounter(counter, fighter.difficulty);
 
       if (abilityRes.vibeDrain > 0) {
         setPlayerVibe(v => Math.max(0, v - abilityRes.vibeDrain));
@@ -597,8 +602,8 @@ export default function DepthsGame() {
           <p className="depths-intro">{DEPTHS_LORE.intro}</p>
           <p className="depths-hint">{DEPTHS_LORE.banditHook}</p>
           <p className="depths-hint">
-            Mix your kit (big moves cool down briefly). Win a chamber for free Bandit bonus pulls;
-            optional 25¢ quarters after; floor clear = full champion spins. Loss still gets consolation pulls.
+            Easy champs (Bonnie, Beng) get softer enemies and full heals — use Comfort Bonk / Fam Hug on
+            the way to the boss. Win chambers for free Bandit pulls; floor clear = champion spins.
           </p>
         </header>
 
