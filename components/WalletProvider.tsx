@@ -12,17 +12,18 @@ export function WalletProviderWrapper({ children }: { children: React.ReactNode 
   const network = WALLET_NETWORK;
   const endpoint = useMemo(() => WALLET_ENDPOINT, []);
 
+  // Solflare first — users primarily use Solflare; order affects default selection.
   const wallets = useMemo(
     () => [
-      new PhantomWalletAdapter(),
       new SolflareWalletAdapter({ network }),
+      new PhantomWalletAdapter(),
     ],
     [network],
   );
 
   return (
     <ConnectionProvider endpoint={endpoint}>
-      <WalletProvider wallets={wallets} autoConnect={false}>
+      <WalletProvider wallets={wallets} autoConnect>
         <WalletModalProvider>
           {children}
         </WalletModalProvider>
