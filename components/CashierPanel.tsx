@@ -170,16 +170,26 @@ export default function CashierPanel({ showBackLink = true }: CashierPanelProps)
           }),
         });
 
-        const data = (await res.json()) as {
+        const rawText = await res.text();
+        let data: {
           error?: string;
           chipsRemaining?: number;
           tokenAmount?: number;
           symbol?: string;
           signature?: string;
-        };
+        } = {};
+        try {
+          data = rawText ? (JSON.parse(rawText) as typeof data) : {};
+        } catch {
+          showExchangeMessage({
+            ok: false,
+            text: `Cashier error (${res.status}). ${rawText.slice(0, 160) || 'Empty response — try again.'}`,
+          });
+          return;
+        }
 
         if (!res.ok) {
-          showExchangeMessage({ ok: false, text: data.error ?? 'Exchange failed.' });
+          showExchangeMessage({ ok: false, text: data.error ?? `Exchange failed (${res.status}).` });
           void refreshBalances();
           return;
         }
@@ -201,8 +211,9 @@ export default function CashierPanel({ showBackLink = true }: CashierPanelProps)
           });
         }
         await refreshBalances();
-      } catch {
-        showExchangeMessage({ ok: false, text: 'Network error — try again.' });
+      } catch (err) {
+        const detail = err instanceof Error ? err.message : 'Unknown error';
+        showExchangeMessage({ ok: false, text: `Could not reach cashier: ${detail}` });
       } finally {
         setExchanging(null);
       }

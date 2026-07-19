@@ -1,11 +1,9 @@
 import { MAX_EXCHANGES_PER_WALLET_PER_DAY } from '@/lib/security/config';
-import { loadJsonStore, saveJsonStore } from '@/lib/security/persistent-store';
 
 type WalletDayBucket = { date: string; count: number };
 
-type ExchangeLimitStore = Record<string, WalletDayBucket>;
-
-const STORE_FILE = 'exchange-limits.json';
+/** In-memory daily exchange counts (Vercel-safe; never EROFS). */
+const buckets = new Map<string, WalletDayBucket>();
 
 function utcDate(): string {
   return new Date().toISOString().slice(0, 10);
@@ -14,22 +12,23 @@ function utcDate(): string {
 export function checkWalletExchangeLimit(
   wallet: string,
 ): { ok: true } | { ok: false; error: string } {
-  const store = loadJsonStore<ExchangeLimitStore>(STORE_FILE, {});
-  const today = utcDate();
-  const bucket = store[wallet];
+  try {
+    const today = utcDate();
+    const bucket = buckets.get(wallet);
 
-  if (!bucket || bucket.date !== today) {
-    store[wallet] = { date: today, count: 1 };
-    saveJsonStore(STORE_FILE, store);
+    if (!bucket || bucket.date !== today) {
+      buckets.set(wallet, { date: today, count: 1 });
+      return { ok: true };
+    }
+
+    if (bucket.count >= MAX_EXCHANGES_PER_WALLET_PER_DAY) {
+      return { ok: false, error: 'Daily exchange limit reached for this wallet.' };
+    }
+
+    bucket.count += 1;
+    buckets.set(wallet, bucket);
+    return { ok: true };
+  } catch {
     return { ok: true };
   }
-
-  if (bucket.count >= MAX_EXCHANGES_PER_WALLET_PER_DAY) {
-    return { ok: false, error: 'Daily exchange limit reached for this wallet.' };
-  }
-
-  bucket.count += 1;
-  store[wallet] = bucket;
-  saveJsonStore(STORE_FILE, store);
-  return { ok: true };
 }
