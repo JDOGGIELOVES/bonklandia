@@ -25,17 +25,17 @@ function sleep(ms: number): Promise<void> {
 function walletErrorMessage(err: unknown): string {
   if (!(err instanceof Error)) return 'Payment failed.';
   const msg = err.message || 'Payment failed.';
-  if (/User rejected|rejected the request|Approval Denied/i.test(msg)) {
+  if (/User rejected|rejected the request|Approval Denied|denied by user/i.test(msg)) {
     return 'Wallet cancelled the payment.';
   }
-  if (/blockhash|expired|not valid|block height exceeded/i.test(msg)) {
-    return 'Network was slow — try the Quarter Slot again.';
-  }
-  if (/403|429|fetch|network|Failed to fetch|timeout|timed out/i.test(msg)) {
-    return 'Solana RPC is busy — wait a moment and try again.';
-  }
-  if (/insufficient|0x1/i.test(msg)) {
+  if (/insufficient|0x1|insufficient funds/i.test(msg)) {
     return 'Not enough SOL for the 25¢ spin plus network fees.';
+  }
+  if (/blockhash|expired|not valid|block height exceeded|Blockhash not found/i.test(msg)) {
+    return 'Solflare/RPC took too long (blockhash expired). Tap Quarter Slot again and approve quickly.';
+  }
+  if (/403|429|fetch|Failed to fetch|timeout|timed out|network/i.test(msg)) {
+    return 'Solana RPC is busy — wait a few seconds and try again.';
   }
   return msg;
 }
@@ -43,10 +43,10 @@ function walletErrorMessage(err: unknown): string {
 function isRetryableSendError(err: unknown): boolean {
   if (!(err instanceof Error)) return false;
   const msg = err.message || '';
-  if (/User rejected|rejected the request|Approval Denied|insufficient|0x1/i.test(msg)) {
+  if (/User rejected|rejected the request|Approval Denied|denied by user|insufficient|0x1/i.test(msg)) {
     return false;
   }
-  return /blockhash|expired|not valid|block height exceeded|timeout|timed out|429|403|fetch|network|Failed to fetch/i.test(
+  return /blockhash|expired|not valid|block height exceeded|Blockhash not found|timeout|timed out|429|403|fetch|network|Failed to fetch|Node is behind|slot/i.test(
     msg,
   );
 }
@@ -58,7 +58,7 @@ export default function PaidSpinButton({
   onSpinGranted,
 }: PaidSpinButtonProps) {
   const { connection } = useConnection();
-  const { publicKey, sendTransaction, connected } = useWallet();
+  const { publicKey, sendTransaction, signTransaction, connected } = useWallet();
   const [quote, setQuote] = useState<PaidSpinQuote | null>(null);
   const [loading, setLoading] = useState(false);
   const [status, setStatus] = useState<string | null>(null);
@@ -85,7 +85,7 @@ export default function PaidSpinButton({
     loadQuote();
   }, [loadQuote]);
 
-  /** Wait until signature is confirmed, or give up soft so server can still verify. */
+  /** Soft confirm — never fail the spin if we already have a signature. */
   const waitForConfirmation = useCallback(
     async (signature: string, blockhash: string, lastValidBlockHeight: number) => {
       try {
@@ -95,23 +95,27 @@ export default function PaidSpinButton({
         );
         return;
       } catch {
-        // Slow RPC / timeout — poll status before giving up
+        // Solflare + public RPC often times out here even when the tx lands.
       }
 
-      for (let i = 0; i < 20; i++) {
-        await sleep(800);
-        const status = await connection.getSignatureStatus(signature, {
-          searchTransactionHistory: true,
-        });
-        const conf = status.value?.confirmationStatus;
-        if (status.value?.err) {
-          throw new Error('Transaction failed on-chain.');
-        }
-        if (conf === 'confirmed' || conf === 'finalized') {
-          return;
+      for (let i = 0; i < 24; i++) {
+        await sleep(700);
+        try {
+          const st = await connection.getSignatureStatus(signature, {
+            searchTransactionHistory: true,
+          });
+          if (st.value?.err) {
+            throw new Error('Transaction failed on-chain.');
+          }
+          const conf = st.value?.confirmationStatus;
+          if (conf === 'confirmed' || conf === 'finalized') {
+            return;
+          }
+        } catch (err) {
+          if (err instanceof Error && /failed on-chain/i.test(err.message)) throw err;
         }
       }
-      // Soft success: tx may still be landing; server verify will poll again.
+      // Soft success — redeem API will poll for the tx.
     },
     [connection],
   );
@@ -125,16 +129,16 @@ export default function PaidSpinButton({
       const treasury = new PublicKey(activeQuote.treasuryPubkey);
       let lastErr: unknown = new Error('Payment failed.');
 
-      for (let attempt = 0; attempt < 3; attempt++) {
+      for (let attempt = 0; attempt < 4; attempt++) {
         try {
           if (attempt > 0) {
-            setStatus(`Network lag — retry ${attempt + 1}/3…`);
-            await sleep(500 * attempt);
+            setStatus(`Retry ${attempt + 1}/4 — approve quickly in your wallet…`);
+            await sleep(400 * attempt);
           } else {
-            setStatus('Approve in your wallet…');
+            setStatus('Getting a fresh network ticket…');
           }
 
-          // Fresh blockhash on every attempt (stale hash is the usual "network was slow" cause).
+          // Fresh blockhash immediately before signing (Solflare users often take long to approve).
           const { blockhash, lastValidBlockHeight } =
             await connection.getLatestBlockhash('confirmed');
 
@@ -148,18 +152,34 @@ export default function PaidSpinButton({
           tx.recentBlockhash = blockhash;
           tx.feePayer = publicKey;
 
-          const signature = await sendTransaction(tx, connection, {
-            preflightCommitment: 'confirmed',
-            skipPreflight: false,
-            maxRetries: 5,
-          });
+          setStatus('Approve in Solflare/Phantom…');
+
+          let signature: string;
+
+          // Prefer sign + raw send — Solflare is more reliable with skipPreflight this way.
+          if (signTransaction) {
+            const signed = await signTransaction(tx);
+            setStatus('Broadcasting payment…');
+            signature = await connection.sendRawTransaction(signed.serialize(), {
+              skipPreflight: true,
+              maxRetries: 5,
+              preflightCommitment: 'processed',
+            });
+          } else {
+            signature = await sendTransaction(tx, connection, {
+              skipPreflight: true,
+              preflightCommitment: 'processed',
+              maxRetries: 5,
+            });
+          }
 
           setStatus('Confirming on Solana…');
           await waitForConfirmation(signature, blockhash, lastValidBlockHeight);
           return signature;
         } catch (err) {
           lastErr = err;
-          if (!isRetryableSendError(err) || attempt >= 2) {
+          // Only retry if the wallet didn't reject and the error looks like lag/blockhash.
+          if (!isRetryableSendError(err) || attempt >= 3) {
             throw err;
           }
         }
@@ -167,7 +187,7 @@ export default function PaidSpinButton({
 
       throw lastErr;
     },
-    [publicKey, connection, sendTransaction, waitForConfirmation],
+    [publicKey, connection, sendTransaction, signTransaction, waitForConfirmation],
   );
 
   const redeemSignature = useCallback(
@@ -175,28 +195,37 @@ export default function PaidSpinButton({
       setStatus('Unlocking your spin…');
 
       let lastError = 'Payment verification failed.';
-      for (let attempt = 0; attempt < 4; attempt++) {
+      for (let attempt = 0; attempt < 6; attempt++) {
         if (attempt > 0) {
-          setStatus(`Still confirming — retry ${attempt + 1}/4…`);
-          await sleep(1200 * attempt);
+          setStatus(`Still finding payment on-chain — retry ${attempt + 1}/6…`);
+          await sleep(1000 * attempt);
         }
 
-        const res = await fetch('/api/casino/paid-spin', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            signature,
-            payerWallet: publicKey?.toBase58(),
-            sessionId,
-            settleToken,
-          }),
-        });
+        let res: Response;
+        try {
+          res = await fetch('/api/casino/paid-spin', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              signature,
+              payerWallet: publicKey?.toBase58(),
+              sessionId,
+              settleToken,
+            }),
+          });
+        } catch {
+          lastError = 'Could not reach server to unlock spin.';
+          continue;
+        }
 
-        const data = (await res.json()) as {
-          error?: string;
-          settleToken?: string;
-          maxWinnings?: number;
-        };
+        const raw = await res.text();
+        let data: { error?: string; settleToken?: string; maxWinnings?: number } = {};
+        try {
+          data = raw ? (JSON.parse(raw) as typeof data) : {};
+        } catch {
+          lastError = `Server error (${res.status}).`;
+          continue;
+        }
 
         if (res.ok) {
           onSpinGranted({
@@ -207,16 +236,16 @@ export default function PaidSpinButton({
         }
 
         lastError = data.error ?? 'Payment verification failed.';
-        // Retry only when the chain/RPC is still catching up.
-        if (!/not found|wait a moment|not found yet|busy|timeout/i.test(lastError)) {
+        // Retry when chain/RPC hasn't indexed the tx yet.
+        if (!/not found|wait a moment|not found yet|busy|timeout|try again/i.test(lastError)) {
           throw new Error(
-            `${lastError} (tx ${signature.slice(0, 8)}… — payment may have landed; retry in a few seconds or contact support with the signature.)`,
+            `${lastError} (tx ${signature.slice(0, 12)}… — if SOL left your wallet, wait 10s and tap again with the same payment or contact support.)`,
           );
         }
       }
 
       throw new Error(
-        `${lastError} (tx ${signature.slice(0, 8)}… — payment may have landed; try again in a few seconds.)`,
+        `${lastError} (tx ${signature.slice(0, 12)}… — payment may have landed; wait and try unlocking again.)`,
       );
     },
     [publicKey, sessionId, settleToken, onSpinGranted],
@@ -233,7 +262,6 @@ export default function PaidSpinButton({
     setStatus(null);
 
     try {
-      // Refresh price right before pay so quote matches server verify threshold.
       let activeQuote = quote;
       try {
         const r = await fetch('/api/casino/paid-spin');
@@ -243,7 +271,7 @@ export default function PaidSpinButton({
           setQuote(activeQuote);
         }
       } catch {
-        // Keep existing quote if refresh fails.
+        // keep quote
       }
 
       const signature = await sendQuarterPayment(activeQuote);
@@ -271,7 +299,7 @@ export default function PaidSpinButton({
             : 'Pay 25¢ in SOL for one extra pull.'}
       </p>
       <p className="paid-spin-detail">
-        SOL goes to the shared treasury — treasury never pays SOL out.
+        SOL goes to the shared treasury. Solflare: approve promptly so the network ticket stays valid.
       </p>
 
       {!connected && (
