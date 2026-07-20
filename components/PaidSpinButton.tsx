@@ -101,21 +101,43 @@ export default function PaidSpinButton({
       });
   }, []);
 
+  /** Prefer our server RPC — browser → public mainnet often returns 429. */
+  const fetchBlockhash = useCallback(async (): Promise<PrefetchedBlockhash> => {
+    // 1) Server-side RPC (Helius / SOLANA_RPC_URL when configured)
+    try {
+      const res = await fetch('/api/solana/blockhash', { cache: 'no-store' });
+      const data = (await res.json()) as {
+        blockhash?: string;
+        lastValidBlockHeight?: number;
+        error?: string;
+      };
+      if (res.ok && data.blockhash && data.lastValidBlockHeight != null) {
+        return {
+          blockhash: data.blockhash,
+          lastValidBlockHeight: data.lastValidBlockHeight,
+          fetchedAt: Date.now(),
+        };
+      }
+    } catch {
+      // fall through
+    }
+
+    // 2) Browser connection (publicnode or configured endpoint)
+    const { blockhash, lastValidBlockHeight } =
+      await connection.getLatestBlockhash('confirmed');
+    return { blockhash, lastValidBlockHeight, fetchedAt: Date.now() };
+  }, [connection]);
+
   // Prefetch blockhash so the click path's FIRST await can be Solflare itself.
   const refreshBlockhash = useCallback(async () => {
     try {
-      const { blockhash, lastValidBlockHeight } =
-        await connection.getLatestBlockhash('confirmed');
-      blockhashRef.current = {
-        blockhash,
-        lastValidBlockHeight,
-        fetchedAt: Date.now(),
-      };
+      const bh = await fetchBlockhash();
+      blockhashRef.current = bh;
       setBlockhashReady(true);
     } catch {
       setBlockhashReady(false);
     }
-  }, [connection]);
+  }, [fetchBlockhash]);
 
   useEffect(() => {
     loadQuote();
@@ -245,22 +267,21 @@ export default function PaidSpinButton({
       return;
     }
 
-    // Refresh blockhash only if missing or older than ~45s (still usually valid).
+    // Prefer prefetched hash; only hit network if missing/stale.
     let bh = blockhashRef.current;
     const bhAge = bh ? Date.now() - bh.fetchedAt : Infinity;
-    if (!bh || bhAge > 45_000) {
-      setStatus('Refreshing network…');
+    if (!bh || bhAge > 40_000) {
+      setLoading(true);
+      setStatus('Getting network ticket…');
       try {
-        const latest = await connection.getLatestBlockhash('confirmed');
-        bh = {
-          blockhash: latest.blockhash,
-          lastValidBlockHeight: latest.lastValidBlockHeight,
-          fetchedAt: Date.now(),
-        };
+        bh = await fetchBlockhash();
         blockhashRef.current = bh;
         setBlockhashReady(true);
       } catch {
-        setError('Could not reach Solana RPC. Try again in a few seconds.');
+        setLoading(false);
+        setError(
+          'Could not reach Solana network. Wait a few seconds and try again (or set SOLANA_RPC_URL / NEXT_PUBLIC_SOLANA_RPC_URL to a private RPC like Helius).',
+        );
         return;
       }
     }
@@ -281,7 +302,7 @@ export default function PaidSpinButton({
       tx.recentBlockhash = bh.blockhash;
       tx.feePayer = publicKey;
 
-      // FIRST wallet interaction after click (no fetch before this).
+      // Prefer wallet interaction ASAP after we have a blockhash.
       const signature = await sendSolTransferWithWallet({
         transaction: tx,
         connection,
@@ -292,7 +313,6 @@ export default function PaidSpinButton({
 
       setStatus('Payment sent — confirming…');
       await waitForConfirmation(signature, bh.blockhash, bh.lastValidBlockHeight);
-      // Prefetch next blockhash for a second spin
       void refreshBlockhash();
       await redeemSignature(signature);
       setStatus(null);
@@ -314,6 +334,7 @@ export default function PaidSpinButton({
     waitForConfirmation,
     redeemSignature,
     refreshBlockhash,
+    fetchBlockhash,
     loadQuote,
   ]);
 

@@ -11,10 +11,17 @@ export const WALLET_NETWORK: WalletAdapterNetwork =
       ? WalletAdapterNetwork.Testnet
       : WalletAdapterNetwork.Mainnet;
 
+/**
+ * Browser RPC for wallet-adapter ConnectionProvider.
+ * Avoid bare public mainnet-beta as sole default — it 429s constantly and
+ * breaks Quarter Slot before Solflare opens.
+ */
 export const WALLET_ENDPOINT =
   process.env.NEXT_PUBLIC_SOLANA_RPC_URL ??
   process.env.SOLANA_RPC_URL ??
-  clusterApiUrl(WALLET_NETWORK);
+  (WALLET_NETWORK === WalletAdapterNetwork.Mainnet
+    ? 'https://solana-rpc.publicnode.com'
+    : clusterApiUrl(WALLET_NETWORK));
 
 /**
  * Shared Bonklandia treasury — same wallet as Bonga Bonk Miner, GrokSight (bonklandia.com).

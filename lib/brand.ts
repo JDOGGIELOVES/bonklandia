@@ -16,7 +16,7 @@ export const BRAND = {
   depths: 'Degen Depths',
   storagePrefix: 'bonklandia',
   /** Bump on each production ship so you can confirm the live build. */
-  buildId: '2026-07-18u',
+  buildId: '2026-07-18v',
 } as const;
 
 export const LEGACY_STORAGE_KEYS = {
