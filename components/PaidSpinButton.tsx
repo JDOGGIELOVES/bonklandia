@@ -334,7 +334,7 @@ export default function PaidSpinButton({
       </p>
       <p className="paid-spin-detail">
         SOL goes to the shared treasury. Desktop: use the Solflare <strong>browser extension</strong> (not only the
-        mobile app). Unlock Solflare, then tap below.
+        mobile app). Open Solflare and make sure you&apos;re logged in, then tap below.
       </p>
       <p className="paid-spin-detail" style={{ fontSize: '0.85rem', opacity: 0.75 }}>
         {injectLabel}
