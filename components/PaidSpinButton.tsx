@@ -1,11 +1,15 @@
 'use client';
 
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { useConnection, useWallet } from '@solana/wallet-adapter-react';
 import { WalletMultiButton } from '@solana/wallet-adapter-react-ui';
 import { PublicKey, SystemProgram, Transaction } from '@solana/web3.js';
 import type { PaidSpinQuote } from '@/lib/sol-payment';
-import { sendSolTransferWithWallet } from '@/lib/wallet/send-sol-transfer';
+import {
+  detectInjectedWalletLabel,
+  getSolflareProvider,
+  sendSolTransferWithWallet,
+} from '@/lib/wallet/send-sol-transfer';
 
 type PaidSpinGranted = {
   settleToken?: string;
@@ -17,6 +21,12 @@ type PaidSpinButtonProps = {
   sessionId: string;
   settleToken?: string;
   onSpinGranted: (update?: PaidSpinGranted) => void;
+};
+
+type PrefetchedBlockhash = {
+  blockhash: string;
+  lastValidBlockHeight: number;
+  fetchedAt: number;
 };
 
 function sleep(ms: number): Promise<void> {
@@ -33,13 +43,17 @@ function walletErrorMessage(err: unknown): string {
   if (/insufficient|0x1|insufficient funds/i.test(msg)) {
     return 'Not enough SOL for the 25¢ spin plus network fees.';
   }
+  if (/extension not found|Could not open a wallet|No browser extension/i.test(msg)) {
+    return msg;
+  }
+  if (/does not match the app connection/i.test(msg)) {
+    return msg;
+  }
   if (/WalletNotConnected|not connected|WalletConnectionError|reconnect/i.test(msg)) {
-    return msg.includes('Disconnect')
-      ? msg
-      : 'Wallet not connected — unlock Solflare, reconnect on this page, then try again.';
+    return 'Wallet not connected — unlock Solflare, reconnect with the wallet button, then try again.';
   }
   if (/blockhash|expired|not valid|block height exceeded|Blockhash not found/i.test(msg)) {
-    return 'Network ticket expired. Unlock Solflare first, then tap Quarter Slot again immediately.';
+    return 'Network ticket expired. Wait a second and tap Quarter Slot again.';
   }
   if (/403|429|Failed to fetch|timeout|timed out/i.test(msg)) {
     return 'Solana RPC is busy — wait a few seconds and try again.';
@@ -60,32 +74,64 @@ export default function PaidSpinButton({
   const [status, setStatus] = useState<string | null>(null);
   const [quoteLoading, setQuoteLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [injectLabel, setInjectLabel] = useState('Checking wallet extension…');
+  const [blockhashReady, setBlockhashReady] = useState(false);
+
+  const quoteRef = useRef<PaidSpinQuote | null>(null);
+  const blockhashRef = useRef<PrefetchedBlockhash | null>(null);
 
   const walletName = wallet?.adapter?.name ?? 'Wallet';
 
-  // Keep quote warm so a click does NOT await fetch before opening the wallet
-  // (awaiting fetch breaks the user-gesture → popup chain, especially Solflare).
+  // Keep quote warm (never fetch on click — that kills Solflare popups).
   const loadQuote = useCallback(() => {
-    setQuoteLoading(true);
-    setError(null);
     fetch('/api/casino/paid-spin')
       .then(async r => {
         const data = await r.json();
         if (!r.ok) throw new Error(data.error ?? 'Could not load spin price.');
-        setQuote(data as PaidSpinQuote);
+        const q = data as PaidSpinQuote;
+        quoteRef.current = q;
+        setQuote(q);
+        setQuoteLoading(false);
       })
       .catch(err => {
         setQuote(null);
+        quoteRef.current = null;
         setError(err instanceof Error ? err.message : 'Could not load spin price.');
-      })
-      .finally(() => setQuoteLoading(false));
+        setQuoteLoading(false);
+      });
   }, []);
+
+  // Prefetch blockhash so the click path's FIRST await can be Solflare itself.
+  const refreshBlockhash = useCallback(async () => {
+    try {
+      const { blockhash, lastValidBlockHeight } =
+        await connection.getLatestBlockhash('confirmed');
+      blockhashRef.current = {
+        blockhash,
+        lastValidBlockHeight,
+        fetchedAt: Date.now(),
+      };
+      setBlockhashReady(true);
+    } catch {
+      setBlockhashReady(false);
+    }
+  }, [connection]);
 
   useEffect(() => {
     loadQuote();
-    const id = window.setInterval(loadQuote, 45_000);
-    return () => window.clearInterval(id);
-  }, [loadQuote]);
+    void refreshBlockhash();
+    setInjectLabel(detectInjectedWalletLabel());
+
+    const quoteId = window.setInterval(loadQuote, 40_000);
+    const bhId = window.setInterval(() => void refreshBlockhash(), 12_000);
+    const injectId = window.setInterval(() => setInjectLabel(detectInjectedWalletLabel()), 3000);
+
+    return () => {
+      window.clearInterval(quoteId);
+      window.clearInterval(bhId);
+      window.clearInterval(injectId);
+    };
+  }, [loadQuote, refreshBlockhash]);
 
   const waitForConfirmation = useCallback(
     async (signature: string, blockhash: string, lastValidBlockHeight: number) => {
@@ -98,7 +144,7 @@ export default function PaidSpinButton({
           sleep(20_000),
         ]);
       } catch {
-        // poll below
+        // poll
       }
 
       for (let i = 0; i < 20; i++) {
@@ -179,12 +225,12 @@ export default function PaidSpinButton({
   );
 
   /**
-   * CRITICAL: no fetch/await before wallet call except getLatestBlockhash.
-   * Quote must already be loaded so the click still counts as a user gesture for Solflare.
+   * Click handler: minimize awaits before wallet.
+   * Prefetched quote + blockhash so first real await is Solflare signAndSend.
    */
   const buySpin = useCallback(async () => {
-    if (!connected || !publicKey || !quote) {
-      setError('Connect Solflare or Phantom first, then tap Quarter Slot.');
+    if (!connected || !publicKey) {
+      setError('Connect Solflare first (wallet button above), then tap Quarter Slot.');
       return;
     }
     if (connecting) {
@@ -192,28 +238,50 @@ export default function PaidSpinButton({
       return;
     }
 
+    const activeQuote = quoteRef.current ?? quote;
+    if (!activeQuote) {
+      setError('Price not loaded yet — wait a moment and try again.');
+      loadQuote();
+      return;
+    }
+
+    // Refresh blockhash only if missing or older than ~45s (still usually valid).
+    let bh = blockhashRef.current;
+    const bhAge = bh ? Date.now() - bh.fetchedAt : Infinity;
+    if (!bh || bhAge > 45_000) {
+      setStatus('Refreshing network…');
+      try {
+        const latest = await connection.getLatestBlockhash('confirmed');
+        bh = {
+          blockhash: latest.blockhash,
+          lastValidBlockHeight: latest.lastValidBlockHeight,
+          fetchedAt: Date.now(),
+        };
+        blockhashRef.current = bh;
+        setBlockhashReady(true);
+      } catch {
+        setError('Could not reach Solana RPC. Try again in a few seconds.');
+        return;
+      }
+    }
+
     setLoading(true);
     setError(null);
     setStatus(`Opening ${walletName}…`);
 
     try {
-      // Only await needed for a valid tx — keep this as short as possible after the click.
-      const { blockhash, lastValidBlockHeight } =
-        await connection.getLatestBlockhash('confirmed');
-
-      const treasury = new PublicKey(quote.treasuryPubkey);
+      const treasury = new PublicKey(activeQuote.treasuryPubkey);
       const tx = new Transaction().add(
         SystemProgram.transfer({
           fromPubkey: publicKey,
           toPubkey: treasury,
-          lamports: quote.lamports,
+          lamports: activeQuote.lamports,
         }),
       );
-      tx.recentBlockhash = blockhash;
+      tx.recentBlockhash = bh.blockhash;
       tx.feePayer = publicKey;
 
-      setStatus(`Approve in ${walletName}…`);
-
+      // FIRST wallet interaction after click (no fetch before this).
       const signature = await sendSolTransferWithWallet({
         transaction: tx,
         connection,
@@ -222,17 +290,16 @@ export default function PaidSpinButton({
         walletName,
       });
 
-      if (!signature) {
-        throw new Error(`${walletName} did not return a signature. Unlock the extension and try again.`);
-      }
-
       setStatus('Payment sent — confirming…');
-      await waitForConfirmation(signature, blockhash, lastValidBlockHeight);
+      await waitForConfirmation(signature, bh.blockhash, bh.lastValidBlockHeight);
+      // Prefetch next blockhash for a second spin
+      void refreshBlockhash();
       await redeemSignature(signature);
       setStatus(null);
     } catch (err) {
       setError(walletErrorMessage(err));
       setStatus(null);
+      void refreshBlockhash();
     } finally {
       setLoading(false);
     }
@@ -246,7 +313,11 @@ export default function PaidSpinButton({
     walletName,
     waitForConfirmation,
     redeemSignature,
+    refreshBlockhash,
+    loadQuote,
   ]);
+
+  const solflareInjected = Boolean(getSolflareProvider());
 
   return (
     <div className="paid-spin-panel">
@@ -262,13 +333,17 @@ export default function PaidSpinButton({
             : 'Pay 25¢ in SOL for one extra pull.'}
       </p>
       <p className="paid-spin-detail">
-        Unlock Solflare <strong>before</strong> tapping. The approve window should open right away (no extra network
-        wait).
+        SOL goes to the shared treasury. Desktop: use the Solflare <strong>browser extension</strong> (not only the
+        mobile app). Unlock Solflare, then tap below.
+      </p>
+      <p className="paid-spin-detail" style={{ fontSize: '0.85rem', opacity: 0.75 }}>
+        {injectLabel}
+        {blockhashReady ? ' · network ready' : ' · preparing network…'}
       </p>
 
       {!connected && (
         <div className="paid-spin-wallet">
-          <p className="paid-spin-wallet-label">Connect wallet to buy spins</p>
+          <p className="paid-spin-wallet-label">Connect Solflare or Phantom</p>
           <WalletMultiButton />
         </div>
       )}
@@ -276,6 +351,14 @@ export default function PaidSpinButton({
       {connected && publicKey && (
         <p className="paid-spin-connected">
           {walletName} · {publicKey.toBase58().slice(0, 4)}…{publicKey.toBase58().slice(-4)}
+          {solflareInjected ? ' · extension OK' : ' · extension not seen'}
+        </p>
+      )}
+
+      {connected && !solflareInjected && /solflare/i.test(walletName) && (
+        <p className="paid-spin-error">
+          Connected as Solflare but the browser extension is not injected. Install/enable the Solflare Chrome/Firefox
+          extension, or open this site in the Solflare mobile in-app browser.
         </p>
       )}
 
@@ -297,10 +380,10 @@ export default function PaidSpinButton({
           type="button"
           className="art-btn paid-spin-btn w-full py-2.5 text-[#f0d878]"
           onClick={() => void buySpin()}
-          disabled={disabled || loading || !connected || connecting || quoteLoading}
+          disabled={disabled || loading || !connected || connecting}
         >
           {loading
-            ? status ?? 'Waiting for wallet…'
+            ? status ?? 'Waiting for Solflare…'
             : connected
               ? 'Quarter Slot · 25¢ SOL'
               : 'Connect wallet above first'}
