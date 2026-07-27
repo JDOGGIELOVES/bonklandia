@@ -109,16 +109,25 @@ export function creditWalletChips(
 }
 
 /**
- * Move chips onto the ledger without bumping lifetimeWon
- * (import of local bank that was already counted as won client-side).
+ * @deprecated Client bank imports are disabled — fake chips must not become spendable.
+ * Kept only for internal refunds after a failed cashier payout.
  */
 export function depositWalletChips(
   wallet: string,
   amount: number,
   ledgerToken?: string | null,
 ): { ok: true; record: WalletChipRecord; deposited: number } | { ok: false; error: string } {
+  return refundWalletChips(wallet, amount, ledgerToken);
+}
+
+/** Restore chips after a failed treasury transfer (does not bump lifetimeWon). */
+export function refundWalletChips(
+  wallet: string,
+  amount: number,
+  ledgerToken?: string | null,
+): { ok: true; record: WalletChipRecord; deposited: number } | { ok: false; error: string } {
   const chips = Math.max(0, Math.floor(amount));
-  if (chips <= 0) return { ok: false, error: 'Invalid chip deposit.' };
+  if (chips <= 0) return { ok: false, error: 'Invalid chip refund.' };
 
   const prev = getWalletChipBalance(wallet, ledgerToken);
   const next = {

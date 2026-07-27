@@ -6,8 +6,10 @@ import { useCallback, useEffect, useState } from 'react';
 import { useWallet } from '@solana/wallet-adapter-react';
 import { WalletMultiButton } from '@solana/wallet-adapter-react-ui';
 import { useBonkBank } from '@/hooks/useBonkBank';
+import { useSpendableChips } from '@/hooks/useSpendableChips';
 import { useFamTokenBalances } from '@/hooks/useFamTokenBalances';
 import { formatWalletAddress } from '@/lib/bank';
+import { loadChipLedgerToken, saveChipLedgerToken } from '@/lib/chip-ledger-client';
 import {
   FAM_TOKENS,
   calculateChipCost,
@@ -27,13 +29,18 @@ type CashierPanelProps = {
 export default function CashierPanel({ showBackLink = true }: CashierPanelProps) {
   const { publicKey, connected } = useWallet();
   const walletAddress = publicKey?.toBase58() ?? null;
+  const { chips: localDisplayChips, lifetimeChipsWon: localLifetimeWon } = useBonkBank();
   const {
-    chips,
-    lifetimeChipsWon,
-    lifetimeExchanges,
-    spendChips,
-    refresh: refreshLocalBank,
-  } = useBonkBank();
+    spendableChips,
+    lifetimeWon: spendableLifetimeWon,
+    lifetimeExchanged,
+    ledgerToken,
+    loading: spendableLoading,
+    refresh: refreshSpendable,
+  } = useSpendableChips();
+  /** Only server-ledger chips can be cashed. */
+  const chips = spendableChips;
+  const lifetimeChipsWon = spendableLifetimeWon || localLifetimeWon;
 
   const {
     balances,
@@ -117,8 +124,11 @@ export default function CashierPanel({ showBackLink = true }: CashierPanelProps)
       if (!Number.isFinite(tokenAmount) || tokenAmount < token.minTokens) {
         return `Minimum is ${token.minTokens.toLocaleString()} ${token.symbol}.`;
       }
+      if (spendableLoading) {
+        return 'Loading spendable chip balance…';
+      }
       if (chipCost <= 0 || chips < chipCost) {
-        return `Need ${chipCost.toLocaleString()} Bonk Chips (you have ${chips.toLocaleString()}). Wallet ${token.symbol} is separate from chips.`;
+        return `Need ${chipCost.toLocaleString()} spendable Bonk Chips (server balance: ${chips.toLocaleString()}). Earn chips in Depths/Bandit with this wallet connected — fake local chips cannot be cashed. Wallet ${token.symbol} is separate.`;
       }
       if (!walletCanReceiveToken(balances[coinId])) {
         return `No ${token.symbol} on this connected address (${formatMintAddress(token.mint)}). Hold ${token.symbol} on this same Solflare/Phantom account first.`;
@@ -135,6 +145,7 @@ export default function CashierPanel({ showBackLink = true }: CashierPanelProps)
       balancesLoading,
       chips,
       connected,
+      spendableLoading,
       treasuryReady,
       treasuryStatus,
       treasuryTokenMap,
@@ -166,7 +177,7 @@ export default function CashierPanel({ showBackLink = true }: CashierPanelProps)
             tokenAmount,
             walletAddress,
             chipCost,
-            bankChips: chips,
+            ledgerToken: ledgerToken ?? (walletAddress ? loadChipLedgerToken(walletAddress) : null),
           }),
         });
 
@@ -174,6 +185,8 @@ export default function CashierPanel({ showBackLink = true }: CashierPanelProps)
         let data: {
           error?: string;
           chipsRemaining?: number;
+          spendableChips?: number;
+          ledgerToken?: string;
           tokenAmount?: number;
           symbol?: string;
           signature?: string;
@@ -191,25 +204,24 @@ export default function CashierPanel({ showBackLink = true }: CashierPanelProps)
         if (!res.ok) {
           showExchangeMessage({ ok: false, text: data.error ?? `Exchange failed (${res.status}).` });
           void refreshBalances();
+          void refreshSpendable();
           return;
         }
 
-        // Debit Bonk Chips bank only after on-chain send succeeds.
-        const spent = spendChips(chipCost);
-        if (!spent.ok) {
-          showExchangeMessage({
-            ok: true,
-            text: `Sent ${Number(data.tokenAmount).toLocaleString()} ${data.symbol}, but chip bank debit failed — refresh and check balance.`,
-            txUrl: data.signature ? solscanTxUrl(data.signature) : undefined,
-          });
-        } else {
-          refreshLocalBank();
-          showExchangeMessage({
-            ok: true,
-            text: `Sent ${Number(data.tokenAmount).toLocaleString()} ${data.symbol} to your wallet. ${spent.state.chips.toLocaleString()} Bonk Chips left.`,
-            txUrl: data.signature ? solscanTxUrl(data.signature) : undefined,
-          });
+        if (walletAddress && data.ledgerToken) {
+          saveChipLedgerToken(
+            walletAddress,
+            data.ledgerToken,
+            Math.max(0, Math.floor(Number(data.spendableChips ?? data.chipsRemaining) || 0)),
+            { force: true },
+          );
         }
+        await refreshSpendable();
+        showExchangeMessage({
+          ok: true,
+          text: `Sent ${Number(data.tokenAmount).toLocaleString()} ${data.symbol}. ${Math.max(0, Math.floor(Number(data.spendableChips ?? 0))).toLocaleString()} spendable Bonk Chips left.`,
+          txUrl: data.signature ? solscanTxUrl(data.signature) : undefined,
+        });
         await refreshBalances();
       } catch (err) {
         const detail = err instanceof Error ? err.message : 'Unknown error';
@@ -222,9 +234,8 @@ export default function CashierPanel({ showBackLink = true }: CashierPanelProps)
       amounts,
       exchangeBlockReason,
       walletAddress,
-      chips,
-      spendChips,
-      refreshLocalBank,
+      ledgerToken,
+      refreshSpendable,
       refreshBalances,
       showExchangeMessage,
       balancesLoading,
@@ -278,11 +289,10 @@ export default function CashierPanel({ showBackLink = true }: CashierPanelProps)
         <div className="cashier-notice mb-8" role="note">
           <h2 className="cashier-notice-title">How exchange works</h2>
           <p className="cashier-notice-body">
-            <strong>Bonk Chips</strong> are what you spend (won in Depths / Bandit).{' '}
-            <strong>BONGA in Solflare</strong> is separate — you need some on this wallet so we can send more BONGA to
-            you. Cashier is the only way tokens leave the shared treasury from Bonklandia. Cashouts are{' '}
-            <strong>micro-prizes only</strong> (about <strong>$1 max per cashout</strong>, small daily cap) for every
-            Fam coin — fun to redeem, not a treasury drain.
+            <strong>Spendable Bonk Chips</strong> are earned in Depths / Bandit with your wallet connected — the server
+            tracks them. Editing browser storage does <strong>not</strong> create cashable chips.{' '}
+            <strong>BONGA in Solflare</strong> is separate (you need some so we can send more). Cashouts are{' '}
+            <strong>micro-prizes only</strong> (~<strong>$1 max</strong> per cashout).
           </p>
         </div>
 
@@ -293,27 +303,36 @@ export default function CashierPanel({ showBackLink = true }: CashierPanelProps)
             <div className="p-5 md:p-6">
               <h2 className="art-panel-title">🏦 {BRAND.bank}</h2>
               <p className="text-[#f5e6c8]/55 text-base mb-4">
-                Wins credit here automatically. Connect Solflare or Phantom and exchange below.
+                Only server-verified chips from in-game play can be exchanged. Connect the same wallet you play with.
               </p>
 
               <div className="cashier-stat-row">
                 <div className="cashier-stat">
-                  <span className="cashier-stat-label">Bonk Chips</span>
-                  <span className="cashier-stat-value cashier-stat-chips">{chips.toLocaleString()}</span>
+                  <span className="cashier-stat-label">Spendable chips</span>
+                  <span className="cashier-stat-value cashier-stat-chips">
+                    {spendableLoading ? '…' : chips.toLocaleString()}
+                  </span>
                   <span className="cashier-stat-hint">
-                    {chips > 0
-                      ? connected
+                    {!connected
+                      ? 'Connect wallet to load spendable balance'
+                      : chips > 0
                         ? 'Ready to exchange'
-                        : 'Connect wallet to exchange'
-                      : 'Win chips in Depths or Bandit first'}
+                        : 'Play Depths/Bandit with wallet connected to earn'}
                   </span>
                 </div>
+                {localDisplayChips > chips && (
+                  <div className="cashier-stat">
+                    <span className="cashier-stat-label">Local (not cashable)</span>
+                    <span className="cashier-stat-value text-[#f5e6c8]/50">{localDisplayChips.toLocaleString()}</span>
+                    <span className="cashier-stat-hint">Display only — cannot cash</span>
+                  </div>
+                )}
                 <div className="cashier-stat">
                   <span className="cashier-stat-label">Exchanges</span>
-                  <span className="cashier-stat-value">{lifetimeExchanges.toLocaleString()}</span>
+                  <span className="cashier-stat-value">{lifetimeExchanged.toLocaleString()}</span>
                 </div>
                 <div className="cashier-stat">
-                  <span className="cashier-stat-label">Lifetime Won</span>
+                  <span className="cashier-stat-label">Lifetime earned</span>
                   <span className="cashier-stat-value text-[#f5e6c8]/70">{lifetimeChipsWon.toLocaleString()}</span>
                 </div>
                 <div className="cashier-stat">

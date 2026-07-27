@@ -6,6 +6,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useWallet } from '@solana/wallet-adapter-react';
 import { WalletMultiButton } from '@solana/wallet-adapter-react-ui';
 import { useBonkBank } from '@/hooks/useBonkBank';
+import { claimCasinoToLedger } from '@/lib/chips-client';
 import type { PlayableCharacter } from '@/lib/characters';
 import {
   SLOT_SYMBOL_POOL,
@@ -234,11 +235,17 @@ export default function CasinoSlot({
     return () => clearTimeout(t);
   }, []);
 
+  const claimedToLedgerRef = useRef(false);
+
+  useEffect(() => {
+    claimedToLedgerRef.current = false;
+  }, [activeSecure.sessionId]);
+
   useEffect(() => {
     if (totalWinnings <= 0) return;
 
     const settle = async () => {
-      // Always credit local bank so chip bets / offline play work.
+      // Local bank is display / chip-bet only — not cashable at the cashier.
       const localDelta = totalWinnings - localCreditedRef.current;
       if (localDelta > 0) {
         addChips(localDelta);
@@ -246,7 +253,11 @@ export default function CasinoSlot({
       }
 
       if (activeSecure.localOnly) {
-        setSettleError(null);
+        setSettleError(
+          connected
+            ? 'Linking vault… keep spinning; claim spendable chips when the server session is live.'
+            : 'Connect wallet so Bandit wins become spendable cashier chips.',
+        );
         try {
           sessionStorage.setItem(
             'bonk-casino-pending',
@@ -272,7 +283,7 @@ export default function CasinoSlot({
         });
         const data = await res.json() as { error?: string; settleToken?: string };
         if (!res.ok) {
-          setSettleError(data.error ?? 'Could not settle winnings — chips still saved in your bank.');
+          setSettleError(data.error ?? 'Could not settle winnings to vault.');
           return;
         }
         settledWinningsRef.current = totalWinnings;
@@ -289,13 +300,85 @@ export default function CasinoSlot({
           }),
         );
       } catch {
-        // Local bank already credited above — cashier can still exchange.
-        setSettleError(null);
+        setSettleError('Could not reach vault — try again with wallet connected.');
       }
     };
 
     void settle();
-  }, [totalWinnings, activeSecure, addChips]);
+  }, [totalWinnings, activeSecure, addChips, connected]);
+
+  /** One-shot: move settled session total onto spendable server ledger (session-capped). */
+  const claimSpendableIfReady = useCallback(async () => {
+    if (claimedToLedgerRef.current) return true;
+    if (totalWinnings <= 0) return true;
+    if (activeSecure.localOnly) {
+      setSettleError('Connect wallet and wait for vault link so wins become spendable.');
+      return false;
+    }
+    const wallet = publicKey?.toBase58();
+    if (!wallet) {
+      setSettleError('Connect wallet to bank spendable chips for the cashier.');
+      return false;
+    }
+
+    let settleToken = activeSecure.settleToken;
+    try {
+      const res = await fetch('/api/casino/settle', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          sessionId: activeSecure.sessionId,
+          settleToken,
+          totalWinnings,
+        }),
+      });
+      const data = (await res.json()) as { error?: string; settleToken?: string };
+      if (!res.ok) {
+        setSettleError(data.error ?? 'Could not settle before claim.');
+        return false;
+      }
+      settledWinningsRef.current = totalWinnings;
+      if (data.settleToken) {
+        settleToken = data.settleToken;
+        setActiveSecure(prev => ({ ...prev, settleToken: data.settleToken! }));
+      }
+    } catch {
+      setSettleError('Could not settle before claim.');
+      return false;
+    }
+
+    const claimed = await claimCasinoToLedger({
+      wallet,
+      sessionId: activeSecure.sessionId,
+      settleToken,
+    });
+    if (claimed) {
+      claimedToLedgerRef.current = true;
+      setSettleError(null);
+      setLastMessage(
+        `Banked ${totalWinnings.toLocaleString()} spendable Bonk Chips — cash at the ${BRAND.cashier}.`,
+      );
+      return true;
+    }
+    setSettleError('Could not bank spendable chips — connect wallet and try again.');
+    return false;
+  }, [totalWinnings, activeSecure, publicKey]);
+
+  useEffect(() => {
+    if (spinsLeft === 0 && totalWinnings > 0 && !activeSecure.localOnly && connected) {
+      void claimSpendableIfReady();
+    }
+  }, [spinsLeft, totalWinnings, activeSecure.localOnly, connected, claimSpendableIfReady]);
+
+  const handleContinue = useCallback(async () => {
+    if (totalWinnings > 0) await claimSpendableIfReady();
+    onContinue?.();
+  }, [totalWinnings, claimSpendableIfReady, onContinue]);
+
+  const handleExit = useCallback(async () => {
+    if (totalWinnings > 0) await claimSpendableIfReady();
+    onExit();
+  }, [totalWinnings, claimSpendableIfReady, onExit]);
 
   const ladderPrimed = ladderSteps >= JACKPOT_LADDER_STEPS;
   const selectedBet = getChipBetOption(selectedBetChips);
@@ -417,7 +500,7 @@ export default function CasinoSlot({
           <div className="casino-continue-sticky">
             <button
               type="button"
-              onClick={onContinue}
+              onClick={() => void handleContinue()}
               className="art-btn casino-continue-primary"
             >
               {continueLabel}
@@ -703,7 +786,7 @@ export default function CasinoSlot({
               <div className="casino-continue-hero">
                 <button
                   type="button"
-                  onClick={onContinue}
+                  onClick={() => void handleContinue()}
                   className="art-btn casino-continue-primary"
                 >
                   {continueLabel}
@@ -716,7 +799,8 @@ export default function CasinoSlot({
 
             {totalWinnings > 0 && !settleError && (
               <p className="casino-secure-note">
-                {totalWinnings.toLocaleString()} chips in your bank — ready at the {BRAND.cashier}.
+                {totalWinnings.toLocaleString()} chips settled
+                {connected ? ' — banked as spendable for the cashier' : ' — connect wallet to make them spendable'}.
               </p>
             )}
 
@@ -734,7 +818,7 @@ export default function CasinoSlot({
                   Run It Back
                 </button>
               )}
-              <button type="button" onClick={onExit} className="art-btn casino-exit-btn">
+              <button type="button" onClick={() => void handleExit()} className="art-btn casino-exit-btn">
                 {exitLabel}
               </button>
             </div>

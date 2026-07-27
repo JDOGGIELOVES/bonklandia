@@ -31,8 +31,10 @@ import {
   buildDepthsRoomBanditSession,
 } from '@/lib/depths/bandit';
 import { getAbilityMotionClass, getEnemyMotionClass } from '@/lib/combat-vfx';
+import { useWallet } from '@solana/wallet-adapter-react';
 import { useBonkBank } from '@/hooks/useBonkBank';
 import { useCombatAudio } from '@/hooks/useCombatAudio';
+import { earnSpendableChips } from '@/lib/chips-client';
 import CombatArenaVfx from '@/components/CombatArenaVfx';
 import CasinoSlot from '@/components/CasinoSlot';
 import {
@@ -58,6 +60,7 @@ type BanditKind = 'room' | 'clear' | 'defeat';
 const wait = (ms: number) => new Promise<void>(resolve => setTimeout(resolve, ms));
 
 export default function DepthsGame() {
+  const { publicKey, connected } = useWallet();
   const { chips, addChips } = useBonkBank();
   const {
     muted,
@@ -294,7 +297,22 @@ export default function DepthsGame() {
     if (pick.chips > 0) {
       setRunChips(c => c + pick.chips);
       addChips(pick.chips);
-      pushLog(`+${pick.chips} Bonk Chips (event).`);
+      const wallet = publicKey?.toBase58();
+      if (connected && wallet) {
+        void earnSpendableChips({
+          wallet,
+          amount: pick.chips,
+          source: 'depths-event',
+        }).then(earned => {
+          if (earned) {
+            pushLog(`+${pick.chips} spendable Bonk Chips banked for cashier.`);
+          } else {
+            pushLog(`+${pick.chips} local chips (connect/retry to bank spendable).`);
+          }
+        });
+      } else {
+        pushLog(`+${pick.chips} Bonk Chips (event) — connect wallet to make them spendable.`);
+      }
     }
     const nextHp = Math.max(0, Math.min(fighter.hp, playerHP + pick.hpDelta));
     if (nextHp <= 0) {

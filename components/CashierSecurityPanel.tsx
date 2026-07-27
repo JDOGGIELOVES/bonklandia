@@ -54,8 +54,9 @@ const RULES = [
   },
   {
     id: 'chips',
-    label: 'Bonk Chips auto-credit',
-    detail: 'Winnings land in your bank automatically — connect a wallet and exchange for SPL tokens.',
+    label: 'Spendable chips are server-verified',
+    detail:
+      'Only chips earned in-game with your wallet connected can be cashed. Fake localStorage balances cannot spend at the cashier.',
   },
   {
     id: 'quarter',

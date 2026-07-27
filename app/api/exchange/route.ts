@@ -21,6 +21,11 @@ import {
   USD_CONCERN_THRESHOLD,
   chipsToBongaEquivalent,
 } from '@/lib/security/config';
+import {
+  debitWalletChips,
+  getWalletChipBalance,
+  refundWalletChips,
+} from '@/lib/security/chip-ledger';
 import { blockIfEmergencyStopped } from '@/lib/security/emergency';
 import {
   assertExchangeWithinLimits,
@@ -36,7 +41,7 @@ const VALID_IDS: FamCoinId[] = ['bonk', 'bonga', 'bong', 'bink', 'bonnie', 'beng
 
 /**
  * Sole Bonklandia exit for treasury SPL → player wallets.
- * Micro-prize policy: ~$1 max per cashout; all Fam coins share USD + chip caps.
+ * Spendable chips = server ledger only (HMAC). Client bankChips ignored for payment.
  */
 export async function POST(request: Request) {
   try {
@@ -50,7 +55,9 @@ export async function POST(request: Request) {
       tokenAmount?: number;
       walletAddress?: string;
       chipCost?: number;
+      /** @deprecated ignored — spendable balance is server ledger only */
       bankChips?: number;
+      ledgerToken?: string;
     };
 
     try {
@@ -72,7 +79,7 @@ export async function POST(request: Request) {
     const tokenAmount = Number(body.tokenAmount);
     const chipCost = Number(body.chipCost);
     const walletAddress = body.walletAddress?.trim();
-    const bankChips = Math.max(0, Math.floor(Number(body.bankChips) || 0));
+    const ledgerToken = body.ledgerToken?.trim() || null;
 
     if (!walletAddress) {
       return NextResponse.json({ error: 'Wallet address is required.' }, { status: 400 });
@@ -93,13 +100,15 @@ export async function POST(request: Request) {
       );
     }
 
-    if (bankChips < chipCost) {
+    // Spendable chips: sealed server ledger only (earned via claim/earn APIs).
+    const ledger = getWalletChipBalance(walletAddress, ledgerToken);
+    if (ledger.chips < chipCost) {
       return NextResponse.json(
         {
-          error: `Not enough Bonk Chips. Need ${chipCost.toLocaleString()}, your bank shows ${bankChips.toLocaleString()}. (Wallet ${token.symbol} balance is separate from Bonk Chips.)`,
-          code: 'INSUFFICIENT_CHIPS',
+          error: `Not enough spendable Bonk Chips. Need ${chipCost.toLocaleString()}, server balance is ${ledger.chips.toLocaleString()}. Play Depths/Bandit with this wallet connected to earn chips — localStorage chips cannot be cashed.`,
+          code: 'INSUFFICIENT_SPENDABLE_CHIPS',
           chipCost,
-          bankChips,
+          spendableChips: ledger.chips,
         },
         { status: 400 },
       );
@@ -174,6 +183,19 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: 'Invalid wallet address.' }, { status: 400 });
     }
 
+    // Debit spendable ledger before on-chain send; refund if transfer fails.
+    const debited = debitWalletChips(walletAddress, chipCost, ledgerToken ?? ledger.ledgerToken);
+    if (!debited.ok) {
+      return NextResponse.json(
+        {
+          error: debited.error,
+          code: 'INSUFFICIENT_SPENDABLE_CHIPS',
+          spendableChips: getWalletChipBalance(walletAddress, ledgerToken).chips,
+        },
+        { status: 400 },
+      );
+    }
+
     const result = await executeTokenExchange(connection, {
       coinId,
       tokenAmount,
@@ -182,6 +204,7 @@ export async function POST(request: Request) {
     });
 
     if (!result.ok) {
+      refundWalletChips(walletAddress, chipCost, debited.record.ledgerToken);
       const status =
         result.code === 'TREASURY_MISSING' || result.code === 'PAYOUTS_PAUSED' ? 503 : 400;
       let error = result.error;
@@ -200,7 +223,9 @@ export async function POST(request: Request) {
       chipCost: result.chipCost,
       tokenAmount: result.tokenAmount,
       symbol: result.symbol,
-      chipsRemaining: Math.max(0, bankChips - chipCost),
+      chipsRemaining: debited.record.chips,
+      spendableChips: debited.record.chips,
+      ledgerToken: debited.record.ledgerToken,
       bongaEquivalent: chipsToBongaEquivalent(chipCost),
       estimatedUsd: valuation.usd,
       estimatedUsdLabel: formatUsd(valuation.usd),
@@ -248,12 +273,15 @@ export async function GET() {
       maxBongaEquivalentPerWalletPerDay: MAX_BONGA_EQUIVALENT_PER_WALLET_PER_DAY,
       maxExchangesPerWalletPerDay: MAX_EXCHANGES_PER_WALLET_PER_DAY,
       appliesToAllFamCoins: true,
-      note: 'All Fam cashouts share USD + chip caps. Large cashouts blocked. Resets midnight UTC.',
+      spendableChipsServerOnly: true,
+      note: 'Only server-ledger chips (earned in-game) can be cashed. Fake localStorage chips cannot. Micro-prize USD caps apply.',
     },
     security: {
       treasuryNeverPaysSol: true,
       treasuryNeverCreatesTokenAccounts: true,
-      bankChipsClientSide: true,
+      bankChipsClientSide: false,
+      spendableChipsServerLedger: true,
+      clientChipImportDisabled: true,
       cashOutCapped: true,
       soleTreasurySplExit: 'POST /api/exchange',
     },
