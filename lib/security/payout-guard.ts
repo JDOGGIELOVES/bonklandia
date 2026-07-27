@@ -6,7 +6,8 @@ let recentPayoutCount = 0;
 let recentPayoutWindowStart = 0;
 
 const VELOCITY_WINDOW_MS = 5 * 60 * 1000;
-const VELOCITY_MAX_PAYOUTS = Number(process.env.TREASURY_VELOCITY_MAX_PAYOUTS ?? '50');
+/** Successful cashier payouts per 5 minutes before auto-pause (anti-burst). */
+const VELOCITY_MAX_PAYOUTS = Number(process.env.TREASURY_VELOCITY_MAX_PAYOUTS ?? '15');
 const AUTO_PAUSE_MS = 15 * 60 * 1000;
 
 export function treasuryPayoutsAllowed(): boolean {

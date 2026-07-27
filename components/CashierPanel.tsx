@@ -280,7 +280,9 @@ export default function CashierPanel({ showBackLink = true }: CashierPanelProps)
           <p className="cashier-notice-body">
             <strong>Bonk Chips</strong> are what you spend (won in Depths / Bandit).{' '}
             <strong>BONGA in Solflare</strong> is separate — you need some on this wallet so we can send more BONGA to
-            you. No claim or sync steps.
+            you. Cashier is the only way tokens leave the shared treasury from Bonklandia. Cashouts are{' '}
+            <strong>micro-prizes only</strong> (about <strong>$1 max per cashout</strong>, small daily cap) for every
+            Fam coin — fun to redeem, not a treasury drain.
           </p>
         </div>
 

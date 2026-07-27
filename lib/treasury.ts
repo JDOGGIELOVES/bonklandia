@@ -258,6 +258,10 @@ export type ExchangeResult =
   | { ok: true; signature: string; chipCost: number; tokenAmount: number; symbol: string }
   | { ok: false; error: string; code?: string };
 
+/**
+ * ONLY Bonklandia code path that signs treasury SPL outflows.
+ * Call exclusively from POST /api/exchange after fairness caps pass.
+ */
 export async function executeTokenExchange(
   connection: Connection,
   params: ExchangeParams,

@@ -6,18 +6,37 @@ import {
   getSolanaRpcUrl,
   type FamCoinId,
 } from '@/lib/fam-tokens';
+import {
+  CHIPS_PER_BONGA,
+  MAX_BONGA_EQUIVALENT_PER_EXCHANGE,
+  MAX_BONGA_EQUIVALENT_PER_WALLET_PER_DAY,
+  MAX_CHIP_COST_PER_EXCHANGE,
+  MAX_CHIPS_EXCHANGED_PER_IP_PER_DAY,
+  MAX_CHIPS_EXCHANGED_PER_WALLET_PER_DAY,
+  MAX_EXCHANGES_PER_IP_PER_HOUR,
+  MAX_EXCHANGES_PER_WALLET_PER_DAY,
+  MAX_USD_PER_EXCHANGE,
+  MAX_USD_PER_IP_PER_DAY,
+  MAX_USD_PER_WALLET_PER_DAY,
+  USD_CONCERN_THRESHOLD,
+  chipsToBongaEquivalent,
+} from '@/lib/security/config';
 import { blockIfEmergencyStopped } from '@/lib/security/emergency';
-import { checkWalletExchangeLimit } from '@/lib/security/exchange-limits';
+import {
+  assertExchangeWithinLimits,
+  getWalletExchangeQuota,
+  recordSuccessfulExchange,
+} from '@/lib/security/exchange-limits';
 import { checkRateLimit, getClientIp } from '@/lib/security/rate-limit';
+import { estimateCashoutUsd, formatUsd } from '@/lib/security/token-usd';
 import { executeTokenExchange } from '@/lib/treasury';
 import { walletHasTokenAccount } from '@/lib/token-accounts';
 
 const VALID_IDS: FamCoinId[] = ['bonk', 'bonga', 'bong', 'bink', 'bonnie', 'beng'];
 
 /**
- * Cashier exchange: send SPL from treasury → player wallet.
- * Bonk Chips are debited in the browser bank after success (player-facing source of truth).
- * Server enforces rate limits + on-chain checks only — no separate "cashier ledger" gate.
+ * Sole Bonklandia exit for treasury SPL → player wallets.
+ * Micro-prize policy: ~$1 max per cashout; all Fam coins share USD + chip caps.
  */
 export async function POST(request: Request) {
   try {
@@ -31,7 +50,6 @@ export async function POST(request: Request) {
       tokenAmount?: number;
       walletAddress?: string;
       chipCost?: number;
-      /** Client bank balance — for validation messaging only. */
       bankChips?: number;
     };
 
@@ -75,7 +93,6 @@ export async function POST(request: Request) {
       );
     }
 
-    // Soft check: client must report enough bank chips (actual debit happens client-side after success).
     if (bankChips < chipCost) {
       return NextResponse.json(
         {
@@ -88,19 +105,55 @@ export async function POST(request: Request) {
       );
     }
 
-    const ipLimited = checkRateLimit(`exchange:ip:${ip}`, 60, 60 * 60 * 1000);
+    const valuation = await estimateCashoutUsd(coinId, tokenAmount);
+    const fairness = assertExchangeWithinLimits({
+      wallet: walletAddress,
+      ip,
+      chipCost,
+      usdValue: valuation.usd,
+    });
+
+    if (!fairness.ok) {
+      return NextResponse.json(
+        {
+          error: fairness.error,
+          code: fairness.code,
+          estimatedUsd: valuation.usd,
+          unitPriceUsd: valuation.unitPrice,
+          priceSource: valuation.source,
+          quota: getWalletExchangeQuota(walletAddress),
+        },
+        { status: 429 },
+      );
+    }
+
+    if (fairness.concern) {
+      console.warn('[exchange:CONCERN]', {
+        wallet: walletAddress.slice(0, 8) + '…',
+        coinId,
+        tokenAmount,
+        estimatedUsd: valuation.usd,
+        chipCost,
+        threshold: USD_CONCERN_THRESHOLD,
+      });
+    }
+
+    const ipLimited = checkRateLimit(
+      `exchange:ip:${ip}`,
+      MAX_EXCHANGES_PER_IP_PER_HOUR,
+      60 * 60 * 1000,
+    );
     if (!ipLimited.ok) {
       return NextResponse.json({ error: ipLimited.error }, { status: 429 });
     }
 
-    const walletLimited = checkRateLimit(`exchange:wallet:${walletAddress}`, 30, 60 * 60 * 1000);
+    const walletLimited = checkRateLimit(
+      `exchange:wallet:${walletAddress}`,
+      15,
+      60 * 60 * 1000,
+    );
     if (!walletLimited.ok) {
       return NextResponse.json({ error: walletLimited.error }, { status: 429 });
-    }
-
-    const dailyLimit = checkWalletExchangeLimit(walletAddress);
-    if (!dailyLimit.ok) {
-      return NextResponse.json({ error: dailyLimit.error }, { status: 429 });
     }
 
     const connection = new Connection(getSolanaRpcUrl(), 'confirmed');
@@ -140,12 +193,18 @@ export async function POST(request: Request) {
       return NextResponse.json({ error, code: result.code }, { status });
     }
 
+    recordSuccessfulExchange(walletAddress, ip, chipCost, valuation.usd);
+
     return NextResponse.json({
       signature: result.signature,
       chipCost: result.chipCost,
       tokenAmount: result.tokenAmount,
       symbol: result.symbol,
       chipsRemaining: Math.max(0, bankChips - chipCost),
+      bongaEquivalent: chipsToBongaEquivalent(chipCost),
+      estimatedUsd: valuation.usd,
+      estimatedUsdLabel: formatUsd(valuation.usd),
+      quota: getWalletExchangeQuota(walletAddress),
     });
   } catch (err) {
     console.error('[exchange]', err);
@@ -175,10 +234,28 @@ export async function GET() {
     treasuryConfigured: isTreasuryPayoutsReady(),
     payoutsReady: isTreasuryPayoutsReady() && treasuryPayoutsAllowed(),
     payoutsBlockedReason: treasuryPayoutsBlockedReason() ?? treasuryKeyMismatchError(),
+    fairness: {
+      policy: 'micro-prize',
+      maxUsdPerExchange: MAX_USD_PER_EXCHANGE,
+      maxUsdPerWalletPerDay: MAX_USD_PER_WALLET_PER_DAY,
+      maxUsdPerIpPerDay: MAX_USD_PER_IP_PER_DAY,
+      usdConcernThreshold: USD_CONCERN_THRESHOLD,
+      chipsPerBonga: CHIPS_PER_BONGA,
+      maxChipCostPerExchange: MAX_CHIP_COST_PER_EXCHANGE,
+      maxChipsExchangedPerWalletPerDay: MAX_CHIPS_EXCHANGED_PER_WALLET_PER_DAY,
+      maxChipsExchangedPerIpPerDay: MAX_CHIPS_EXCHANGED_PER_IP_PER_DAY,
+      maxBongaEquivalentPerExchange: MAX_BONGA_EQUIVALENT_PER_EXCHANGE,
+      maxBongaEquivalentPerWalletPerDay: MAX_BONGA_EQUIVALENT_PER_WALLET_PER_DAY,
+      maxExchangesPerWalletPerDay: MAX_EXCHANGES_PER_WALLET_PER_DAY,
+      appliesToAllFamCoins: true,
+      note: 'All Fam cashouts share USD + chip caps. Large cashouts blocked. Resets midnight UTC.',
+    },
     security: {
       treasuryNeverPaysSol: true,
       treasuryNeverCreatesTokenAccounts: true,
       bankChipsClientSide: true,
+      cashOutCapped: true,
+      soleTreasurySplExit: 'POST /api/exchange',
     },
   });
 }

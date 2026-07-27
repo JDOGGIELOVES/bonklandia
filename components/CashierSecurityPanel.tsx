@@ -62,6 +62,12 @@ const RULES = [
     label: 'Quarter Slot deposits in only',
     detail: '25¢ SOL goes to the shared treasury — treasury never sends SOL back.',
   },
+  {
+    id: 'single-exit',
+    label: 'Cashier is the only SPL exit',
+    detail:
+      'Tokens leave the shared treasury only through this cashier. Micro-prize caps apply to every Fam coin (~$1 max per cashout, small daily USD + chip limits).',
+  },
 ] as const;
 
 export default function CashierSecurityPanel({

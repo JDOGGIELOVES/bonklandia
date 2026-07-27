@@ -209,12 +209,15 @@ export type SpinResult = {
   message: string;
 };
 
-/** Scales chip payouts — tuned so casino runs fund real-token exchanges at the cashier. */
-const CHIP_BASE_PER_WAVE = 500;
+/**
+ * Chip payouts: fun big-hit feel, but far below the old 10k/100k Fam lines
+ * that made cashier dumps trivial. Cashier chip caps still protect treasury.
+ */
+const CHIP_BASE_PER_WAVE = 120;
 
 /** Fixed Fam line prizes (before victory / bet multipliers). */
-export const FAM_ANY_THREE_CHIPS = 10_000;
-export const FAM_SAME_THREE_CHIPS = 100_000;
+export const FAM_ANY_THREE_CHIPS = 1_200;
+export const FAM_SAME_THREE_CHIPS = 6_000;
 
 export function formatBonkChips(amount: number): string {
   return amount.toLocaleString('en-US');
@@ -232,7 +235,7 @@ export function getPaytable(wave: number, chipMultiplier = 1): PaytableRow[] {
       tier: 'jackpot',
       combo: 'BONK · BONK · BONK',
       detail: 'Jackpot symbol on all 3 lines',
-      payout: scalePayout(base * 300, chipMultiplier),
+      payout: scalePayout(base * 60, chipMultiplier),
       rowClass: 'paytable-row-jackpot',
     },
     {
@@ -253,14 +256,14 @@ export function getPaytable(wave: number, chipMultiplier = 1): PaytableRow[] {
       tier: 'bonk-single',
       combo: 'BONK · ? · ?',
       detail: 'One or two BONKs on the line',
-      payout: scalePayout(base * 12, chipMultiplier),
+      payout: scalePayout(base * 10, chipMultiplier),
       rowClass: 'paytable-row-bonk',
     },
     {
       tier: 'degen-triple',
       combo: 'Degen · Degen · Degen',
       detail: 'Three enemy symbols across the line',
-      payout: scalePayout(base * 6, chipMultiplier),
+      payout: scalePayout(base * 5, chipMultiplier),
       rowClass: 'paytable-row-degen',
     },
     {
