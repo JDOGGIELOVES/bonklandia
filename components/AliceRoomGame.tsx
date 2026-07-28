@@ -17,6 +17,7 @@ import {
   evaluateTripKill,
   getLevelInfo,
   newRunSeed,
+  resetTripKillStreak,
   spinBlockReels,
   spinPlayerReels,
   type AlicePhase,
@@ -279,6 +280,7 @@ export default function AliceRoomGame() {
 
     if (result.blocked) {
       void playWinResult('fam-any');
+      setTripKill(s => resetTripKillStreak(s));
       setPhase('block-result');
       setBusy(false);
       return;
@@ -501,8 +503,8 @@ export default function AliceRoomGame() {
                 <strong>double</strong>). Options rotate each run.
               </li>
               <li>
-                <strong>Don’t rush</strong> — repeating the same choice pattern can <em>trip-kill</em> the
-                run (zero spendable).
+                <strong>Soft anti-rush</strong> — only ejects if you pick the <em>same harsh door type</em>{' '}
+                many times in a row (safe/double paths never kill).
               </li>
               <li>
                 After the boss, bank the final tally (capped spendable chips).

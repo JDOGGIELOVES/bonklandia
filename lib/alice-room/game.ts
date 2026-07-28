@@ -23,10 +23,13 @@ export const MAX_ALICE_SPENDABLE_PAYOUT = Number(
   process.env.MAX_ALICE_SPENDABLE_PAYOUT ?? '90',
 );
 
-/** Same tier in a row on failed defenses before hard trip kill. */
-export const TRIP_KILL_SAME_TIER_STREAK = 3;
-/** Same UI slot index streak also counts as rushing. */
-export const TRIP_KILL_SAME_SLOT_STREAK = 3;
+/**
+ * Only hard-kill after many *identical punishing* choices in a row.
+ * Safe ("none") and double never count — always playable.
+ * UI slot spam removed (too many false positives when labels shuffle).
+ */
+export const TRIP_KILL_SAME_TIER_STREAK = 6;
+export const TRIP_KILL_WARN_STREAK = 5;
 
 export type AlicePhase =
   | 'intro'
@@ -210,59 +213,61 @@ export function applyTrickLoss(coins: number, choice: TrickChoice) {
 }
 
 export type TripKillState = {
-  /** Last failed-defense choice tiers in order */
-  tierHistory: ChoiceTier[];
-  /** Last failed-defense UI slots */
-  slotHistory: number[];
+  /** Last failed-defense *punishing* tiers only (moderate / heavy / wipe). */
+  punishHistory: ChoiceTier[];
   warned: boolean;
 };
 
 export function emptyTripKillState(): TripKillState {
-  return { tierHistory: [], slotHistory: [], warned: false };
+  return { punishHistory: [], warned: false };
 }
 
 export type TripKillResult =
   | { kill: false; warn: boolean; message?: string }
   | { kill: true; message: string };
 
+function isPunishingTier(tier: ChoiceTier): boolean {
+  return tier === 'moderate' || tier === 'heavy' || tier === 'wipe';
+}
+
 /**
- * Call after each failed-defense choice.
- * Kill if same tier streak or same UI slot streak without playing variety.
+ * Soft anti-rush only.
+ * - Safe / double choices never count toward kill.
+ * - Successful defense should call {@link resetTripKillStreak}.
+ * - Need 6 identical punishing tiers in a row to eject (very hard to hit by accident).
  */
 export function evaluateTripKill(
   state: TripKillState,
   choice: TrickChoice,
 ): { state: TripKillState; result: TripKillResult } {
-  const tierHistory = [...state.tierHistory, choice.tier];
-  const slotHistory = [...state.slotHistory, choice.slotIndex];
+  // Good / gift paths clear the rush meter.
+  if (!isPunishingTier(choice.tier)) {
+    return {
+      state: { punishHistory: [], warned: false },
+      result: { kill: false, warn: false },
+    };
+  }
+
+  const punishHistory = [...state.punishHistory, choice.tier];
   const next: TripKillState = {
-    tierHistory,
-    slotHistory,
+    punishHistory,
     warned: state.warned,
   };
 
-  const tierStreak = trailingStreak(tierHistory);
-  const slotStreak = trailingStreak(slotHistory);
+  const tierStreak = trailingStreak(punishHistory);
 
-  if (
-    tierStreak >= TRIP_KILL_SAME_TIER_STREAK ||
-    slotStreak >= TRIP_KILL_SAME_SLOT_STREAK
-  ) {
+  if (tierStreak >= TRIP_KILL_SAME_TIER_STREAK) {
     return {
       state: next,
       result: {
         kill: true,
         message:
-          'TRIP KILL — You forced the same path through the layers. The voyage ejects you. Final tally: nothing spendable.',
+          'TRIP KILL — You forced the same harsh path six times in a row. Slow down and read the doors. Final tally: nothing spendable.',
       },
     };
   }
 
-  if (
-    !state.warned &&
-    (tierStreak >= TRIP_KILL_SAME_TIER_STREAK - 1 ||
-      slotStreak >= TRIP_KILL_SAME_SLOT_STREAK - 1)
-  ) {
+  if (!state.warned && tierStreak >= TRIP_KILL_WARN_STREAK) {
     next.warned = true;
     return {
       state: next,
@@ -270,12 +275,17 @@ export function evaluateTripKill(
         kill: false,
         warn: true,
         message:
-          'The trip notices a pattern… Force the same choice again and you may be ejected.',
+          'Pattern warning — repeating the same harsh choice many times may eject the trip. Try a different door.',
       },
     };
   }
 
   return { state: next, result: { kill: false, warn: false } };
+}
+
+/** Call after a successful 3-entity shield so blocks refresh the meter. */
+export function resetTripKillStreak(state: TripKillState): TripKillState {
+  return { punishHistory: [], warned: false };
 }
 
 function trailingStreak<T>(arr: T[]): number {

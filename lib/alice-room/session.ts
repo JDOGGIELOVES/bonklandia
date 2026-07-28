@@ -21,8 +21,8 @@ export type AliceSessionPayload = {
 };
 
 const TTL_MS = 2 * 60 * 60 * 1000;
-/** ~90s minimum run before bank — same spirit as casino session not being free mint. */
-export const ALICE_MIN_PLAY_MS = Number(process.env.ALICE_MIN_PLAY_MS ?? '90000');
+/** Soft floor before bank (~30s). Full 10-layer runs already take longer. */
+export const ALICE_MIN_PLAY_MS = Number(process.env.ALICE_MIN_PLAY_MS ?? '30000');
 
 function sign(payload: string): string {
   return createHmac('sha256', getCasinoSessionSecret()).update(payload).digest('base64url');
