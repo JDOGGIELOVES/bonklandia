@@ -6325,3 +6325,164 @@ body {
 .alice-melt-10 .alice-room-bg {
   filter: hue-rotate(40deg) saturate(1.55) contrast(1.12) brightness(0.95);
 }
+
+/* Alice: no left column — compact strip + larger reels */
+.alice-stage-solo {
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  gap: 0.75rem;
+  width: 100%;
+  max-width: 560px;
+  margin: 0 auto;
+}
+.alice-slot-stage {
+  width: 100%;
+}
+.alice-trip-strip {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.65rem;
+  padding: 0.55rem 0.75rem;
+  border-radius: 0.85rem;
+  background: rgba(24, 10, 45, 0.9);
+  border: 1px solid rgba(192, 132, 252, 0.4);
+}
+.alice-trip-strip-entity {
+  display: flex;
+  align-items: center;
+  gap: 0.55rem;
+  min-width: 0;
+  flex: 1;
+}
+.alice-trip-strip-img {
+  width: 48px;
+  height: 48px;
+  object-fit: contain;
+  flex-shrink: 0;
+}
+.alice-trip-strip-meta {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  gap: 0.05rem;
+}
+.alice-trip-strip-layer {
+  font-size: 0.68rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: #67e8f9;
+}
+.alice-trip-strip-name {
+  font-weight: 800;
+  font-size: 0.95rem;
+  color: #f5d0fe;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.alice-trip-strip-need {
+  font-size: 0.7rem;
+  color: rgba(196, 181, 253, 0.7);
+}
+.alice-trip-strip-stats {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  flex-shrink: 0;
+  gap: 0.1rem;
+}
+.alice-trip-strip-coins {
+  font-weight: 800;
+  font-size: 1.05rem;
+  color: #f0abfc;
+}
+.alice-trip-strip-coins small {
+  font-size: 0.7rem;
+  font-weight: 600;
+  opacity: 0.75;
+}
+.alice-trip-strip-spend {
+  font-size: 0.72rem;
+  color: rgba(196, 181, 253, 0.75);
+}
+.alice-log-under {
+  max-height: 8rem;
+  margin-top: 0.25rem;
+}
+.alice-log-under h3 {
+  margin-bottom: 0.35rem;
+}
+.alice-cabinet .slot-reels {
+  --slot-reel-height: 200px;
+  padding: 0.45rem;
+}
+.alice-cabinet .slot-symbol,
+.alice-slot-symbol {
+  height: var(--slot-reel-height, 200px);
+  justify-content: center;
+  gap: 0.15rem;
+}
+.alice-cabinet .alice-symbol-frame,
+.alice-cabinet .slot-symbol-frame {
+  width: 148px;
+  height: 148px;
+}
+.alice-cabinet .alice-symbol-img,
+.alice-cabinet .slot-symbol-img {
+  width: 140px !important;
+  height: 140px !important;
+}
+.alice-cabinet .alice-symbol-label,
+.alice-cabinet .slot-symbol-label {
+  font-size: 0.62rem;
+  max-width: 96%;
+}
+.alice-symbol-emoji-fallback {
+  font-size: 3.2rem !important;
+}
+@media (max-width: 640px) {
+  .alice-room-content {
+    padding-left: 0.5rem;
+    padding-right: 0.5rem;
+  }
+  .alice-page-title {
+    font-size: 1.65rem !important;
+  }
+  .alice-cabinet .slot-reels {
+    --slot-reel-height: 176px;
+  }
+  .alice-cabinet .alice-symbol-frame,
+  .alice-cabinet .slot-symbol-frame {
+    width: 128px;
+    height: 128px;
+  }
+  .alice-cabinet .alice-symbol-img,
+  .alice-cabinet .slot-symbol-img {
+    width: 120px !important;
+    height: 120px !important;
+  }
+  .alice-tricks-hint {
+    font-size: 0.8rem;
+  }
+}
+@media (max-width: 400px) {
+  .alice-cabinet .slot-reels {
+    --slot-reel-height: 156px;
+  }
+  .alice-cabinet .alice-symbol-frame,
+  .alice-cabinet .slot-symbol-frame {
+    width: 110px;
+    height: 110px;
+  }
+  .alice-cabinet .alice-symbol-img,
+  .alice-cabinet .slot-symbol-img {
+    width: 104px !important;
+    height: 104px !important;
+  }
+  .alice-trip-strip-img {
+    width: 40px;
+    height: 40px;
+  }
+}

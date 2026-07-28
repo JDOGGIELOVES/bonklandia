@@ -36,7 +36,8 @@ import {
 import { useCasinoAudio } from '@/hooks/useCasinoAudio';
 import type { WinTier } from '@/lib/slot-machine';
 
-const REEL_ITEM_HEIGHT = 160;
+/** Keep in sync with `.alice-cabinet .slot-reels { --slot-reel-height }` */
+const REEL_ITEM_HEIGHT = 200;
 const REEL_SPIN_MS = CASINO_SPIN_DURATION_MS;
 const LEVER_PULL_MS = CASINO_SPIN_START_DELAY_MS;
 
@@ -48,18 +49,18 @@ function AliceSymbolCell({ symbol }: { symbol: AliceSymbol }) {
 
   return (
     <div
-      className={`slot-symbol slot-symbol-${
+      className={`slot-symbol alice-slot-symbol slot-symbol-${
         symbol.kind === 'elf' ? 'enemy' : symbol.kind === 'wild' ? 'jackpot' : 'fam'
       }`}
     >
       {showImg ? (
-        <div className="slot-symbol-frame">
+        <div className="slot-symbol-frame alice-symbol-frame">
           <Image
             src={symbol.image!}
             alt={symbol.label}
-            width={100}
-            height={100}
-            className="character-img slot-symbol-img object-contain"
+            width={160}
+            height={160}
+            className="character-img slot-symbol-img alice-symbol-img object-contain"
             unoptimized
             onError={() => setImgFailed(true)}
           />
@@ -69,7 +70,7 @@ function AliceSymbolCell({ symbol }: { symbol: AliceSymbol }) {
           {symbol.emoji}
         </span>
       )}
-      <span className="slot-symbol-label">{symbol.label}</span>
+      <span className="slot-symbol-label alice-symbol-label">{symbol.label}</span>
     </div>
   );
 }
@@ -522,54 +523,41 @@ export default function AliceRoomGame() {
         )}
 
         {phase !== 'intro' && (
-          <div className="slot-stage-layout alice-stage-layout">
-            <div className="casino-side-column alice-side-column">
-              <aside className="slot-paytable alice-paytable" aria-label="Trip key">
-                <div className="slot-paytable-header">
-                  <h3 className="slot-paytable-title">Trip key</h3>
-                  <p className="slot-paytable-sub">
-                    Layer {level}/{TOTAL_LEVELS}
+          <div className="alice-stage-layout alice-stage-solo">
+            {/* Compact status strip — no cramped left column on mobile */}
+            <div className="alice-trip-strip" aria-label="Trip status">
+              <div className="alice-trip-strip-entity">
+                {defenseEntity.image && (
+                  <Image
+                    src={defenseEntity.image}
+                    alt={defenseEntity.label}
+                    width={56}
+                    height={56}
+                    className="alice-trip-strip-img"
+                    unoptimized
+                  />
+                )}
+                <div className="alice-trip-strip-meta">
+                  <span className="alice-trip-strip-layer">
+                    L{level}/{TOTAL_LEVELS}
                     {levelInfo.isBoss ? ' · BOSS' : ''}
-                    {levelInfo.loving ? ' · LOVING' : ''}
-                  </p>
+                    {levelInfo.loving ? ' · LOVE' : ''}
+                  </span>
+                  <span className="alice-trip-strip-name">{defenseEntity.label}</span>
+                  <span className="alice-trip-strip-need">Shield: 3× this being</span>
                 </div>
-                <div className="alice-entity-card">
-                  {defenseEntity.image && (
-                    <Image
-                      src={defenseEntity.image}
-                      alt={defenseEntity.label}
-                      width={120}
-                      height={120}
-                      className="alice-entity-portrait"
-                      unoptimized
-                    />
-                  )}
-                  <p className="alice-entity-name">{defenseEntity.label}</p>
-                  <p className="alice-entity-need">Defense: 3× on the shield line</p>
-                </div>
-                <div className="slot-paytable-session">
-                  <span className="slot-paytable-session-label">Alice Coins</span>
-                  <span className="slot-paytable-session-value">{aliceCoins.toLocaleString()}</span>
-                </div>
-                <p className="alice-side-hint">
-                  ~{projectedSpendable} spendable if banked now ({ALICE_COINS_PER_SPENDABLE_CHIP} AC → 1
-                  chip, cap). Loving floors: max −50%, one double/run.
-                </p>
-              </aside>
-
-              {log.length > 0 && (
-                <aside className="alice-log" aria-label="Run log">
-                  <h3>Looking-glass log</h3>
-                  <ul>
-                    {log.map(line => (
-                      <li key={line.id}>{line.text}</li>
-                    ))}
-                  </ul>
-                </aside>
-              )}
+              </div>
+              <div className="alice-trip-strip-stats">
+                <span className="alice-trip-strip-coins">
+                  {aliceCoins.toLocaleString()} <small>AC</small>
+                </span>
+                <span className="alice-trip-strip-spend">
+                  ~{projectedSpendable} chips
+                </span>
+              </div>
             </div>
 
-            <div className="slot-stage">
+            <div className="slot-stage alice-slot-stage">
               <div
                 className={`slot-cabinet alice-cabinet ${spinning ? 'slot-cabinet-active' : ''} ${leverPulled ? 'slot-cabinet-pull' : ''}`}
               >
@@ -783,6 +771,17 @@ export default function AliceRoomGame() {
                     </Link>
                   </div>
                 </section>
+              )}
+
+              {log.length > 0 && (
+                <aside className="alice-log alice-log-under" aria-label="Run log">
+                  <h3>Log</h3>
+                  <ul>
+                    {log.slice(0, 6).map(line => (
+                      <li key={line.id}>{line.text}</li>
+                    ))}
+                  </ul>
+                </aside>
               )}
             </div>
           </div>
