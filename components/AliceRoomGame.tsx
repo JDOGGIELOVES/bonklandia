@@ -36,8 +36,12 @@ import {
 import { useCasinoAudio } from '@/hooks/useCasinoAudio';
 import type { WinTier } from '@/lib/slot-machine';
 
-/** Keep in sync with `.alice-cabinet .slot-reels { --slot-reel-height }` */
-const REEL_ITEM_HEIGHT = 200;
+/**
+ * Reel strip math — keep in sync with CSS:
+ * desktop: --slot-reel-height 180px; mobile: 132px
+ * Use 156 as a middle ground; CSS clips window; stop offset uses this.
+ */
+const REEL_ITEM_HEIGHT = 156;
 const REEL_SPIN_MS = CASINO_SPIN_DURATION_MS;
 const LEVER_PULL_MS = CASINO_SPIN_START_DELAY_MS;
 
@@ -58,8 +62,8 @@ function AliceSymbolCell({ symbol }: { symbol: AliceSymbol }) {
           <Image
             src={symbol.image!}
             alt={symbol.label}
-            width={160}
-            height={160}
+            width={140}
+            height={140}
             className="character-img slot-symbol-img alice-symbol-img object-contain"
             unoptimized
             onError={() => setImgFailed(true)}
@@ -70,6 +74,7 @@ function AliceSymbolCell({ symbol }: { symbol: AliceSymbol }) {
           {symbol.emoji}
         </span>
       )}
+      {/* Labels hidden on narrow screens via CSS — art only */}
       <span className="slot-symbol-label alice-symbol-label">{symbol.label}</span>
     </div>
   );
@@ -478,9 +483,9 @@ export default function AliceRoomGame() {
               : `${levelInfo.depthLabel} · ${levelInfo.name}`}
           </p>
           <h1 className="casino-title alice-page-title">{BRAND.aliceRoom}</h1>
-          <p className="casino-tagline">
-            Alice Machine · win spin → entity encounter → defense (3× this being) → strategy doors if
-            needed. Only the post-boss tally is spendable.
+          <p className="casino-tagline alice-tagline-desktop">
+            Alice Machine · win spin → encounter → defense (3× this being) → strategy doors. Only
+            post-boss tally is spendable.
           </p>
         </header>
 
@@ -774,14 +779,9 @@ export default function AliceRoomGame() {
               )}
 
               {log.length > 0 && (
-                <aside className="alice-log alice-log-under" aria-label="Run log">
-                  <h3>Log</h3>
-                  <ul>
-                    {log.slice(0, 6).map(line => (
-                      <li key={line.id}>{line.text}</li>
-                    ))}
-                  </ul>
-                </aside>
+                <p className="alice-log-one-line" aria-live="polite">
+                  {log[0]?.text}
+                </p>
               )}
             </div>
           </div>
