@@ -156,8 +156,17 @@ export default function AliceRoomGame() {
     setTripKill(emptyTripKillState());
     setMelt(0);
     try {
-      const res = await fetch('/api/alice/start', { method: 'POST' });
-      const data = (await res.json()) as { sessionToken?: string; error?: string };
+      const wallet = publicKey?.toBase58() ?? null;
+      const res = await fetch('/api/alice/start', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ wallet }),
+      });
+      const data = (await res.json()) as {
+        sessionToken?: string;
+        error?: string;
+        minPlayMs?: number;
+      };
       if (!res.ok || !data.sessionToken) {
         setMessage(data.error ?? 'Could not open the Alice Room.');
         setBusy(false);

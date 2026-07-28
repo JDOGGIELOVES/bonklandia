@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { evaluateAlicePayout } from '@/lib/alice-room/session';
+import { evaluateAlicePayout, isValidWalletAddress } from '@/lib/alice-room/session';
 import { creditWalletChips } from '@/lib/security/chip-ledger';
 import { assertEarnAllowed, recordEarn } from '@/lib/security/earn-limits';
 import { blockIfEmergencyStopped } from '@/lib/security/emergency';
@@ -7,17 +7,25 @@ import { checkRateLimit, getClientIp } from '@/lib/security/rate-limit';
 import { isSignatureUsed, markSignatureUsed } from '@/lib/security/signature-store';
 
 /**
- * Cash only the post-boss final Alice tally into spendable Bonk Chips.
- * Session must be valid and not already completed; amount is hard-capped.
+ * Bank post-boss Alice tally → spendable server ledger.
+ * Parity with casino claim:
+ * - emergency stop
+ * - HMAC session
+ * - one claim per sessionId (signature store)
+ * - hard max spendable (session maxSpendable)
+ * - earn rate limits
+ * - wallet rate limits
+ * - optional wallet bind from start
+ * - min play duration
  */
 export async function POST(request: Request) {
   const stopped = blockIfEmergencyStopped();
   if (stopped) return stopped;
 
   const ip = getClientIp(request);
-  const limited = checkRateLimit(`alice-complete:${ip}`, 20, 60 * 60 * 1000);
-  if (!limited.ok) {
-    return NextResponse.json({ error: limited.error }, { status: 429 });
+  const ipLimited = checkRateLimit(`alice-complete:ip:${ip}`, 15, 60 * 60 * 1000);
+  if (!ipLimited.ok) {
+    return NextResponse.json({ error: ipLimited.error }, { status: 429 });
   }
 
   let body: {
@@ -37,24 +45,38 @@ export async function POST(request: Request) {
   const aliceCoins = Math.floor(Number(body.aliceCoins) || 0);
   const ledgerToken = body.ledgerToken?.trim() || null;
 
-  if (!wallet) {
+  if (!wallet || !isValidWalletAddress(wallet)) {
     return NextResponse.json(
-      { error: 'Connect a wallet to bank your final Alice tally as spendable chips.' },
+      {
+        error: 'Connect a valid wallet to bank your final Alice tally as spendable chips.',
+        code: 'WALLET',
+      },
       { status: 400 },
     );
   }
   if (!sessionToken) {
-    return NextResponse.json({ error: 'Missing Alice Room session.' }, { status: 400 });
+    return NextResponse.json({ error: 'Missing Alice Room session.', code: 'SESSION' }, { status: 400 });
   }
 
-  const evaluated = evaluateAlicePayout(sessionToken, aliceCoins);
+  const walletLimited = checkRateLimit(`alice-complete:wallet:${wallet}`, 10, 60 * 60 * 1000);
+  if (!walletLimited.ok) {
+    return NextResponse.json({ error: walletLimited.error }, { status: 429 });
+  }
+
+  const evaluated = evaluateAlicePayout(sessionToken, aliceCoins, wallet);
   if (!evaluated.ok) {
-    return NextResponse.json({ error: evaluated.error }, { status: 400 });
+    return NextResponse.json(
+      { error: evaluated.error, code: evaluated.code },
+      { status: evaluated.code === 'TOO_FAST' ? 429 : 400 },
+    );
   }
 
   const claimKey = `alice-complete:${evaluated.sessionId}`;
   if (isSignatureUsed(claimKey)) {
-    return NextResponse.json({ error: 'This Alice Room run was already claimed.' }, { status: 400 });
+    return NextResponse.json(
+      { error: 'This Alice Room run was already claimed.', code: 'ALREADY_CLAIMED' },
+      { status: 400 },
+    );
   }
 
   if (evaluated.spendable <= 0) {
@@ -76,15 +98,23 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: credited.error }, { status: 400 });
   }
 
+  // One-shot claim (same pattern as casino claim keys).
   markSignatureUsed(claimKey, 'alice-complete');
   recordEarn(wallet, evaluated.spendable, 'alice-room');
 
   return NextResponse.json({
     ok: true,
     spendable: evaluated.spendable,
-    aliceCoins,
+    maxSpendable: evaluated.maxSpendable,
+    aliceCoinsReported: aliceCoins,
     chips: credited.record.chips,
+    lifetimeWon: credited.record.lifetimeWon,
     ledgerToken: credited.record.ledgerToken,
+    security: {
+      serverLedgerOnly: true,
+      sessionCapped: true,
+      oneClaimPerSession: true,
+    },
     message: `Banked ${evaluated.spendable.toLocaleString()} spendable Bonk Chips from the Alice Room.`,
   });
 }
