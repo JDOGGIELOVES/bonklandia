@@ -14,9 +14,10 @@ export const BRAND = {
   casino: 'Bonklandia Casino',
   slotMachine: 'BONKLANDIA BANDIT',
   depths: 'Degen Depths',
+  aliceRoom: 'The Alice Room',
   storagePrefix: 'bonklandia',
   /** Bump on each production ship so you can confirm the live build. */
-  buildId: '2026-07-27e',
+  buildId: '2026-07-27f',
 } as const;
 
 export const LEGACY_STORAGE_KEYS = {

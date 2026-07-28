@@ -15,6 +15,7 @@ export type EarnSource =
   | 'depths-bandit'
   | 'depths-clear'
   | 'casino-claim'
+  | 'alice-room'
   | 'other';
 
 const SOURCE_MAX: Record<EarnSource, number> = {
@@ -22,6 +23,8 @@ const SOURCE_MAX: Record<EarnSource, number> = {
   'depths-bandit': Number(process.env.MAX_EARN_DEPTHS_BANDIT ?? '25000'),
   'depths-clear': Number(process.env.MAX_EARN_DEPTHS_CLEAR ?? '25000'),
   'casino-claim': Number(process.env.MAX_EARN_CASINO_CLAIM ?? '500000'),
+  /** Final Alice Room tally only (post-boss), micro-prize aligned. */
+  'alice-room': Number(process.env.MAX_EARN_ALICE_ROOM ?? '90'),
   other: Number(process.env.MAX_EARN_OTHER ?? '1000'),
 };
 

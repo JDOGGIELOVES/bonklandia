@@ -5836,3 +5836,309 @@ body {
 .depths-log p {
   margin: 0.2rem 0;
 }
+
+/* -- The Alice Room (Wonderland Bandit side game) ----------------- */
+.alice-room {
+  position: relative;
+  min-height: 100vh;
+  color: #e8e0ff;
+  font-family: system-ui, sans-serif;
+  overflow-x: hidden;
+}
+.alice-room-bg {
+  position: fixed;
+  inset: 0;
+  background:
+    radial-gradient(ellipse 80% 50% at 50% -10%, rgba(168, 85, 247, 0.35), transparent),
+    radial-gradient(ellipse 60% 40% at 100% 100%, rgba(34, 211, 238, 0.12), transparent),
+    linear-gradient(165deg, #0c0618 0%, #1a0b2e 40%, #0f172a 100%);
+  z-index: 0;
+}
+.alice-room-content {
+  position: relative;
+  z-index: 1;
+  max-width: 920px;
+  margin: 0 auto;
+  padding: 1.25rem 1rem 3rem;
+}
+.alice-room-header { text-align: center; margin-bottom: 1.25rem; }
+.alice-room-nav {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  justify-content: center;
+  margin-bottom: 1rem;
+}
+.alice-nav-link {
+  color: #c4b5fd;
+  text-decoration: none;
+  font-size: 0.9rem;
+  border: 1px solid rgba(167, 139, 250, 0.35);
+  padding: 0.35rem 0.75rem;
+  border-radius: 999px;
+  background: rgba(76, 29, 149, 0.25);
+}
+.alice-nav-link:hover { background: rgba(124, 58, 237, 0.35); color: #f5f3ff; }
+.alice-eyebrow {
+  text-transform: uppercase;
+  letter-spacing: 0.14em;
+  font-size: 0.72rem;
+  color: #a78bfa;
+  margin: 0 0 0.35rem;
+}
+.alice-title {
+  font-family: var(--font-display, Georgia, serif);
+  font-size: clamp(2rem, 5vw, 3rem);
+  color: #f0abfc;
+  text-shadow: 0 0 24px rgba(232, 121, 249, 0.45);
+  margin: 0 0 0.5rem;
+}
+.alice-sub {
+  color: rgba(233, 213, 255, 0.75);
+  line-height: 1.5;
+  max-width: 38rem;
+  margin: 0 auto;
+  font-size: 0.98rem;
+}
+.alice-status-bar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+  align-items: center;
+  justify-content: center;
+  margin: 1.25rem 0 0.35rem;
+  padding: 0.75rem;
+  border-radius: 1rem;
+  background: rgba(30, 10, 50, 0.65);
+  border: 1px solid rgba(167, 139, 250, 0.3);
+}
+.alice-stat { text-align: center; min-width: 5.5rem; }
+.alice-stat-label {
+  display: block;
+  font-size: 0.68rem;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: #a78bfa;
+}
+.alice-stat-value {
+  font-weight: 700;
+  font-size: 1.15rem;
+  color: #f5f3ff;
+}
+.alice-coins { color: #f0abfc; }
+.alice-wallet :global(button),
+.alice-wallet button {
+  font-size: 0.8rem !important;
+  height: auto !important;
+}
+.alice-footnote {
+  text-align: center;
+  font-size: 0.75rem;
+  color: rgba(196, 181, 253, 0.55);
+  margin: 0 0 1.25rem;
+}
+.alice-panel {
+  background: rgba(20, 8, 40, 0.75);
+  border: 1px solid rgba(192, 132, 252, 0.35);
+  border-radius: 1.25rem;
+  padding: 1.25rem 1.35rem;
+  margin-bottom: 1rem;
+  box-shadow: 0 12px 40px rgba(0, 0, 0, 0.35);
+}
+.alice-intro h2,
+.alice-victory h2,
+.alice-level-banner h2 {
+  color: #e9d5ff;
+  margin: 0 0 0.75rem;
+  font-family: var(--font-display, Georgia, serif);
+}
+.alice-rules {
+  margin: 0 0 1.25rem;
+  padding-left: 1.2rem;
+  line-height: 1.55;
+  color: rgba(233, 213, 255, 0.85);
+}
+.alice-rules li { margin-bottom: 0.5rem; }
+.alice-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border: none;
+  border-radius: 999px;
+  padding: 0.7rem 1.35rem;
+  font-weight: 700;
+  cursor: pointer;
+  text-decoration: none;
+  font-size: 0.95rem;
+  transition: transform 0.12s ease, filter 0.12s ease;
+}
+.alice-btn:disabled { opacity: 0.55; cursor: not-allowed; }
+.alice-btn:not(:disabled):hover { transform: translateY(-1px); filter: brightness(1.08); }
+.alice-btn-primary {
+  background: linear-gradient(135deg, #c026d3, #7c3aed);
+  color: #fff;
+  box-shadow: 0 0 20px rgba(192, 38, 211, 0.35);
+}
+.alice-btn-danger {
+  background: linear-gradient(135deg, #e11d48, #9f1239);
+  color: #fff;
+}
+.alice-btn-ghost {
+  background: transparent;
+  color: #c4b5fd;
+  border: 1px solid rgba(167, 139, 250, 0.45);
+}
+.alice-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.65rem;
+  justify-content: center;
+  margin-top: 1rem;
+}
+.alice-level-banner { text-align: center; margin-bottom: 1rem; }
+.alice-depth {
+  display: inline-block;
+  font-size: 0.72rem;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: #67e8f9;
+  margin-bottom: 0.35rem;
+}
+.alice-level-banner p {
+  color: rgba(233, 213, 255, 0.7);
+  margin: 0.35rem 0 0;
+  font-size: 0.92rem;
+}
+.alice-boss-tag {
+  display: inline-block;
+  margin-top: 0.5rem;
+  padding: 0.2rem 0.65rem;
+  border-radius: 999px;
+  background: rgba(244, 63, 94, 0.25);
+  border: 1px solid #fb7185;
+  color: #fda4af;
+  font-size: 0.75rem;
+  font-weight: 800;
+  letter-spacing: 0.1em;
+}
+.alice-reels {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 0.65rem;
+  margin: 1rem 0;
+}
+.alice-reels-spin .alice-reel {
+  animation: alice-reel-tick 0.12s ease infinite alternate;
+}
+@keyframes alice-reel-tick {
+  from { filter: brightness(1.2); transform: translateY(-2px); }
+  to { filter: brightness(0.9); transform: translateY(2px); }
+}
+.alice-reel {
+  background: linear-gradient(180deg, rgba(49, 20, 80, 0.95), rgba(15, 10, 30, 0.95));
+  border: 2px solid rgba(192, 132, 252, 0.45);
+  border-radius: 1rem;
+  padding: 1rem 0.5rem;
+  text-align: center;
+  min-height: 6.5rem;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 0.35rem;
+}
+.alice-reel-elf {
+  border-color: rgba(52, 211, 153, 0.65);
+  box-shadow: 0 0 16px rgba(52, 211, 153, 0.2);
+}
+.alice-reel-emoji { font-size: 2.1rem; line-height: 1; }
+.alice-reel-label {
+  font-size: 0.72rem;
+  color: rgba(233, 213, 255, 0.75);
+  line-height: 1.2;
+}
+.alice-message {
+  text-align: center;
+  color: #f5d0fe;
+  font-weight: 600;
+  margin: 0.5rem 0 0;
+  min-height: 1.5em;
+}
+.alice-tricks { margin-top: 1.25rem; }
+.alice-tricks h3 {
+  text-align: center;
+  color: #fda4af;
+  margin: 0 0 0.35rem;
+}
+.alice-tricks-hint {
+  text-align: center;
+  font-size: 0.88rem;
+  color: rgba(254, 205, 211, 0.75);
+  margin: 0 0 0.85rem;
+}
+.alice-trick-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.65rem;
+}
+@media (max-width: 560px) {
+  .alice-trick-grid { grid-template-columns: 1fr; }
+}
+.alice-trick-card {
+  text-align: left;
+  background: rgba(40, 12, 55, 0.9);
+  border: 1px solid rgba(251, 113, 133, 0.4);
+  border-radius: 0.85rem;
+  padding: 0.85rem 1rem;
+  cursor: pointer;
+  color: inherit;
+  transition: border-color 0.15s, background 0.15s;
+}
+.alice-trick-card:hover {
+  border-color: #f0abfc;
+  background: rgba(88, 28, 135, 0.55);
+}
+.alice-trick-label {
+  display: block;
+  font-weight: 800;
+  color: #fce7f3;
+  margin-bottom: 0.25rem;
+}
+.alice-trick-whisper {
+  display: block;
+  font-size: 0.8rem;
+  color: rgba(233, 213, 255, 0.6);
+  font-style: italic;
+}
+.alice-victory { text-align: center; }
+.alice-final-tally { font-size: 1.15rem; color: #f0abfc; }
+.alice-warn { color: #fcd34d; }
+.alice-claim-msg { margin-top: 0.75rem; color: #e9d5ff; }
+.alice-claim-ok { color: #6ee7b7; font-weight: 700; }
+.alice-log {
+  margin-top: 1rem;
+  padding: 0.85rem 1rem;
+  border-radius: 0.85rem;
+  background: rgba(0, 0, 0, 0.35);
+  border: 1px solid rgba(167, 139, 250, 0.2);
+}
+.alice-log h3 {
+  margin: 0 0 0.5rem;
+  font-size: 0.8rem;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  color: #a78bfa;
+}
+.alice-log ul {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  max-height: 10rem;
+  overflow-y: auto;
+}
+.alice-log li {
+  font-size: 0.82rem;
+  color: rgba(233, 213, 255, 0.65);
+  padding: 0.2rem 0;
+  border-bottom: 1px solid rgba(167, 139, 250, 0.08);
+}

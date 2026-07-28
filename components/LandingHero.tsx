@@ -10,6 +10,9 @@ export default function LandingHero() {
         <Link href="/depths" className="tavern-nav-plaque">
           {BRAND.depths}
         </Link>
+        <Link href="/alice" className="tavern-nav-plaque">
+          {BRAND.aliceRoom}
+        </Link>
         <Link href="/cashier" className="tavern-nav-plaque">
           {BRAND.cashier}
         </Link>
