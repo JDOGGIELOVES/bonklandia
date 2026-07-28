@@ -28,12 +28,8 @@ import { getEntityForLevel } from '@/lib/alice-room/symbols';
 import { ALL_ALICE_SYMBOLS, type AliceSymbol } from '@/lib/alice-room/symbols';
 import { BRAND } from '@/lib/brand';
 import { loadChipLedgerToken, saveChipLedgerToken } from '@/lib/chip-ledger-client';
-import {
-  CASINO_AMBIENCE_CREDIT,
-  CASINO_SPIN_DURATION_MS,
-  CASINO_SPIN_START_DELAY_MS,
-} from '@/lib/casino-audio';
-import { useCasinoAudio } from '@/hooks/useCasinoAudio';
+import { CASINO_SPIN_DURATION_MS, CASINO_SPIN_START_DELAY_MS } from '@/lib/casino-audio';
+import { useAliceAudio } from '@/hooks/useAliceAudio';
 import type { WinTier } from '@/lib/slot-machine';
 
 /**
@@ -135,6 +131,8 @@ function aliceWinTier(aliceCoins: number): WinTier {
 
 export default function AliceRoomGame() {
   const { publicKey, connected } = useWallet();
+  const [phase, setPhase] = useState<AlicePhase>('intro');
+  const [level, setLevel] = useState(1);
   const {
     muted,
     audioReady,
@@ -143,9 +141,8 @@ export default function AliceRoomGame() {
     playLeverPull,
     playSpinSequence,
     playWinResult,
-  } = useCasinoAudio();
-  const [phase, setPhase] = useState<AlicePhase>('intro');
-  const [level, setLevel] = useState(1);
+    ambienceCredit,
+  } = useAliceAudio(level);
   const [aliceCoins, setAliceCoins] = useState(0);
   const [sessionToken, setSessionToken] = useState<string | null>(null);
   const [runSeed, setRunSeed] = useState(0);
@@ -463,7 +460,7 @@ export default function AliceRoomGame() {
                 className="casino-audio-btn"
                 onClick={() => void toggleMute()}
                 aria-label={muted ? 'Unmute Alice Machine audio' : 'Mute Alice Machine audio'}
-                title={CASINO_AMBIENCE_CREDIT}
+                title={ambienceCredit}
               >
                 {muted ? '🔇' : '🔊'}
               </button>
