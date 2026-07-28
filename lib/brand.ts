@@ -14,10 +14,13 @@ export const BRAND = {
   casino: 'Bonklandia Casino',
   slotMachine: 'BONKLANDIA BANDIT',
   depths: 'Degen Depths',
+  /** In-world name of the Wonderland side game. */
   aliceRoom: 'The Alice Room',
+  /** Home nav plaque — how players open the rabbit hole. */
+  aliceRoomNav: 'Eat the Mushroom',
   storagePrefix: 'bonklandia',
   /** Bump on each production ship so you can confirm the live build. */
-  buildId: '2026-07-27f',
+  buildId: '2026-07-27g',
 } as const;
 
 export const LEGACY_STORAGE_KEYS = {
