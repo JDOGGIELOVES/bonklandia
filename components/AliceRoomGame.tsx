@@ -27,7 +27,13 @@ import { getEntityForLevel } from '@/lib/alice-room/symbols';
 import { ALL_ALICE_SYMBOLS, type AliceSymbol } from '@/lib/alice-room/symbols';
 import { BRAND } from '@/lib/brand';
 import { loadChipLedgerToken, saveChipLedgerToken } from '@/lib/chip-ledger-client';
-import { CASINO_SPIN_DURATION_MS, CASINO_SPIN_START_DELAY_MS } from '@/lib/casino-audio';
+import {
+  CASINO_AMBIENCE_CREDIT,
+  CASINO_SPIN_DURATION_MS,
+  CASINO_SPIN_START_DELAY_MS,
+} from '@/lib/casino-audio';
+import { useCasinoAudio } from '@/hooks/useCasinoAudio';
+import type { WinTier } from '@/lib/slot-machine';
 
 const REEL_ITEM_HEIGHT = 160;
 const REEL_SPIN_MS = CASINO_SPIN_DURATION_MS;
@@ -110,8 +116,25 @@ function AliceReel({
 
 const IDLE_REEL: AliceSymbol = ALL_ALICE_SYMBOLS[0]!;
 
+function aliceWinTier(aliceCoins: number): WinTier {
+  if (aliceCoins >= 7000) return 'jackpot';
+  if (aliceCoins >= 3500) return 'fam-triple';
+  if (aliceCoins >= 1500) return 'fam-any';
+  if (aliceCoins > 0) return 'bonk-single';
+  return 'none';
+}
+
 export default function AliceRoomGame() {
   const { publicKey, connected } = useWallet();
+  const {
+    muted,
+    audioReady,
+    unlockAudio,
+    toggleMute,
+    playLeverPull,
+    playSpinSequence,
+    playWinResult,
+  } = useCasinoAudio();
   const [phase, setPhase] = useState<AlicePhase>('intro');
   const [level, setLevel] = useState(1);
   const [aliceCoins, setAliceCoins] = useState(0);
@@ -155,6 +178,8 @@ export default function AliceRoomGame() {
     setDoubleUsed(false);
     setTripKill(emptyTripKillState());
     setMelt(0);
+    // User gesture — unlock Bandit-style audio (lever, reels, ambience).
+    void unlockAudio();
     try {
       const wallet = publicKey?.toBase58() ?? null;
       const res = await fetch('/api/alice/start', {
@@ -198,6 +223,9 @@ export default function AliceRoomGame() {
       blocked?: boolean;
     },
   ) => {
+    // Same SFX stack as Bonklandia Bandit.
+    void playLeverPull();
+    void playSpinSequence();
     setSpinning(true);
     setLeverPulled(true);
     setJustLanded(false);
@@ -224,6 +252,9 @@ export default function AliceRoomGame() {
     if (result.aliceCoins) {
       setAliceCoins(c => c + result.aliceCoins!);
       pushLog(`+${result.aliceCoins.toLocaleString()} Alice Coins — ${result.message}`);
+      void playWinResult(aliceWinTier(result.aliceCoins));
+    } else {
+      void playWinResult('none');
     }
     setPhase('player-result');
     setBusy(false);
@@ -247,11 +278,13 @@ export default function AliceRoomGame() {
     pushLog(result.message);
 
     if (result.blocked) {
+      void playWinResult('fam-any');
       setPhase('block-result');
       setBusy(false);
       return;
     }
 
+    void playWinResult('none');
     const doors = buildTrickChoices(level, runSeed, doubleUsed);
     setChoices(doors);
     setPhase('trick-choices');
@@ -302,10 +335,13 @@ export default function AliceRoomGame() {
     if (choice.tier === 'double') {
       setDoubleUsed(true);
       pushLog(`DOUBLE — +${applied.gained.toLocaleString()} Alice Coins. (${choice.label})`);
+      void playWinResult('jackpot');
     } else if (applied.lost > 0) {
       pushLog(`“${choice.label}” — lost ${applied.lost.toLocaleString()} (${choice.tier}).`);
+      void playWinResult('none');
     } else {
       pushLog(`“${choice.label}” — safe. Coins untouched.`);
+      void playWinResult('bonk-single');
     }
     setMessage(`${choice.label}: ${applied.flavor}`);
     setChoices([]);
@@ -401,6 +437,26 @@ export default function AliceRoomGame() {
               <Link href="/depths" className="alice-nav-link">
                 {BRAND.depths}
               </Link>
+            </div>
+            <div className="casino-audio-bar alice-audio-bar">
+              <button
+                type="button"
+                className="casino-audio-btn"
+                onClick={() => void toggleMute()}
+                aria-label={muted ? 'Unmute Alice Machine audio' : 'Mute Alice Machine audio'}
+                title={CASINO_AMBIENCE_CREDIT}
+              >
+                {muted ? '🔇 Sound Off' : '🔊 Sound On'}
+              </button>
+              {!audioReady && (
+                <button
+                  type="button"
+                  className="casino-audio-unlock"
+                  onClick={() => void unlockAudio()}
+                >
+                  Tap to enable sound
+                </button>
+              )}
             </div>
             <div className="casino-wallet-bar">
               <div className="casino-wallet-connect">
