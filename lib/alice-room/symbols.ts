@@ -1,179 +1,154 @@
 /**
- * Alice Machine reel entities — DMT / hyperspace beings.
- * Drop transparent PNGs in public/assets/alice/entities/ matching each `file` name.
- * Until art is present, the UI falls back to emoji.
+ * Alice Machine reel / encounter entities (DMT trip archetypes).
+ * Art lives in public/assets/alice/entities/ as real RGBA PNGs.
+ *
+ * Canva note: downloads named .png are often JPEG + black bg (no alpha).
+ * We convert with black→alpha so they behave like Bonk Fam portraits (RGBA PNG).
  */
 
-export const ALICE_ASSET_VERSION = '2026-07-27a';
+export const ALICE_ASSET_VERSION = '2026-07-28a';
 
-export type AliceSymbolKind = 'elf' | 'entity' | 'guide' | 'wild';
+export type AliceSymbolKind = 'elf' | 'entity' | 'guide' | 'wild' | 'loving';
 
 export type AliceSymbol = {
   id: string;
   label: string;
   emoji: string;
   kind: AliceSymbolKind;
-  /** Path under /public — e.g. /assets/alice/entities/machine-elf.png */
+  /** Path under /public */
   image: string | null;
+  /** Trip level 1–10 (defense needs 3 of this entity). */
+  level: number;
 };
 
 function entityImage(file: string): string {
   return `/assets/alice/entities/${file}?v=${ALICE_ASSET_VERSION}`;
 }
 
-/** Machine Elves — need three of these on the defense pull to block. */
-export const ELF_SYMBOLS: AliceSymbol[] = [
+/**
+ * One hero entity per trip level (order matches design doc).
+ * Defense pull: land three of the current level's entity.
+ */
+export const LEVEL_ENTITIES: AliceSymbol[] = [
   {
-    id: 'elf-self-transforming',
-    label: 'Self-Transforming Elf',
+    level: 1,
+    id: 'machine-elf',
+    label: 'Machine Elf',
     emoji: '🧝',
     kind: 'elf',
     image: entityImage('machine-elf.png'),
   },
   {
-    id: 'elf-clockwork',
-    label: 'Clockwork Elf',
-    emoji: '⚙️',
-    kind: 'elf',
-    image: entityImage('clockwork-elf.png'),
-  },
-  {
-    id: 'elf-fractal',
-    label: 'Fractal Elf',
-    emoji: '🔮',
-    kind: 'elf',
-    image: entityImage('fractal-elf.png'),
-  },
-  {
-    id: 'elf-jester',
-    label: 'Hyperspace Jester',
+    level: 2,
+    id: 'jester',
+    label: 'Jester',
     emoji: '🃏',
-    kind: 'elf',
-    image: entityImage('jester-elf.png'),
-  },
-];
-
-/** Benevolent / guide entities (score like Fam lines). */
-export const GUIDE_SYMBOLS: AliceSymbol[] = [
-  {
-    id: 'guide-mother',
-    label: 'Hyperspace Mother',
-    emoji: '🌌',
-    kind: 'guide',
-    image: entityImage('hyperspace-mother.png'),
+    kind: 'entity',
+    image: entityImage('jester.png'),
   },
   {
-    id: 'guide-serpent',
-    label: 'Rainbow Serpent',
-    emoji: '🐍',
-    kind: 'guide',
-    image: entityImage('rainbow-serpent.png'),
-  },
-  {
-    id: 'guide-mantis',
-    label: 'Mantis Teacher',
+    level: 3,
+    id: 'mantis',
+    label: 'Mantis',
     emoji: '🦗',
-    kind: 'guide',
+    kind: 'entity',
     image: entityImage('mantis.png'),
   },
   {
-    id: 'guide-octopus',
-    label: 'Octopus Mind',
-    emoji: '🐙',
-    kind: 'guide',
-    image: entityImage('octopus-mind.png'),
+    level: 4,
+    id: 'grey',
+    label: 'Grey',
+    emoji: '👽',
+    kind: 'entity',
+    image: entityImage('grey.png'),
+  },
+  {
+    level: 5,
+    id: 'light-being',
+    label: 'Light Being',
+    emoji: '✨',
+    kind: 'loving',
+    image: entityImage('light-being.png'),
+  },
+  {
+    level: 6,
+    id: 'goddess',
+    label: 'Goddess',
+    emoji: '👑',
+    kind: 'loving',
+    image: entityImage('goddess.png'),
+  },
+  {
+    level: 7,
+    id: 'fractal-being',
+    label: 'Fractal Architect',
+    emoji: '🔷',
+    kind: 'entity',
+    image: entityImage('fractal-being.png'),
+  },
+  {
+    level: 8,
+    id: 'serpent',
+    label: 'Serpent',
+    emoji: '🐍',
+    kind: 'entity',
+    image: entityImage('serpent.png'),
+  },
+  {
+    level: 9,
+    id: 'ancestor',
+    label: 'Ancestor',
+    emoji: '🕯️',
+    kind: 'loving',
+    image: entityImage('ancestor.png'),
+  },
+  {
+    level: 10,
+    id: 'the-other',
+    label: 'The Other',
+    emoji: '🌀',
+    kind: 'wild',
+    image: entityImage('the-other.png'),
   },
 ];
 
-/** Other trip entities (wonder scoring). */
-export const ENTITY_SYMBOLS: AliceSymbol[] = [
-  {
-    id: 'entity-insectoid',
-    label: 'Insectoid',
-    emoji: '🪲',
-    kind: 'entity',
-    image: entityImage('insectoid.png'),
-  },
-  {
-    id: 'entity-glyph',
-    label: 'Living Glyph',
-    emoji: '✦',
-    kind: 'entity',
-    image: entityImage('living-glyph.png'),
-  },
-  {
-    id: 'entity-cathedral',
-    label: 'Jewel Cathedral',
-    emoji: '🏛️',
-    kind: 'entity',
-    image: entityImage('jewel-cathedral.png'),
-  },
-  {
-    id: 'entity-clown',
-    label: 'Cosmic Clown',
-    emoji: '🤡',
-    kind: 'entity',
-    image: entityImage('cosmic-clown.png'),
-  },
-  {
-    id: 'entity-eye',
-    label: 'All-Seeing Lattice',
-    emoji: '👁️',
-    kind: 'entity',
-    image: entityImage('all-seeing-lattice.png'),
-  },
-  {
-    id: 'entity-mushroom',
-    label: 'Gate Mushroom',
-    emoji: '🍄',
-    kind: 'entity',
-    image: entityImage('gate-mushroom.png'),
-  },
-];
+export function getEntityForLevel(level: number): AliceSymbol {
+  const found = LEVEL_ENTITIES.find(e => e.level === level);
+  return found ?? LEVEL_ENTITIES[0]!;
+}
 
-export const WILD_SYMBOL: AliceSymbol = {
-  id: 'wild-glass',
-  label: 'Looking Glass',
-  emoji: '🌀',
-  kind: 'wild',
-  image: entityImage('looking-glass.png'),
-};
+/** Full reel pool = all trip entities. */
+export const ALL_ALICE_SYMBOLS: AliceSymbol[] = [...LEVEL_ENTITIES];
 
-/** @deprecated use GUIDE_SYMBOLS */
+/** @deprecated — prefer LEVEL_ENTITIES / getEntityForLevel */
+export const ELF_SYMBOLS = LEVEL_ENTITIES.filter(e => e.level === 1);
+export const GUIDE_SYMBOLS = LEVEL_ENTITIES.filter(e => e.kind === 'loving' || e.kind === 'guide');
+export const ENTITY_SYMBOLS = LEVEL_ENTITIES.filter(
+  e => e.kind === 'entity' || e.kind === 'elf',
+);
+export const WILD_SYMBOL = LEVEL_ENTITIES.find(e => e.id === 'the-other')!;
 export const FAM_SYMBOLS = GUIDE_SYMBOLS;
-/** @deprecated use ENTITY_SYMBOLS */
 export const WONDER_SYMBOLS = ENTITY_SYMBOLS;
 
-export const ALL_ALICE_SYMBOLS: AliceSymbol[] = [
-  ...ELF_SYMBOLS,
-  ...GUIDE_SYMBOLS,
-  ...ENTITY_SYMBOLS,
-  WILD_SYMBOL,
-];
-
 export function isElf(s: AliceSymbol): boolean {
-  return s.kind === 'elf';
+  return s.kind === 'elf' || s.id === 'machine-elf';
 }
 
-export function isGuide(s: AliceSymbol): boolean {
-  return s.kind === 'guide' || s.kind === 'wild';
+/** True if reel symbol matches the entity required to block this level. */
+export function matchesDefenseEntity(symbol: AliceSymbol, level: number): boolean {
+  const need = getEntityForLevel(level);
+  return symbol.id === need.id;
 }
 
-/** Expected PNG filenames for artists (drop into public/assets/alice/entities/). */
 export const ALICE_ENTITY_ASSET_FILES = [
   'machine-elf.png',
-  'clockwork-elf.png',
-  'fractal-elf.png',
-  'jester-elf.png',
-  'hyperspace-mother.png',
-  'rainbow-serpent.png',
+  'jester.png',
   'mantis.png',
-  'octopus-mind.png',
-  'insectoid.png',
-  'living-glyph.png',
-  'jewel-cathedral.png',
-  'cosmic-clown.png',
-  'all-seeing-lattice.png',
-  'gate-mushroom.png',
-  'looking-glass.png',
+  'grey.png',
+  'light-being.png',
+  'goddess.png',
+  'fractal-being.png',
+  'serpent.png',
+  'ancestor.png',
+  'the-other.png',
 ] as const;

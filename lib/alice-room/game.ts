@@ -1,15 +1,12 @@
 import {
   ALL_ALICE_SYMBOLS,
-  ELF_SYMBOLS,
-  ENTITY_SYMBOLS,
-  GUIDE_SYMBOLS,
-  WILD_SYMBOL,
-  isElf,
+  getEntityForLevel,
+  matchesDefenseEntity,
   type AliceSymbol,
 } from '@/lib/alice-room/symbols';
 
-export const ELF_LEVELS = 7;
-export const BOSS_LEVEL = 8;
+export const ELF_LEVELS = 9; // levels before boss
+export const BOSS_LEVEL = 10;
 export const TOTAL_LEVELS = BOSS_LEVEL;
 
 /** Alice Coins are run points only — not cashier chips until boss clear conversion. */
@@ -51,30 +48,55 @@ export type AliceLevelInfo = {
 
 export function getLevelInfo(level: number): AliceLevelInfo {
   const isBoss = level >= BOSS_LEVEL;
-  if (isBoss) {
-    return {
-      level: BOSS_LEVEL,
-      isBoss: true,
-      name: 'The Red Machine Queen',
-      blurb: 'The deepest layer. One last spin — then her court tries to empty your pockets.',
-      depthLabel: 'Reality Layer ∞',
-    };
-  }
-  const names = [
-    'Tick-Tock Scout',
-    'Glitch Messenger',
-    'Mirror Twin',
-    'Smoke Whisperer',
-    'Tea-Time Trickster',
-    'Card-Suit Saboteur',
-    'Cheshire Circuit',
+  const roster: { name: string; blurb: string }[] = [
+    {
+      name: 'Machine Elves',
+      blurb: 'Self-transforming elves present impossible toys. Spin for Alice Coins — then shield with three elves.',
+    },
+    {
+      name: 'Jesters / Tricksters',
+      blurb: 'Cosmic prank energy. Land three Jesters to block the mockery.',
+    },
+    {
+      name: 'Insectoids / Mantis',
+      blurb: 'Clinical, supervisory presence. Three Mantis blocks the exam.',
+    },
+    {
+      name: 'Greys',
+      blurb: 'Sterile observation. Three Greys form the shield line.',
+    },
+    {
+      name: 'Light Beings',
+      blurb: 'Overwhelming benevolence. Loving floor — losses capped; a rare double gift exists.',
+    },
+    {
+      name: 'Goddess / Divine Feminine',
+      blurb: 'Heart-level encounter. Loving floor — losses capped; a double path may open.',
+    },
+    {
+      name: 'Fractal Architects',
+      blurb: 'Living geometry rebuilds space. Three Fractal Architects block the rearrange.',
+    },
+    {
+      name: 'Serpent / Ouroboros',
+      blurb: 'Rising, coiled initiation energy. Three Serpents hold the channel.',
+    },
+    {
+      name: 'Ancestors / Guides',
+      blurb: 'Familiar, personal, lineage. Loving floor — losses capped; a double blessing may open.',
+    },
+    {
+      name: 'The Other',
+      blurb: 'Boss layer — formless hyper-presence. Three of The Other to withstand the dissolve.',
+    },
   ];
+  const row = roster[Math.min(level, TOTAL_LEVELS) - 1] ?? roster[0]!;
   return {
-    level,
-    isBoss: false,
-    name: names[level - 1] ?? `Machine Elf ${level}`,
-    blurb: `Layer ${level} of the rabbit hole. Spin for Alice Coins — then survive the elf turn.`,
-    depthLabel: `Reality Layer ${level}`,
+    level: Math.min(level, TOTAL_LEVELS),
+    isBoss,
+    name: row.name,
+    blurb: row.blurb,
+    depthLabel: isBoss ? 'Reality Layer ∞' : `Reality Layer ${level}`,
   };
 }
 
@@ -100,14 +122,7 @@ export function spinPlayerReels(): {
   aliceCoins: number;
   message: string;
 } {
-  const pool = [
-    ...GUIDE_SYMBOLS,
-    ...GUIDE_SYMBOLS,
-    ...ENTITY_SYMBOLS,
-    ...ENTITY_SYMBOLS,
-    ...ELF_SYMBOLS,
-    WILD_SYMBOL,
-  ];
+  const pool = ALL_ALICE_SYMBOLS;
   const reels: [AliceSymbol, AliceSymbol, AliceSymbol] = [
     pick(pool),
     pick(pool),
@@ -117,62 +132,55 @@ export function spinPlayerReels(): {
   let aliceCoins = 200 + Math.floor(Math.random() * 400);
   let message = 'A curious nibble of Alice Coins.';
 
-  const guideIds = reels.filter(r => r.kind === 'guide').map(r => r.id);
-  const allGuideOrWild = reels.every(r => r.kind === 'guide' || r.kind === 'wild');
-  const allSameGuide =
-    allGuideOrWild && guideIds.length >= 1 && guideIds.every(id => id === guideIds[0]);
-  const allEntity = reels.every(r => r.kind === 'entity' || r.kind === 'wild');
-  const allElf = reels.every(r => r.kind === 'elf');
+  const sameThree = reels[0].id === reels[1].id && reels[1].id === reels[2].id;
   const twoMatch =
     reels[0].id === reels[1].id || reels[1].id === reels[2].id || reels[0].id === reels[2].id;
-  const hasWild = reels.some(r => r.kind === 'wild');
+  const lovingLine = reels.every(r => r.kind === 'loving');
+  const hasOther = reels.some(r => r.id === 'the-other');
 
-  if (allSameGuide) {
+  if (sameThree) {
     aliceCoins = 8000 + Math.floor(Math.random() * 4000);
-    message = 'Triple guide through the looking glass! Huge Alice Coins!';
-  } else if (allGuideOrWild) {
-    aliceCoins = 3500 + Math.floor(Math.random() * 2500);
-    message = 'Full guide line — the hole rewards boldness!';
-  } else if (allEntity) {
-    aliceCoins = 5000 + Math.floor(Math.random() * 3000);
-    message = 'Entity cascade! Alice Coins pour like tea!';
-  } else if (allElf) {
-    aliceCoins = 1500 + Math.floor(Math.random() * 1000);
-    message = 'Three elves on YOUR spin — ironic gift of Alice Coins.';
+    message = `Triple ${reels[0].label}! Hyperspace jackpot — huge Alice Coins!`;
+  } else if (lovingLine) {
+    aliceCoins = 4500 + Math.floor(Math.random() * 2500);
+    message = 'A line of loving presence — Alice Coins bloom.';
   } else if (twoMatch) {
     aliceCoins = 1200 + Math.floor(Math.random() * 1800);
     message = 'A matching pair deepens the dream.';
-  } else if (hasWild) {
+  } else if (hasOther) {
     aliceCoins = 900 + Math.floor(Math.random() * 1100);
-    message = 'Looking Glass wild — reality bends in your favor.';
+    message = 'The Other brushes the line — reality bends.';
   }
 
   return { reels, aliceCoins, message };
 }
 
 /**
- * Block attempt: need 3 elves on the line.
- * Slightly elf-weighted so blocking is skillful-luck, not impossible.
+ * Defense pull: need three of the **current level's** entity.
+ * Slightly weighted toward that entity so blocking is luck + skill, not impossible.
  */
-export function spinBlockReels(isBoss: boolean): {
+export function spinBlockReels(
+  level: number,
+  isBoss = level >= BOSS_LEVEL,
+): {
   reels: [AliceSymbol, AliceSymbol, AliceSymbol];
   blocked: boolean;
   message: string;
 } {
-  const elfWeight = isBoss ? 0.38 : 0.42;
+  const target = getEntityForLevel(level);
+  const hitWeight = isBoss ? 0.36 : 0.42;
   const roll = (): AliceSymbol => {
-    if (Math.random() < elfWeight) return pick(ELF_SYMBOLS);
-    if (Math.random() < 0.5) return pick(GUIDE_SYMBOLS);
-    return pick(ENTITY_SYMBOLS);
+    if (Math.random() < hitWeight) return target;
+    return pick(ALL_ALICE_SYMBOLS.filter(s => s.id !== target.id));
   };
   const reels: [AliceSymbol, AliceSymbol, AliceSymbol] = [roll(), roll(), roll()];
-  const blocked = reels.every(isElf);
+  const blocked = reels.every(r => matchesDefenseEntity(r, level));
   return {
     reels,
     blocked,
     message: blocked
-      ? 'THREE MACHINE ELVES! You parry the attack — Alice Coins safe!'
-      : 'No triple-elf shield… the Machine Elves spring their trick.',
+      ? `THREE ${target.label.toUpperCase()}S! You parry the encounter — Alice Coins safe!`
+      : `No triple ${target.label} shield… the presence springs its test.`,
   };
 }
 

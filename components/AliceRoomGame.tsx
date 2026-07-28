@@ -205,12 +205,13 @@ export default function AliceRoomGame() {
   const beginElfTurn = () => {
     if (phase !== 'player-result') return;
     setPhase('elf-attack');
+    const need = levelInfo.name;
     setMessage(
       levelInfo.isBoss
-        ? 'The Red Machine Queen attacks! Pull — three Machine Elves blocks her wrath.'
-        : `${levelInfo.name} attacks! Pull once: three Machine Elves blocks the hit.`,
+        ? 'The Other presses in. Pull — three of The Other / sigil line blocks the dissolve.'
+        : `${need} engages. Pull once: land three matching entities to shield your Alice Coins.`,
     );
-    pushLog('── Elf turn ── Pull for a triple-elf shield.');
+    pushLog(`── Encounter turn ── Defense: three of this level’s being.`);
   };
 
   const doBlockSpin = async () => {
@@ -218,7 +219,7 @@ export default function AliceRoomGame() {
     setBusy(true);
     setPhase('block-spinning');
     const result = await runReelSpin(() => {
-      const r = spinBlockReels(levelInfo.isBoss);
+      const r = spinBlockReels(level, levelInfo.isBoss);
       return { reels: r.reels, message: r.message, blocked: r.blocked };
     });
     pushLog(result.message);
@@ -433,8 +434,8 @@ export default function AliceRoomGame() {
                   </li>
                   <li className="slot-paytable-row paytable-row-degen">
                     <div className="slot-paytable-combo">
-                      <span className="slot-paytable-combo-text">Machine Elves ×3</span>
-                      <span className="slot-paytable-detail">Defense pull only — blocks attack</span>
+                      <span className="slot-paytable-combo-text">This level’s entity ×3</span>
+                      <span className="slot-paytable-detail">Defense pull — blocks the encounter</span>
                     </div>
                     <div className="slot-paytable-payout">
                       <span className="slot-paytable-payout-value">SHIELD</span>
@@ -549,7 +550,7 @@ export default function AliceRoomGame() {
                       </div>
                       <div className="slot-reel-bezel-label">
                         {phase === 'elf-attack' || phase === 'block-spinning' || phase === 'block-result'
-                          ? 'SHIELD LINE — 3 ELVES'
+                          ? 'SHIELD LINE — 3 OF THIS BEING'
                           : 'WIN LINE'}
                       </div>
                     </div>
