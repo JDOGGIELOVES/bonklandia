@@ -6519,6 +6519,146 @@ body {
   box-sizing: border-box;
   width: auto;
 }
+
+/* Dramatic entity encounter + choices (full-width under machine) */
+.alice-encounter {
+  width: 100%;
+  margin: 0;
+  padding: 0 0 1rem;
+  box-sizing: border-box;
+  background:
+    radial-gradient(ellipse 90% 55% at 50% 18%, rgba(168, 85, 247, 0.28), transparent 55%),
+    linear-gradient(180deg, rgba(12, 4, 24, 0.2) 0%, rgba(8, 2, 16, 0.95) 40%, #05010c 100%);
+}
+.alice-encounter-stage {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  width: 100%;
+  padding: 0.75rem 0.5rem 0.5rem;
+  box-sizing: border-box;
+  overflow: hidden;
+}
+.alice-encounter-glow {
+  position: absolute;
+  inset: 5% 10% auto;
+  height: 55%;
+  border-radius: 50%;
+  background: radial-gradient(circle, rgba(240, 171, 252, 0.35), transparent 68%);
+  pointer-events: none;
+  filter: blur(8px);
+  z-index: 0;
+}
+.alice-encounter-portrait {
+  position: relative;
+  z-index: 1;
+  width: min(92vw, 420px);
+  height: auto;
+  max-height: min(58vh, 440px);
+  object-fit: contain;
+  filter: drop-shadow(0 12px 40px rgba(0, 0, 0, 0.75)) drop-shadow(0 0 28px rgba(192, 132, 252, 0.35));
+  animation: alice-encounter-rise 0.55s ease-out both;
+}
+.alice-encounter-emoji {
+  position: relative;
+  z-index: 1;
+  font-size: clamp(4rem, 22vw, 7rem);
+  line-height: 1;
+  animation: alice-encounter-rise 0.55s ease-out both;
+}
+@keyframes alice-encounter-rise {
+  from {
+    opacity: 0;
+    transform: translateY(18px) scale(0.92);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+.alice-encounter-caption {
+  position: relative;
+  z-index: 2;
+  width: 100%;
+  max-width: 36rem;
+  margin: 0.35rem auto 0;
+  padding: 0 0.75rem;
+  text-align: center;
+  box-sizing: border-box;
+}
+.alice-encounter-layer {
+  margin: 0;
+  font-size: 0.68rem;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: #67e8f9;
+}
+.alice-encounter-name {
+  margin: 0.25rem 0 0.4rem;
+  font-family: var(--font-display), Georgia, serif;
+  font-size: clamp(1.45rem, 5.5vw, 2.1rem);
+  color: #fce7f3;
+  text-shadow: 0 0 24px rgba(244, 114, 182, 0.45);
+  line-height: 1.15;
+}
+.alice-encounter-line {
+  margin: 0 0 0.45rem;
+  font-size: clamp(0.88rem, 3.2vw, 1.05rem);
+  line-height: 1.4;
+  color: rgba(233, 213, 255, 0.88);
+  font-style: italic;
+}
+.alice-encounter-prompt {
+  margin: 0;
+  font-size: 0.78rem;
+  line-height: 1.35;
+  color: rgba(196, 181, 253, 0.75);
+}
+.alice-encounter-choices {
+  width: 100%;
+  max-width: 640px;
+  margin: 0.85rem auto 0;
+  padding: 0 0.5rem;
+  box-sizing: border-box;
+}
+.alice-encounter .alice-trick-card {
+  background: rgba(30, 10, 48, 0.92);
+  border: 1px solid rgba(232, 121, 249, 0.4);
+  text-align: left;
+  padding: 0.85rem 1rem;
+}
+.alice-encounter .alice-trick-card:hover,
+.alice-encounter .alice-trick-card:focus-visible {
+  border-color: #f0abfc;
+  background: rgba(76, 29, 149, 0.55);
+  outline: none;
+}
+@media (max-width: 640px) {
+  .alice-encounter-portrait {
+    width: 100vw;
+    max-width: 100vw;
+    max-height: min(48vh, 360px);
+  }
+  .alice-encounter-caption {
+    padding: 0 0.65rem;
+  }
+  .alice-encounter-choices {
+    padding: 0 0.4rem;
+  }
+  .alice-encounter .alice-trick-grid {
+    grid-template-columns: 1fr;
+    gap: 0.5rem;
+  }
+  .alice-encounter .alice-trick-grid-5 {
+    grid-template-columns: 1fr;
+  }
+}
+@media (min-width: 641px) {
+  .alice-encounter .alice-trick-grid {
+    grid-template-columns: 1fr 1fr;
+  }
+}
 .alice-top-bar-compact {
   flex-wrap: wrap;
   justify-content: center;

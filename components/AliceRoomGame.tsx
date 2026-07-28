@@ -701,14 +701,42 @@ export default function AliceRoomGame() {
               </div>
 
               {phase === 'trick-choices' && (
-                <div className="alice-tricks alice-tricks-under-machine">
-                  <h3>{levelInfo.loving ? 'The presence offers paths' : 'The presence tests you'}</h3>
-                  <p className="alice-tricks-hint">
-                    {levelInfo.loving
-                      ? 'Max loss 50%. One golden door may double your Alice Coins (once per run).'
-                      : 'One path costs nothing. Others take moderate, heavy, or all. Labels mislead. Don’t spam the same choice.'}
-                  </p>
-                  <div className={`alice-trick-grid ${choices.length >= 5 ? 'alice-trick-grid-5' : ''}`}>
+                <section className="alice-encounter" aria-label={`${levelInfo.name} encounter`}>
+                  <div className="alice-encounter-stage">
+                    <div className="alice-encounter-glow" aria-hidden />
+                    {defenseEntity.image ? (
+                      <Image
+                        src={defenseEntity.image}
+                        alt={defenseEntity.label}
+                        width={720}
+                        height={720}
+                        className="alice-encounter-portrait"
+                        priority
+                        unoptimized
+                      />
+                    ) : (
+                      <span className="alice-encounter-emoji" aria-hidden>
+                        {defenseEntity.emoji}
+                      </span>
+                    )}
+                    <div className="alice-encounter-caption">
+                      <p className="alice-encounter-layer">
+                        Layer {level}/{TOTAL_LEVELS}
+                        {levelInfo.loving ? ' · Loving presence' : ''}
+                      </p>
+                      <h2 className="alice-encounter-name">{levelInfo.name}</h2>
+                      <p className="alice-encounter-line">{levelInfo.attackLine}</p>
+                      <p className="alice-encounter-prompt">
+                        {levelInfo.loving
+                          ? 'Choose a path. Losses capped at 50% — a golden door may double your Alice Coins.'
+                          : 'Shield failed. Choose carefully — one path is safe. Labels mislead.'}
+                      </p>
+                    </div>
+                  </div>
+
+                  <div
+                    className={`alice-trick-grid alice-encounter-choices ${choices.length >= 5 ? 'alice-trick-grid-5' : ''}`}
+                  >
                     {choices.map(c => (
                       <button
                         key={c.id}
@@ -721,7 +749,7 @@ export default function AliceRoomGame() {
                       </button>
                     ))}
                   </div>
-                </div>
+                </section>
               )}
 
               {phase === 'victory' && (
