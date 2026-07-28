@@ -1,8 +1,8 @@
 import {
   ALL_ALICE_SYMBOLS,
   ELF_SYMBOLS,
-  FAM_SYMBOLS,
-  WONDER_SYMBOLS,
+  ENTITY_SYMBOLS,
+  GUIDE_SYMBOLS,
   WILD_SYMBOL,
   isElf,
   type AliceSymbol,
@@ -35,9 +35,7 @@ export type LossTier = 'none' | 'moderate' | 'heavy' | 'all';
 
 export type TrickChoice = {
   id: string;
-  /** Deceptive Wonderland label (shuffled each attack). */
   label: string;
-  /** Flavor blurb — elves try to mislead. */
   whisper: string;
   tier: LossTier;
   lossFraction: number;
@@ -84,6 +82,18 @@ function pick<T>(arr: T[]): T {
   return arr[Math.floor(Math.random() * arr.length)]!;
 }
 
+export function buildAliceReelStrip(
+  result: AliceSymbol,
+  pool: AliceSymbol[] = ALL_ALICE_SYMBOLS,
+  length = 28,
+): AliceSymbol[] {
+  const strip: AliceSymbol[] = [];
+  for (let i = 0; i < length; i++) {
+    strip.push(i === length - 1 ? result : pick(pool));
+  }
+  return strip;
+}
+
 /** Player spin: easy big Alice Coins (run points only). */
 export function spinPlayerReels(): {
   reels: [AliceSymbol, AliceSymbol, AliceSymbol];
@@ -91,10 +101,10 @@ export function spinPlayerReels(): {
   message: string;
 } {
   const pool = [
-    ...FAM_SYMBOLS,
-    ...FAM_SYMBOLS,
-    ...WONDER_SYMBOLS,
-    ...WONDER_SYMBOLS,
+    ...GUIDE_SYMBOLS,
+    ...GUIDE_SYMBOLS,
+    ...ENTITY_SYMBOLS,
+    ...ENTITY_SYMBOLS,
     ...ELF_SYMBOLS,
     WILD_SYMBOL,
   ];
@@ -104,37 +114,35 @@ export function spinPlayerReels(): {
     pick(pool),
   ];
 
-  const kinds = reels.map(r => r.kind);
   let aliceCoins = 200 + Math.floor(Math.random() * 400);
   let message = 'A curious nibble of Alice Coins.';
 
-  const famIds = reels.filter(r => r.kind === 'fam').map(r => r.id);
-  const allFamOrWild = reels.every(r => r.kind === 'fam' || r.kind === 'wild');
-  const allSameFam =
-    allFamOrWild &&
-    famIds.length >= 1 &&
-    famIds.every(id => id === famIds[0]);
-  const allWonder = reels.every(r => r.kind === 'wonder' || r.kind === 'wild');
+  const guideIds = reels.filter(r => r.kind === 'guide').map(r => r.id);
+  const allGuideOrWild = reels.every(r => r.kind === 'guide' || r.kind === 'wild');
+  const allSameGuide =
+    allGuideOrWild && guideIds.length >= 1 && guideIds.every(id => id === guideIds[0]);
+  const allEntity = reels.every(r => r.kind === 'entity' || r.kind === 'wild');
   const allElf = reels.every(r => r.kind === 'elf');
   const twoMatch =
     reels[0].id === reels[1].id || reels[1].id === reels[2].id || reels[0].id === reels[2].id;
+  const hasWild = reels.some(r => r.kind === 'wild');
 
-  if (allSameFam) {
+  if (allSameGuide) {
     aliceCoins = 8000 + Math.floor(Math.random() * 4000);
-    message = 'Triple Fam through the looking glass! Huge Alice Coins!';
-  } else if (allFamOrWild) {
+    message = 'Triple guide through the looking glass! Huge Alice Coins!';
+  } else if (allGuideOrWild) {
     aliceCoins = 3500 + Math.floor(Math.random() * 2500);
-    message = 'Full Fam line — the hole rewards boldness!';
-  } else if (allWonder) {
+    message = 'Full guide line — the hole rewards boldness!';
+  } else if (allEntity) {
     aliceCoins = 5000 + Math.floor(Math.random() * 3000);
-    message = 'Wonderland cascade! Alice Coins pour like tea!';
+    message = 'Entity cascade! Alice Coins pour like tea!';
   } else if (allElf) {
     aliceCoins = 1500 + Math.floor(Math.random() * 1000);
     message = 'Three elves on YOUR spin — ironic gift of Alice Coins.';
   } else if (twoMatch) {
     aliceCoins = 1200 + Math.floor(Math.random() * 1800);
     message = 'A matching pair deepens the dream.';
-  } else if (kinds.includes('wild')) {
+  } else if (hasWild) {
     aliceCoins = 900 + Math.floor(Math.random() * 1100);
     message = 'Looking Glass wild — reality bends in your favor.';
   }
@@ -154,8 +162,8 @@ export function spinBlockReels(isBoss: boolean): {
   const elfWeight = isBoss ? 0.38 : 0.42;
   const roll = (): AliceSymbol => {
     if (Math.random() < elfWeight) return pick(ELF_SYMBOLS);
-    if (Math.random() < 0.5) return pick(FAM_SYMBOLS);
-    return pick(WONDER_SYMBOLS);
+    if (Math.random() < 0.5) return pick(GUIDE_SYMBOLS);
+    return pick(ENTITY_SYMBOLS);
   };
   const reels: [AliceSymbol, AliceSymbol, AliceSymbol] = [roll(), roll(), roll()];
   const blocked = reels.every(isElf);
@@ -163,7 +171,7 @@ export function spinBlockReels(isBoss: boolean): {
     reels,
     blocked,
     message: blocked
-      ? 'THREE ELVES! You parry the attack — Alice Coins safe!'
+      ? 'THREE MACHINE ELVES! You parry the attack — Alice Coins safe!'
       : 'No triple-elf shield… the Machine Elves spring their trick.',
   };
 }
@@ -186,11 +194,9 @@ const LOSS_TIERS: { tier: LossTier; lossFraction: number }[] = [
   { tier: 'all', lossFraction: 1 },
 ];
 
-/** Four shuffled deceptive choices — one safe, three painful. */
 export function buildTrickChoices(isBoss: boolean): TrickChoice[] {
   const tiers = LOSS_TIERS.map(t => ({
     ...t,
-    // Boss hits harder on mid tiers
     lossFraction:
       isBoss && t.tier === 'moderate'
         ? 0.4
@@ -198,12 +204,10 @@ export function buildTrickChoices(isBoss: boolean): TrickChoice[] {
           ? 0.85
           : t.lossFraction,
   }));
-  // Shuffle tiers
   for (let i = tiers.length - 1; i > 0; i--) {
     const j = Math.floor(Math.random() * (i + 1));
     [tiers[i], tiers[j]] = [tiers[j]!, tiers[i]!];
   }
-  // Pick 4 random labels
   const labels = [...TRICK_LABELS].sort(() => Math.random() - 0.5).slice(0, 4);
   return tiers.map((t, i) => ({
     id: `choice-${i}-${t.tier}`,
@@ -214,11 +218,10 @@ export function buildTrickChoices(isBoss: boolean): TrickChoice[] {
   }));
 }
 
-export function applyTrickLoss(coins: number, choice: TrickChoice): {
-  nextCoins: number;
-  lost: number;
-  flavor: string;
-} {
+export function applyTrickLoss(
+  coins: number,
+  choice: TrickChoice,
+): { nextCoins: number; lost: number; flavor: string } {
   const lost = Math.floor(coins * choice.lossFraction);
   const nextCoins = Math.max(0, coins - lost);
   const flavor =
@@ -235,8 +238,4 @@ export function applyTrickLoss(coins: number, choice: TrickChoice): {
 export function aliceCoinsToSpendable(aliceCoins: number): number {
   const raw = Math.floor(Math.max(0, aliceCoins) / ALICE_COINS_PER_SPENDABLE_CHIP);
   return Math.min(MAX_ALICE_SPENDABLE_PAYOUT, Math.max(0, raw));
-}
-
-export function createEmptyPoolHint(): string {
-  return ALL_ALICE_SYMBOLS.map(s => s.emoji).join(' ');
 }

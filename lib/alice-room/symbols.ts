@@ -1,51 +1,153 @@
-import { PLAYABLE_CHARACTERS } from '@/lib/characters';
+/**
+ * Alice Machine reel entities — DMT / hyperspace beings.
+ * Drop transparent PNGs in public/assets/alice/entities/ matching each `file` name.
+ * Until art is present, the UI falls back to emoji.
+ */
 
-export type AliceSymbolKind = 'fam' | 'elf' | 'wonder' | 'wild';
+export const ALICE_ASSET_VERSION = '2026-07-27a';
+
+export type AliceSymbolKind = 'elf' | 'entity' | 'guide' | 'wild';
 
 export type AliceSymbol = {
   id: string;
   label: string;
   emoji: string;
   kind: AliceSymbolKind;
+  /** Path under /public — e.g. /assets/alice/entities/machine-elf.png */
+  image: string | null;
 };
 
-/** Machine Elves — the antagonists of the Alice Room. */
+function entityImage(file: string): string {
+  return `/assets/alice/entities/${file}?v=${ALICE_ASSET_VERSION}`;
+}
+
+/** Machine Elves — need three of these on the defense pull to block. */
 export const ELF_SYMBOLS: AliceSymbol[] = [
-  { id: 'elf-tick', label: 'Tick-Tock Elf', emoji: '🧝', kind: 'elf' },
-  { id: 'elf-glitch', label: 'Glitch Elf', emoji: '👾', kind: 'elf' },
-  { id: 'elf-mirror', label: 'Mirror Elf', emoji: '🪞', kind: 'elf' },
-  { id: 'elf-smoke', label: 'Smoke Elf', emoji: '💨', kind: 'elf' },
+  {
+    id: 'elf-self-transforming',
+    label: 'Self-Transforming Elf',
+    emoji: '🧝',
+    kind: 'elf',
+    image: entityImage('machine-elf.png'),
+  },
+  {
+    id: 'elf-clockwork',
+    label: 'Clockwork Elf',
+    emoji: '⚙️',
+    kind: 'elf',
+    image: entityImage('clockwork-elf.png'),
+  },
+  {
+    id: 'elf-fractal',
+    label: 'Fractal Elf',
+    emoji: '🔮',
+    kind: 'elf',
+    image: entityImage('fractal-elf.png'),
+  },
+  {
+    id: 'elf-jester',
+    label: 'Hyperspace Jester',
+    emoji: '🃏',
+    kind: 'elf',
+    image: entityImage('jester-elf.png'),
+  },
 ];
 
-/** Bonk Fam siblings on the Alice reels. */
-export const FAM_SYMBOLS: AliceSymbol[] = PLAYABLE_CHARACTERS.map(c => ({
-  id: `fam-${c.id}`,
-  label: c.name,
-  emoji: c.id === 'bonk' ? '🐕' : c.id === 'bonga' ? '😎' : c.id === 'bong' ? '🌿' : c.id === 'bink' ? '✨' : c.id === 'bonnie' ? '💖' : '🐻',
-  kind: 'fam' as const,
-}));
+/** Benevolent / guide entities (score like Fam lines). */
+export const GUIDE_SYMBOLS: AliceSymbol[] = [
+  {
+    id: 'guide-mother',
+    label: 'Hyperspace Mother',
+    emoji: '🌌',
+    kind: 'guide',
+    image: entityImage('hyperspace-mother.png'),
+  },
+  {
+    id: 'guide-serpent',
+    label: 'Rainbow Serpent',
+    emoji: '🐍',
+    kind: 'guide',
+    image: entityImage('rainbow-serpent.png'),
+  },
+  {
+    id: 'guide-mantis',
+    label: 'Mantis Teacher',
+    emoji: '🦗',
+    kind: 'guide',
+    image: entityImage('mantis.png'),
+  },
+  {
+    id: 'guide-octopus',
+    label: 'Octopus Mind',
+    emoji: '🐙',
+    kind: 'guide',
+    image: entityImage('octopus-mind.png'),
+  },
+];
 
-/** Wonderland flavor (points, not block). */
-export const WONDER_SYMBOLS: AliceSymbol[] = [
-  { id: 'rabbit', label: 'White Rabbit', emoji: '🐇', kind: 'wonder' },
-  { id: 'tea', label: 'Mad Tea', emoji: '🍵', kind: 'wonder' },
-  { id: 'key', label: 'Tiny Key', emoji: '🔑', kind: 'wonder' },
-  { id: 'mushroom', label: 'Mushroom', emoji: '🍄', kind: 'wonder' },
-  { id: 'hat', label: 'Mad Hat', emoji: '🎩', kind: 'wonder' },
-  { id: 'card', label: 'Queen Card', emoji: '🃏', kind: 'wonder' },
+/** Other trip entities (wonder scoring). */
+export const ENTITY_SYMBOLS: AliceSymbol[] = [
+  {
+    id: 'entity-insectoid',
+    label: 'Insectoid',
+    emoji: '🪲',
+    kind: 'entity',
+    image: entityImage('insectoid.png'),
+  },
+  {
+    id: 'entity-glyph',
+    label: 'Living Glyph',
+    emoji: '✦',
+    kind: 'entity',
+    image: entityImage('living-glyph.png'),
+  },
+  {
+    id: 'entity-cathedral',
+    label: 'Jewel Cathedral',
+    emoji: '🏛️',
+    kind: 'entity',
+    image: entityImage('jewel-cathedral.png'),
+  },
+  {
+    id: 'entity-clown',
+    label: 'Cosmic Clown',
+    emoji: '🤡',
+    kind: 'entity',
+    image: entityImage('cosmic-clown.png'),
+  },
+  {
+    id: 'entity-eye',
+    label: 'All-Seeing Lattice',
+    emoji: '👁️',
+    kind: 'entity',
+    image: entityImage('all-seeing-lattice.png'),
+  },
+  {
+    id: 'entity-mushroom',
+    label: 'Gate Mushroom',
+    emoji: '🍄',
+    kind: 'entity',
+    image: entityImage('gate-mushroom.png'),
+  },
 ];
 
 export const WILD_SYMBOL: AliceSymbol = {
-  id: 'wild-alice',
+  id: 'wild-glass',
   label: 'Looking Glass',
   emoji: '🌀',
   kind: 'wild',
+  image: entityImage('looking-glass.png'),
 };
 
+/** @deprecated use GUIDE_SYMBOLS */
+export const FAM_SYMBOLS = GUIDE_SYMBOLS;
+/** @deprecated use ENTITY_SYMBOLS */
+export const WONDER_SYMBOLS = ENTITY_SYMBOLS;
+
 export const ALL_ALICE_SYMBOLS: AliceSymbol[] = [
-  ...FAM_SYMBOLS,
   ...ELF_SYMBOLS,
-  ...WONDER_SYMBOLS,
+  ...GUIDE_SYMBOLS,
+  ...ENTITY_SYMBOLS,
   WILD_SYMBOL,
 ];
 
@@ -53,6 +155,25 @@ export function isElf(s: AliceSymbol): boolean {
   return s.kind === 'elf';
 }
 
-export function isFam(s: AliceSymbol): boolean {
-  return s.kind === 'fam' || s.kind === 'wild';
+export function isGuide(s: AliceSymbol): boolean {
+  return s.kind === 'guide' || s.kind === 'wild';
 }
+
+/** Expected PNG filenames for artists (drop into public/assets/alice/entities/). */
+export const ALICE_ENTITY_ASSET_FILES = [
+  'machine-elf.png',
+  'clockwork-elf.png',
+  'fractal-elf.png',
+  'jester-elf.png',
+  'hyperspace-mother.png',
+  'rainbow-serpent.png',
+  'mantis.png',
+  'octopus-mind.png',
+  'insectoid.png',
+  'living-glyph.png',
+  'jewel-cathedral.png',
+  'cosmic-clown.png',
+  'all-seeing-lattice.png',
+  'gate-mushroom.png',
+  'looking-glass.png',
+] as const;
