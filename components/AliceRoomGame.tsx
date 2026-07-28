@@ -8,18 +8,22 @@ import { WalletMultiButton } from '@solana/wallet-adapter-react-ui';
 import {
   ALICE_COINS_PER_SPENDABLE_CHIP,
   BOSS_LEVEL,
-  ELF_LEVELS,
   TOTAL_LEVELS,
   aliceCoinsToSpendable,
-  applyTrickLoss,
+  applyChoice,
   buildAliceReelStrip,
   buildTrickChoices,
+  emptyTripKillState,
+  evaluateTripKill,
   getLevelInfo,
+  newRunSeed,
   spinBlockReels,
   spinPlayerReels,
   type AlicePhase,
   type TrickChoice,
+  type TripKillState,
 } from '@/lib/alice-room/game';
+import { getEntityForLevel } from '@/lib/alice-room/symbols';
 import { ALL_ALICE_SYMBOLS, type AliceSymbol } from '@/lib/alice-room/symbols';
 import { BRAND } from '@/lib/brand';
 import { loadChipLedgerToken, saveChipLedgerToken } from '@/lib/chip-ledger-client';
@@ -36,7 +40,11 @@ function AliceSymbolCell({ symbol }: { symbol: AliceSymbol }) {
   const showImg = Boolean(symbol.image) && !imgFailed;
 
   return (
-    <div className={`slot-symbol slot-symbol-${symbol.kind === 'elf' ? 'enemy' : symbol.kind === 'wild' ? 'jackpot' : 'fam'}`}>
+    <div
+      className={`slot-symbol slot-symbol-${
+        symbol.kind === 'elf' ? 'enemy' : symbol.kind === 'wild' ? 'jackpot' : 'fam'
+      }`}
+    >
       {showImg ? (
         <div className="slot-symbol-frame">
           <Image
@@ -108,6 +116,7 @@ export default function AliceRoomGame() {
   const [level, setLevel] = useState(1);
   const [aliceCoins, setAliceCoins] = useState(0);
   const [sessionToken, setSessionToken] = useState<string | null>(null);
+  const [runSeed, setRunSeed] = useState(0);
   const [results, setResults] = useState<[AliceSymbol, AliceSymbol, AliceSymbol] | null>(null);
   const [message, setMessage] = useState<string | null>(null);
   const [choices, setChoices] = useState<TrickChoice[]>([]);
@@ -120,15 +129,19 @@ export default function AliceRoomGame() {
   const [claimMsg, setClaimMsg] = useState<string | null>(null);
   const [spendableEarned, setSpendableEarned] = useState<number | null>(null);
   const [logId, setLogId] = useState(0);
+  const [doubleUsed, setDoubleUsed] = useState(false);
+  const [tripKill, setTripKill] = useState<TripKillState>(emptyTripKillState());
+  const [melt, setMelt] = useState(0);
 
   const levelInfo = getLevelInfo(level);
+  const defenseEntity = getEntityForLevel(level);
   const projectedSpendable = aliceCoinsToSpendable(aliceCoins);
   const displayReels = results ?? [IDLE_REEL, IDLE_REEL, IDLE_REEL];
 
   const pushLog = useCallback((text: string) => {
     setLogId(n => {
       const id = n + 1;
-      setLog(prev => [{ id, text }, ...prev].slice(0, 12));
+      setLog(prev => [{ id, text }, ...prev].slice(0, 14));
       return id;
     });
   }, []);
@@ -139,6 +152,9 @@ export default function AliceRoomGame() {
     setBusy(true);
     setClaimMsg(null);
     setSpendableEarned(null);
+    setDoubleUsed(false);
+    setTripKill(emptyTripKillState());
+    setMelt(0);
     try {
       const res = await fetch('/api/alice/start', { method: 'POST' });
       const data = (await res.json()) as { sessionToken?: string; error?: string };
@@ -147,16 +163,18 @@ export default function AliceRoomGame() {
         setBusy(false);
         return;
       }
+      const seed = newRunSeed();
       setSessionToken(data.sessionToken);
+      setRunSeed(seed);
       setLevel(1);
       setAliceCoins(0);
       setResults(null);
       setChoices([]);
       setLog([]);
       setPhase('player-spin');
-      setMessage('Yank the Alice Machine lever — dream-wealth only until the boss falls.');
-      pushLog('You tumble down the rabbit hole. Seven Machine Elves… then the Queen.');
-      pushLog('Alice Coins pile up easily — only the final tally after the boss is cashable.');
+      setMessage('Layer 1 — pull the Alice Machine. Dream-wealth only until the end.');
+      pushLog('Eat the Mushroom. Ten layers. Reality softens.');
+      pushLog('Only the final tally after The Other can become spendable chips.');
     } catch {
       setMessage('Network error opening Alice Room.');
     }
@@ -191,7 +209,7 @@ export default function AliceRoomGame() {
     setBusy(true);
     setPhase('spinning');
     const result = await runReelSpin(() => {
-      const r = spinPlayerReels();
+      const r = spinPlayerReels(level);
       return { reels: r.reels, message: r.message, aliceCoins: r.aliceCoins };
     });
     if (result.aliceCoins) {
@@ -202,16 +220,11 @@ export default function AliceRoomGame() {
     setBusy(false);
   };
 
-  const beginElfTurn = () => {
+  const beginEncounter = () => {
     if (phase !== 'player-result') return;
     setPhase('elf-attack');
-    const need = levelInfo.name;
-    setMessage(
-      levelInfo.isBoss
-        ? 'The Other presses in. Pull — three of The Other / sigil line blocks the dissolve.'
-        : `${need} engages. Pull once: land three matching entities to shield your Alice Coins.`,
-    );
-    pushLog(`── Encounter turn ── Defense: three of this level’s being.`);
+    setMessage(levelInfo.attackLine);
+    pushLog(`── ${levelInfo.name} ── Defense: three ${defenseEntity.label}s.`);
   };
 
   const doBlockSpin = async () => {
@@ -219,7 +232,7 @@ export default function AliceRoomGame() {
     setBusy(true);
     setPhase('block-spinning');
     const result = await runReelSpin(() => {
-      const r = spinBlockReels(level, levelInfo.isBoss);
+      const r = spinBlockReels(level);
       return { reels: r.reels, message: r.message, blocked: r.blocked };
     });
     pushLog(result.message);
@@ -230,18 +243,23 @@ export default function AliceRoomGame() {
       return;
     }
 
-    const trick = buildTrickChoices(levelInfo.isBoss);
-    setChoices(trick);
+    const doors = buildTrickChoices(level, runSeed, doubleUsed);
+    setChoices(doors);
     setPhase('trick-choices');
-    pushLog('The elves offer four doors. One is safe. They will try to trick you.');
+    pushLog(
+      levelInfo.loving
+        ? 'Loving presence — losses capped at 50%. A rare double door may appear.'
+        : 'Four paths. One safe. Labels mislead.',
+    );
     setBusy(false);
   };
 
-  const afterDefenseContinue = () => {
+  const advanceAfterDefense = () => {
+    setMelt(m => Math.min(10, m + 1));
     if (level >= TOTAL_LEVELS) {
       setPhase('victory');
-      setMessage('You clear the deepest layer. Final Alice Coins become the only cashable tally.');
-      pushLog('Boss defeated. Final tally ready for the cashier (if wallet connected).');
+      setMessage('Through the layers. Final Alice Coins are the only cashable tally.');
+      pushLog('Boss cleared. Bank the final tally with your wallet.');
       return;
     }
     setLevel(l => l + 1);
@@ -253,21 +271,41 @@ export default function AliceRoomGame() {
 
   const onPickTrick = (choice: TrickChoice) => {
     if (phase !== 'trick-choices') return;
-    const { nextCoins, lost, flavor } = applyTrickLoss(aliceCoins, choice);
-    setAliceCoins(nextCoins);
-    setMessage(`${choice.label}: ${flavor}`);
-    pushLog(
-      lost > 0
-        ? `Chose “${choice.label}” — lost ${lost.toLocaleString()} Alice Coins (${choice.tier}).`
-        : `Chose “${choice.label}” — safe path! Coins untouched.`,
-    );
+
+    const { state: nextKill, result: killResult } = evaluateTripKill(tripKill, choice);
+    setTripKill(nextKill);
+
+    if (killResult.kill) {
+      setAliceCoins(0);
+      setChoices([]);
+      setPhase('defeat');
+      setMessage(killResult.message);
+      pushLog(killResult.message);
+      return;
+    }
+    if (killResult.warn && killResult.message) {
+      pushLog(killResult.message);
+      setMessage(killResult.message);
+    }
+
+    const applied = applyChoice(aliceCoins, choice);
+    setAliceCoins(applied.nextCoins);
+    if (choice.tier === 'double') {
+      setDoubleUsed(true);
+      pushLog(`DOUBLE — +${applied.gained.toLocaleString()} Alice Coins. (${choice.label})`);
+    } else if (applied.lost > 0) {
+      pushLog(`“${choice.label}” — lost ${applied.lost.toLocaleString()} (${choice.tier}).`);
+    } else {
+      pushLog(`“${choice.label}” — safe. Coins untouched.`);
+    }
+    setMessage(`${choice.label}: ${applied.flavor}`);
     setChoices([]);
-    afterDefenseContinue();
+    advanceAfterDefense();
   };
 
   const continueToNextLevel = () => {
     setPhase('player-spin');
-    setMessage(null);
+    setMessage(`Layer ${level} — ${getLevelInfo(level).name}. Pull for Alice Coins.`);
     setResults(null);
     setJustLanded(false);
   };
@@ -327,14 +365,18 @@ export default function AliceRoomGame() {
         ? 'CHOOSE'
         : phase === 'victory'
           ? 'CLEARED'
-          : phase === 'elf-attack' || phase === 'block-result'
-            ? 'DEFEND'
-            : phase === 'intro'
-              ? 'READY'
-              : 'INSERT BONK';
+          : phase === 'defeat'
+            ? 'EJECTED'
+            : phase === 'elf-attack' || phase === 'block-result'
+              ? 'DEFEND'
+              : phase === 'intro'
+                ? 'READY'
+                : 'PULL';
+
+  const meltClass = `alice-melt-${Math.min(10, Math.max(0, melt || level - 1))}`;
 
   return (
-    <div className="alice-room alice-machine-scene">
+    <div className={`alice-room alice-machine-scene ${meltClass}`}>
       <div className="alice-room-bg" aria-hidden />
       <div className="casino-scene-vignette alice-vignette" />
       <div className="alice-room-content">
@@ -364,31 +406,41 @@ export default function AliceRoomGame() {
           </div>
           <p className="casino-eyebrow alice-eyebrow-line">
             {phase === 'intro'
-              ? 'Eat the Mushroom — Wonderland Bandit side game'
+              ? `${BRAND.aliceRoomNav} — 10-layer DMT voyage`
               : `${levelInfo.depthLabel} · ${levelInfo.name}`}
           </p>
           <h1 className="casino-title alice-page-title">{BRAND.aliceRoom}</h1>
           <p className="casino-tagline">
-            Same one-armed machine as the {BRAND.slotMachine} — Alice in Wonderland decor, hyperspace reels.
-            Mid-run Alice Coins are dream-wealth; only the post-boss tally is spendable.
+            Alice Machine · win spin → entity encounter → defense (3× this being) → strategy doors if
+            needed. Only the post-boss tally is spendable.
           </p>
         </header>
 
         {phase === 'intro' && (
           <section className="alice-panel alice-intro">
-            <h2>How the hole works</h2>
+            <h2>The voyage</h2>
             <ol className="alice-rules">
               <li>
-                <strong>Your spin</strong> on the Alice Machine — Alice Coins (not cashable yet).
+                <strong>10 layers</strong> — Machine Elves → Jesters → Mantis → Greys → Light → Goddess →
+                Fractal → Serpent → Ancestors → <strong>The Other</strong> (boss).
               </li>
               <li>
-                <strong>Elf turn</strong> — pull again. Land <strong>three Machine Elves</strong> to block.
+                Each layer: <strong>pull to win</strong> Alice Coins (dream-wealth), then face the being.
               </li>
               <li>
-                <strong>Fail the block</strong> — four lying Wonderland doors (none / moderate / most / all loss).
+                <strong>Defense pull</strong> — land <strong>three of that level’s entity</strong> to keep
+                everything.
               </li>
               <li>
-                Clear <strong>{ELF_LEVELS} elf layers</strong> + <strong>boss</strong>, then bank the final tally.
+                Fail shield → <strong>4 strategy doors</strong> (5 on loving floors, with a rare{' '}
+                <strong>double</strong>). Options rotate each run.
+              </li>
+              <li>
+                <strong>Don’t rush</strong> — repeating the same choice pattern can <em>trip-kill</em> the
+                run (zero spendable).
+              </li>
+              <li>
+                After the boss, bank the final tally (capped spendable chips).
               </li>
             </ol>
             <button
@@ -397,7 +449,7 @@ export default function AliceRoomGame() {
               disabled={busy}
               onClick={() => void startDive()}
             >
-              {busy ? 'Opening the door…' : 'Eat the Mushroom — Enter'}
+              {busy ? 'Opening…' : `${BRAND.aliceRoomNav} — Begin`}
             </button>
           </section>
         )}
@@ -405,50 +457,36 @@ export default function AliceRoomGame() {
         {phase !== 'intro' && (
           <div className="slot-stage-layout alice-stage-layout">
             <div className="casino-side-column alice-side-column">
-              <aside className="slot-paytable alice-paytable" aria-label="Alice Machine key">
+              <aside className="slot-paytable alice-paytable" aria-label="Trip key">
                 <div className="slot-paytable-header">
-                  <h3 className="slot-paytable-title">Looking-Glass Key</h3>
+                  <h3 className="slot-paytable-title">Trip key</h3>
                   <p className="slot-paytable-sub">
                     Layer {level}/{TOTAL_LEVELS}
                     {levelInfo.isBoss ? ' · BOSS' : ''}
+                    {levelInfo.loving ? ' · LOVING' : ''}
                   </p>
                 </div>
-                <ul className="slot-paytable-rows">
-                  <li className="slot-paytable-row paytable-row-fam">
-                    <div className="slot-paytable-combo">
-                      <span className="slot-paytable-combo-text">Guides ×3</span>
-                      <span className="slot-paytable-detail">Same or any guide line</span>
-                    </div>
-                    <div className="slot-paytable-payout">
-                      <span className="slot-paytable-payout-value">Big Alice Coins</span>
-                    </div>
-                  </li>
-                  <li className="slot-paytable-row paytable-row-bonk">
-                    <div className="slot-paytable-combo">
-                      <span className="slot-paytable-combo-text">Entities / wild</span>
-                      <span className="slot-paytable-detail">Hyperspace beings</span>
-                    </div>
-                    <div className="slot-paytable-payout">
-                      <span className="slot-paytable-payout-value">Easy points</span>
-                    </div>
-                  </li>
-                  <li className="slot-paytable-row paytable-row-degen">
-                    <div className="slot-paytable-combo">
-                      <span className="slot-paytable-combo-text">This level’s entity ×3</span>
-                      <span className="slot-paytable-detail">Defense pull — blocks the encounter</span>
-                    </div>
-                    <div className="slot-paytable-payout">
-                      <span className="slot-paytable-payout-value">SHIELD</span>
-                    </div>
-                  </li>
-                </ul>
+                <div className="alice-entity-card">
+                  {defenseEntity.image && (
+                    <Image
+                      src={defenseEntity.image}
+                      alt={defenseEntity.label}
+                      width={120}
+                      height={120}
+                      className="alice-entity-portrait"
+                      unoptimized
+                    />
+                  )}
+                  <p className="alice-entity-name">{defenseEntity.label}</p>
+                  <p className="alice-entity-need">Defense: 3× on the shield line</p>
+                </div>
                 <div className="slot-paytable-session">
-                  <span className="slot-paytable-session-label">Alice Coins (run)</span>
+                  <span className="slot-paytable-session-label">Alice Coins</span>
                   <span className="slot-paytable-session-value">{aliceCoins.toLocaleString()}</span>
                 </div>
                 <p className="alice-side-hint">
-                  ~{projectedSpendable} spendable chips if this were the final tally ({ALICE_COINS_PER_SPENDABLE_CHIP}{' '}
-                  AC → 1 chip, capped).
+                  ~{projectedSpendable} spendable if banked now ({ALICE_COINS_PER_SPENDABLE_CHIP} AC → 1
+                  chip, cap). Loving floors: max −50%, one double/run.
                 </p>
               </aside>
 
@@ -474,19 +512,13 @@ export default function AliceRoomGame() {
                 <div className="slot-cabinet-rivet slot-cabinet-rivet-br" aria-hidden />
                 <div className="slot-cabinet-trim slot-cabinet-trim-top" aria-hidden />
                 <div className="slot-cabinet-trim slot-cabinet-trim-mid" aria-hidden />
-                <div className="alice-cabinet-cards" aria-hidden>
-                  <span>♠</span>
-                  <span>♥</span>
-                  <span>♦</span>
-                  <span>♣</span>
-                </div>
 
                 <div className="slot-marquee-hood alice-marquee-hood">
                   <div className="slot-marquee-lens">
                     <div className="slot-marquee-backlight alice-marquee-glow" />
                     <h2 className="slot-marquee-title">Alice Machine</h2>
                     <p className="slot-marquee-sub">
-                      {levelInfo.isBoss ? 'Boss Layer · Red Queen Court' : `Wonderland · Layer ${level}`}
+                      {levelInfo.isBoss ? 'BOSS · The Other' : `Layer ${level} · ${levelInfo.name}`}
                     </p>
                   </div>
                 </div>
@@ -512,7 +544,7 @@ export default function AliceRoomGame() {
                   <div className="slot-reels-panel">
                     <div className="slot-reels-panel-header">
                       <span className="slot-panel-badge">
-                        {levelInfo.isBoss ? 'QUEEN' : `ELF ${level}`}
+                        {levelInfo.isBoss ? 'OTHER' : `L${level}`}
                       </span>
                       <span className="slot-panel-model">Model A-L1C3</span>
                     </div>
@@ -549,8 +581,10 @@ export default function AliceRoomGame() {
                         </div>
                       </div>
                       <div className="slot-reel-bezel-label">
-                        {phase === 'elf-attack' || phase === 'block-spinning' || phase === 'block-result'
-                          ? 'SHIELD LINE — 3 OF THIS BEING'
+                        {phase === 'elf-attack' ||
+                        phase === 'block-spinning' ||
+                        phase === 'block-result'
+                          ? `SHIELD — 3× ${defenseEntity.label.toUpperCase()}`
                           : 'WIN LINE'}
                       </div>
                     </div>
@@ -592,34 +626,36 @@ export default function AliceRoomGame() {
 
               <div className="alice-machine-actions">
                 {phase === 'player-result' && (
-                  <button type="button" className="alice-btn alice-btn-danger" onClick={beginElfTurn}>
-                    Face the Elf Attack →
+                  <button type="button" className="alice-btn alice-btn-danger" onClick={beginEncounter}>
+                    Face {levelInfo.name} →
                   </button>
                 )}
                 {phase === 'block-result' && (
-                  <button type="button" className="alice-btn alice-btn-primary" onClick={afterDefenseContinue}>
-                    {level >= BOSS_LEVEL ? 'Claim the Looking Glass' : 'Descend Deeper →'}
+                  <button type="button" className="alice-btn alice-btn-primary" onClick={advanceAfterDefense}>
+                    {level >= BOSS_LEVEL ? 'Exit the voyage' : 'Descend deeper →'}
                   </button>
                 )}
                 {phase === 'level-clear' && (
                   <button type="button" className="alice-btn alice-btn-primary" onClick={continueToNextLevel}>
-                    Enter {getLevelInfo(level).name}
+                    Enter layer {level}: {getLevelInfo(level).name}
                   </button>
                 )}
               </div>
 
               {phase === 'trick-choices' && (
                 <div className="alice-tricks alice-tricks-under-machine">
-                  <h3>The elves offer four paths</h3>
+                  <h3>{levelInfo.loving ? 'The presence offers paths' : 'The presence tests you'}</h3>
                   <p className="alice-tricks-hint">
-                    One path costs nothing. The others take moderate, most, or all Alice Coins. Labels mislead.
+                    {levelInfo.loving
+                      ? 'Max loss 50%. One golden door may double your Alice Coins (once per run).'
+                      : 'One path costs nothing. Others take moderate, heavy, or all. Labels mislead. Don’t spam the same choice.'}
                   </p>
-                  <div className="alice-trick-grid">
+                  <div className={`alice-trick-grid ${choices.length >= 5 ? 'alice-trick-grid-5' : ''}`}>
                     {choices.map(c => (
                       <button
                         key={c.id}
                         type="button"
-                        className="alice-trick-card"
+                        className={`alice-trick-card ${c.tier === 'double' ? 'alice-trick-double' : ''}`}
                         onClick={() => onPickTrick(c)}
                       >
                         <span className="alice-trick-label">{c.label}</span>
@@ -632,7 +668,7 @@ export default function AliceRoomGame() {
 
               {phase === 'victory' && (
                 <section className="alice-panel alice-victory">
-                  <h2>Through the looking glass</h2>
+                  <h2>Voyage complete</h2>
                   <p className="alice-final-tally">
                     Final Alice Coins: <strong>{aliceCoins.toLocaleString()}</strong>
                   </p>
@@ -641,7 +677,7 @@ export default function AliceRoomGame() {
                     <strong>{aliceCoinsToSpendable(aliceCoins).toLocaleString()} Bonk Chips</strong>
                   </p>
                   {!connected && (
-                    <p className="alice-warn">Connect your wallet to bank this tally as spendable chips.</p>
+                    <p className="alice-warn">Connect wallet to bank spendable chips.</p>
                   )}
                   <div className="alice-actions">
                     <button
@@ -650,21 +686,35 @@ export default function AliceRoomGame() {
                       disabled={busy || !sessionToken}
                       onClick={() => void bankFinalTally()}
                     >
-                      {busy ? 'Banking…' : 'Bank Final Tally → Spendable Chips'}
+                      {busy ? 'Banking…' : 'Bank Final Tally'}
                     </button>
                     <Link href="/cashier" className="alice-btn alice-btn-ghost">
                       {BRAND.cashier}
                     </Link>
                     <button type="button" className="alice-btn alice-btn-ghost" onClick={() => void startDive()}>
-                      Dive Again
+                      Dive again
                     </button>
                   </div>
                   {claimMsg && <p className="alice-claim-msg">{claimMsg}</p>}
                   {spendableEarned != null && spendableEarned > 0 && (
-                    <p className="alice-claim-ok">
-                      +{spendableEarned} spendable Bonk Chips on your server ledger.
-                    </p>
+                    <p className="alice-claim-ok">+{spendableEarned} spendable Bonk Chips.</p>
                   )}
+                </section>
+              )}
+
+              {phase === 'defeat' && (
+                <section className="alice-panel alice-victory">
+                  <h2>Trip kill</h2>
+                  <p className="alice-warn">{message}</p>
+                  <p>Repeating the same strategy without presence ejects the voyage. No spendable tally.</p>
+                  <div className="alice-actions">
+                    <button type="button" className="alice-btn alice-btn-primary" onClick={() => void startDive()}>
+                      Begin again — slower
+                    </button>
+                    <Link href="/" className="alice-btn alice-btn-ghost">
+                      Leave
+                    </Link>
+                  </div>
                 </section>
               )}
             </div>

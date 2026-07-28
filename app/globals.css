@@ -6279,3 +6279,49 @@ body {
   opacity: 0.55;
   mix-blend-mode: multiply;
 }
+
+/* Alice trip extras */
+.alice-entity-card {
+  text-align: center;
+  padding: 0.65rem 0.5rem;
+  margin-bottom: 0.65rem;
+  border-radius: 0.75rem;
+  background: rgba(0, 0, 0, 0.35);
+  border: 1px solid rgba(192, 132, 252, 0.3);
+}
+.alice-entity-portrait {
+  width: 96px;
+  height: 96px;
+  object-fit: contain;
+  margin: 0 auto 0.35rem;
+  display: block;
+}
+.alice-entity-name {
+  margin: 0;
+  font-weight: 800;
+  color: #f5d0fe;
+  font-size: 0.95rem;
+}
+.alice-entity-need {
+  margin: 0.2rem 0 0;
+  font-size: 0.75rem;
+  color: rgba(196, 181, 253, 0.7);
+}
+.alice-trick-grid-5 {
+  grid-template-columns: 1fr 1fr;
+}
+.alice-trick-double {
+  border-color: rgba(250, 204, 21, 0.65) !important;
+  box-shadow: 0 0 16px rgba(250, 204, 21, 0.25);
+}
+.alice-trick-double .alice-trick-label {
+  color: #fde68a !important;
+}
+.alice-melt-0 .alice-room-bg { filter: none; }
+.alice-melt-3 .alice-room-bg { filter: hue-rotate(8deg) saturate(1.1); }
+.alice-melt-5 .alice-room-bg { filter: hue-rotate(18deg) saturate(1.25) contrast(1.05); }
+.alice-melt-7 .alice-room-bg { filter: hue-rotate(28deg) saturate(1.4) contrast(1.08); }
+.alice-melt-9 .alice-room-bg,
+.alice-melt-10 .alice-room-bg {
+  filter: hue-rotate(40deg) saturate(1.55) contrast(1.12) brightness(0.95);
+}

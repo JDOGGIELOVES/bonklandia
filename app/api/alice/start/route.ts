@@ -2,8 +2,9 @@ import { NextResponse } from 'next/server';
 import { createAliceSession } from '@/lib/alice-room/session';
 import {
   ALICE_COINS_PER_SPENDABLE_CHIP,
-  ELF_LEVELS,
+  BOSS_LEVEL,
   MAX_ALICE_SPENDABLE_PAYOUT,
+  PRE_BOSS_LEVELS,
   TOTAL_LEVELS,
 } from '@/lib/alice-room/game';
 import { blockIfEmergencyStopped } from '@/lib/security/emergency';
@@ -28,12 +29,14 @@ export async function POST(request: Request) {
     expiresAt: session.expiresAt,
     maxSpendable: session.maxSpendable,
     rules: {
-      elfLevels: ELF_LEVELS,
-      bossLevel: TOTAL_LEVELS,
+      preBossLevels: PRE_BOSS_LEVELS,
+      bossLevel: BOSS_LEVEL,
       totalLevels: TOTAL_LEVELS,
       aliceCoinsPerSpendableChip: ALICE_COINS_PER_SPENDABLE_CHIP,
       maxSpendablePayout: MAX_ALICE_SPENDABLE_PAYOUT,
-      note: 'Mid-run Alice Coins are not cashier chips. Only the final tally after the boss converts (capped).',
+      defense: 'three of current level entity',
+      lovingLevels: [5, 6, 9],
+      note: 'Mid-run Alice Coins are not cashier chips. Only the final tally after The Other (boss) converts (capped).',
     },
   });
 }

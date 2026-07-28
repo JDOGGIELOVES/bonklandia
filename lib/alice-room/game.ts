@@ -1,19 +1,32 @@
 import {
+  buildChoicesForLevel,
+  getEncounter,
+  LOSS_FRACTION,
+  type ChoiceTier,
+  type EncounterChoice,
+} from '@/lib/alice-room/encounters';
+import {
   ALL_ALICE_SYMBOLS,
   getEntityForLevel,
   matchesDefenseEntity,
   type AliceSymbol,
 } from '@/lib/alice-room/symbols';
 
-export const ELF_LEVELS = 9; // levels before boss
+export const PRE_BOSS_LEVELS = 9;
 export const BOSS_LEVEL = 10;
-export const TOTAL_LEVELS = BOSS_LEVEL;
+export const TOTAL_LEVELS = 10;
+/** @deprecated use PRE_BOSS_LEVELS */
+export const ELF_LEVELS = PRE_BOSS_LEVELS;
 
-/** Alice Coins are run points only — not cashier chips until boss clear conversion. */
 export const ALICE_COINS_PER_SPENDABLE_CHIP = 80;
 export const MAX_ALICE_SPENDABLE_PAYOUT = Number(
   process.env.MAX_ALICE_SPENDABLE_PAYOUT ?? '90',
 );
+
+/** Same tier in a row on failed defenses before hard trip kill. */
+export const TRIP_KILL_SAME_TIER_STREAK = 3;
+/** Same UI slot index streak also counts as rushing. */
+export const TRIP_KILL_SAME_SLOT_STREAK = 3;
 
 export type AlicePhase =
   | 'intro'
@@ -28,13 +41,10 @@ export type AlicePhase =
   | 'victory'
   | 'defeat';
 
-export type LossTier = 'none' | 'moderate' | 'heavy' | 'all';
-
-export type TrickChoice = {
+export type TrickChoice = EncounterChoice & {
   id: string;
-  label: string;
-  whisper: string;
-  tier: LossTier;
+  /** UI slot after shuffle (for anti-rush) */
+  slotIndex: number;
   lossFraction: number;
 };
 
@@ -44,59 +54,23 @@ export type AliceLevelInfo = {
   name: string;
   blurb: string;
   depthLabel: string;
+  loving: boolean;
+  entityId: string;
+  attackLine: string;
 };
 
 export function getLevelInfo(level: number): AliceLevelInfo {
+  const enc = getEncounter(level);
   const isBoss = level >= BOSS_LEVEL;
-  const roster: { name: string; blurb: string }[] = [
-    {
-      name: 'Machine Elves',
-      blurb: 'Self-transforming elves present impossible toys. Spin for Alice Coins — then shield with three elves.',
-    },
-    {
-      name: 'Jesters / Tricksters',
-      blurb: 'Cosmic prank energy. Land three Jesters to block the mockery.',
-    },
-    {
-      name: 'Insectoids / Mantis',
-      blurb: 'Clinical, supervisory presence. Three Mantis blocks the exam.',
-    },
-    {
-      name: 'Greys',
-      blurb: 'Sterile observation. Three Greys form the shield line.',
-    },
-    {
-      name: 'Light Beings',
-      blurb: 'Overwhelming benevolence. Loving floor — losses capped; a rare double gift exists.',
-    },
-    {
-      name: 'Goddess / Divine Feminine',
-      blurb: 'Heart-level encounter. Loving floor — losses capped; a double path may open.',
-    },
-    {
-      name: 'Fractal Architects',
-      blurb: 'Living geometry rebuilds space. Three Fractal Architects block the rearrange.',
-    },
-    {
-      name: 'Serpent / Ouroboros',
-      blurb: 'Rising, coiled initiation energy. Three Serpents hold the channel.',
-    },
-    {
-      name: 'Ancestors / Guides',
-      blurb: 'Familiar, personal, lineage. Loving floor — losses capped; a double blessing may open.',
-    },
-    {
-      name: 'The Other',
-      blurb: 'Boss layer — formless hyper-presence. Three of The Other to withstand the dissolve.',
-    },
-  ];
-  const row = roster[Math.min(level, TOTAL_LEVELS) - 1] ?? roster[0]!;
   return {
     level: Math.min(level, TOTAL_LEVELS),
     isBoss,
-    name: row.name,
-    blurb: row.blurb,
+    name: enc.name,
+    blurb: enc.attackLine,
     depthLabel: isBoss ? 'Reality Layer ∞' : `Reality Layer ${level}`,
+    loving: enc.loving,
+    entityId: enc.entityId,
+    attackLine: enc.attackLine,
   };
 }
 
@@ -116,12 +90,13 @@ export function buildAliceReelStrip(
   return strip;
 }
 
-/** Player spin: easy big Alice Coins (run points only). */
-export function spinPlayerReels(): {
+/** Easy large Alice Coin wins (run points only). */
+export function spinPlayerReels(level: number): {
   reels: [AliceSymbol, AliceSymbol, AliceSymbol];
   aliceCoins: number;
   message: string;
 } {
+  const depthBoost = 1 + (level - 1) * 0.06;
   const pool = ALL_ALICE_SYMBOLS;
   const reels: [AliceSymbol, AliceSymbol, AliceSymbol] = [
     pick(pool),
@@ -129,46 +104,36 @@ export function spinPlayerReels(): {
     pick(pool),
   ];
 
-  let aliceCoins = 200 + Math.floor(Math.random() * 400);
-  let message = 'A curious nibble of Alice Coins.';
+  let aliceCoins = Math.floor((400 + Math.random() * 600) * depthBoost);
+  let message = 'Alice Coins pour easily — dream-wealth only until the end.';
 
   const sameThree = reels[0].id === reels[1].id && reels[1].id === reels[2].id;
   const twoMatch =
     reels[0].id === reels[1].id || reels[1].id === reels[2].id || reels[0].id === reels[2].id;
   const lovingLine = reels.every(r => r.kind === 'loving');
-  const hasOther = reels.some(r => r.id === 'the-other');
 
   if (sameThree) {
-    aliceCoins = 8000 + Math.floor(Math.random() * 4000);
-    message = `Triple ${reels[0].label}! Hyperspace jackpot — huge Alice Coins!`;
+    aliceCoins = Math.floor((7000 + Math.random() * 5000) * depthBoost);
+    message = `Triple ${reels[0].label}! Hyperspace jackpot!`;
   } else if (lovingLine) {
-    aliceCoins = 4500 + Math.floor(Math.random() * 2500);
+    aliceCoins = Math.floor((4000 + Math.random() * 2500) * depthBoost);
     message = 'A line of loving presence — Alice Coins bloom.';
   } else if (twoMatch) {
-    aliceCoins = 1200 + Math.floor(Math.random() * 1800);
+    aliceCoins = Math.floor((1500 + Math.random() * 2000) * depthBoost);
     message = 'A matching pair deepens the dream.';
-  } else if (hasOther) {
-    aliceCoins = 900 + Math.floor(Math.random() * 1100);
-    message = 'The Other brushes the line — reality bends.';
   }
 
   return { reels, aliceCoins, message };
 }
 
-/**
- * Defense pull: need three of the **current level's** entity.
- * Slightly weighted toward that entity so blocking is luck + skill, not impossible.
- */
-export function spinBlockReels(
-  level: number,
-  isBoss = level >= BOSS_LEVEL,
-): {
+export function spinBlockReels(level: number): {
   reels: [AliceSymbol, AliceSymbol, AliceSymbol];
   blocked: boolean;
   message: string;
 } {
   const target = getEntityForLevel(level);
-  const hitWeight = isBoss ? 0.36 : 0.42;
+  const isBoss = level >= BOSS_LEVEL;
+  const hitWeight = isBoss ? 0.34 : 0.4;
   const roll = (): AliceSymbol => {
     if (Math.random() < hitWeight) return target;
     return pick(ALL_ALICE_SYMBOLS.filter(s => s.id !== target.id));
@@ -179,71 +144,156 @@ export function spinBlockReels(
     reels,
     blocked,
     message: blocked
-      ? `THREE ${target.label.toUpperCase()}S! You parry the encounter — Alice Coins safe!`
-      : `No triple ${target.label} shield… the presence springs its test.`,
+      ? `THREE ${target.label.toUpperCase()}! Encounter blocked — Alice Coins safe!`
+      : getEncounter(level).failLine,
   };
 }
 
-const TRICK_LABELS: { label: string; whisper: string }[] = [
-  { label: 'Drink Me', whisper: 'Smaller problems… or smaller fortune?' },
-  { label: 'Eat Me', whisper: 'Grow bold — or grow broke.' },
-  { label: 'Follow the White Rabbit', whisper: 'He always knows the way. Always.' },
-  { label: 'Trust the Cheshire Grin', whisper: 'We are all mad here. Especially the honest ones.' },
-  { label: 'Take the Red Pill Card', whisper: 'See how deep the rabbit hole goes.' },
-  { label: 'Take the Blue Pill Card', whisper: 'Wake up with whatever is left.' },
-  { label: 'Ask the Caterpillar', whisper: 'Whooo are you to keep those coins?' },
-  { label: 'Cross the Chessboard', whisper: 'One square forward, three coins back.' },
-];
-
-const LOSS_TIERS: { tier: LossTier; lossFraction: number }[] = [
-  { tier: 'none', lossFraction: 0 },
-  { tier: 'moderate', lossFraction: 0.3 },
-  { tier: 'heavy', lossFraction: 0.7 },
-  { tier: 'all', lossFraction: 1 },
-];
-
-export function buildTrickChoices(isBoss: boolean): TrickChoice[] {
-  const tiers = LOSS_TIERS.map(t => ({
-    ...t,
-    lossFraction:
-      isBoss && t.tier === 'moderate'
-        ? 0.4
-        : isBoss && t.tier === 'heavy'
-          ? 0.85
-          : t.lossFraction,
-  }));
-  for (let i = tiers.length - 1; i > 0; i--) {
-    const j = Math.floor(Math.random() * (i + 1));
-    [tiers[i], tiers[j]] = [tiers[j]!, tiers[i]!];
-  }
-  const labels = [...TRICK_LABELS].sort(() => Math.random() - 0.5).slice(0, 4);
-  return tiers.map((t, i) => ({
-    id: `choice-${i}-${t.tier}`,
-    label: labels[i]!.label,
-    whisper: labels[i]!.whisper,
-    tier: t.tier,
-    lossFraction: t.lossFraction,
-  }));
+export function buildTrickChoices(
+  level: number,
+  runSeed: number,
+  doubleAlreadyUsed: boolean,
+): TrickChoice[] {
+  const enc = getEncounter(level);
+  const raw = buildChoicesForLevel(level, runSeed, doubleAlreadyUsed);
+  return raw.map((c, slotIndex) => {
+    let lossFraction = LOSS_FRACTION[c.tier];
+    if (c.tier === 'double') lossFraction = 0;
+    else if (enc.loving) {
+      lossFraction = Math.min(lossFraction, enc.maxLossFraction);
+    } else if (level >= BOSS_LEVEL && c.tier === 'moderate') {
+      lossFraction = 0.4;
+    } else if (level >= BOSS_LEVEL && c.tier === 'heavy') {
+      lossFraction = 0.85;
+    }
+    return {
+      ...c,
+      id: `L${level}-${c.tier}-${slotIndex}-${c.label.slice(0, 12)}`,
+      slotIndex,
+      lossFraction,
+    };
+  });
 }
 
-export function applyTrickLoss(
+export function applyChoice(
   coins: number,
   choice: TrickChoice,
-): { nextCoins: number; lost: number; flavor: string } {
+): { nextCoins: number; lost: number; gained: number; flavor: string } {
+  if (choice.tier === 'double') {
+    const next = coins * 2;
+    return {
+      nextCoins: next,
+      lost: 0,
+      gained: coins,
+      flavor: 'The presence opens fully — Alice Coins double.',
+    };
+  }
   const lost = Math.floor(coins * choice.lossFraction);
   const nextCoins = Math.max(0, coins - lost);
   const flavor =
     choice.tier === 'none'
-      ? 'The elves snarl — you chose true. Coins untouched.'
+      ? 'True path. Coins untouched.'
       : choice.tier === 'moderate'
-        ? 'A moderate toll. The hole deepens, pockets lighter.'
+        ? 'A moderate toll. The trip deepens.'
         : choice.tier === 'heavy'
-          ? 'Most of your Alice Coins vanish into the looking glass…'
-          : 'Everything. The Machine Elves empty your satchel with a bow.';
-  return { nextCoins, lost, flavor };
+          ? 'Heavy loss. The satchel thins.'
+          : lost >= coins
+            ? 'Everything. The satchel is empty.'
+            : 'Harsh cut — loving floors still spare half.';
+  return { nextCoins, lost, gained: 0, flavor };
+}
+
+/** @deprecated use applyChoice */
+export function applyTrickLoss(coins: number, choice: TrickChoice) {
+  const r = applyChoice(coins, choice);
+  return { nextCoins: r.nextCoins, lost: r.lost, flavor: r.flavor };
+}
+
+export type TripKillState = {
+  /** Last failed-defense choice tiers in order */
+  tierHistory: ChoiceTier[];
+  /** Last failed-defense UI slots */
+  slotHistory: number[];
+  warned: boolean;
+};
+
+export function emptyTripKillState(): TripKillState {
+  return { tierHistory: [], slotHistory: [], warned: false };
+}
+
+export type TripKillResult =
+  | { kill: false; warn: boolean; message?: string }
+  | { kill: true; message: string };
+
+/**
+ * Call after each failed-defense choice.
+ * Kill if same tier streak or same UI slot streak without playing variety.
+ */
+export function evaluateTripKill(
+  state: TripKillState,
+  choice: TrickChoice,
+): { state: TripKillState; result: TripKillResult } {
+  const tierHistory = [...state.tierHistory, choice.tier];
+  const slotHistory = [...state.slotHistory, choice.slotIndex];
+  const next: TripKillState = {
+    tierHistory,
+    slotHistory,
+    warned: state.warned,
+  };
+
+  const tierStreak = trailingStreak(tierHistory);
+  const slotStreak = trailingStreak(slotHistory);
+
+  if (
+    tierStreak >= TRIP_KILL_SAME_TIER_STREAK ||
+    slotStreak >= TRIP_KILL_SAME_SLOT_STREAK
+  ) {
+    return {
+      state: next,
+      result: {
+        kill: true,
+        message:
+          'TRIP KILL — You forced the same path through the layers. The voyage ejects you. Final tally: nothing spendable.',
+      },
+    };
+  }
+
+  if (
+    !state.warned &&
+    (tierStreak >= TRIP_KILL_SAME_TIER_STREAK - 1 ||
+      slotStreak >= TRIP_KILL_SAME_SLOT_STREAK - 1)
+  ) {
+    next.warned = true;
+    return {
+      state: next,
+      result: {
+        kill: false,
+        warn: true,
+        message:
+          'The trip notices a pattern… Force the same choice again and you may be ejected.',
+      },
+    };
+  }
+
+  return { state: next, result: { kill: false, warn: false } };
+}
+
+function trailingStreak<T>(arr: T[]): number {
+  if (arr.length === 0) return 0;
+  const last = arr[arr.length - 1];
+  let n = 0;
+  for (let i = arr.length - 1; i >= 0; i--) {
+    if (arr[i] === last) n++;
+    else break;
+  }
+  return n;
 }
 
 export function aliceCoinsToSpendable(aliceCoins: number): number {
   const raw = Math.floor(Math.max(0, aliceCoins) / ALICE_COINS_PER_SPENDABLE_CHIP);
   return Math.min(MAX_ALICE_SPENDABLE_PAYOUT, Math.max(0, raw));
+}
+
+export function newRunSeed(): number {
+  return (Math.floor(Math.random() * 0x7fffffff) ^ Date.now()) >>> 0;
 }
