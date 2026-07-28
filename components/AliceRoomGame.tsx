@@ -37,11 +37,10 @@ import { useCasinoAudio } from '@/hooks/useCasinoAudio';
 import type { WinTier } from '@/lib/slot-machine';
 
 /**
- * Reel strip math — keep in sync with CSS:
- * desktop: --slot-reel-height 180px; mobile: 132px
- * Use 156 as a middle ground; CSS clips window; stop offset uses this.
+ * MUST match CSS `.alice-cabinet .slot-reels { --slot-reel-height: 160px }`
+ * and each `.slot-symbol` height. Mismatch scrolls the strip into empty black.
  */
-const REEL_ITEM_HEIGHT = 156;
+const REEL_ITEM_HEIGHT = 160;
 const REEL_SPIN_MS = CASINO_SPIN_DURATION_MS;
 const LEVER_PULL_MS = CASINO_SPIN_START_DELAY_MS;
 
@@ -56,14 +55,15 @@ function AliceSymbolCell({ symbol }: { symbol: AliceSymbol }) {
       className={`slot-symbol alice-slot-symbol slot-symbol-${
         symbol.kind === 'elf' ? 'enemy' : symbol.kind === 'wild' ? 'jackpot' : 'fam'
       }`}
+      style={{ height: REEL_ITEM_HEIGHT }}
     >
       {showImg ? (
         <div className="slot-symbol-frame alice-symbol-frame">
           <Image
             src={symbol.image!}
             alt={symbol.label}
-            width={140}
-            height={140}
+            width={120}
+            height={120}
             className="character-img slot-symbol-img alice-symbol-img object-contain"
             unoptimized
             onError={() => setImgFailed(true)}
@@ -74,8 +74,6 @@ function AliceSymbolCell({ symbol }: { symbol: AliceSymbol }) {
           {symbol.emoji}
         </span>
       )}
-      {/* Labels hidden on narrow screens via CSS — art only */}
-      <span className="slot-symbol-label alice-symbol-label">{symbol.label}</span>
     </div>
   );
 }
@@ -92,14 +90,17 @@ function AliceReel({
   spinKey: number;
 }) {
   const strip = useMemo(
-    () => buildAliceReelStrip(result, ALL_ALICE_SYMBOLS),
+    () => buildAliceReelStrip(result, ALL_ALICE_SYMBOLS, 28),
     [result, spinKey],
   );
   const stopAt = (strip.length - 1) * REEL_ITEM_HEIGHT;
 
   return (
     <div className="slot-reel-column">
-      <div className="slot-reel-window">
+      <div
+        className="slot-reel-window"
+        style={{ height: REEL_ITEM_HEIGHT, ['--slot-reel-height' as string]: `${REEL_ITEM_HEIGHT}px` }}
+      >
         <div className="slot-reel-drum-shadow slot-reel-drum-shadow-top" />
         <div className="slot-reel-drum-shadow slot-reel-drum-shadow-bottom" />
         <div
@@ -107,6 +108,7 @@ function AliceReel({
           style={{
             ['--reel-stop' as string]: `-${stopAt}px`,
             ['--reel-duration' as string]: `${REEL_SPIN_MS}ms`,
+            ['--slot-reel-height' as string]: `${REEL_ITEM_HEIGHT}px`,
             animationDelay: spinning ? `${stopDelay}ms` : '0ms',
           }}
         >
@@ -230,18 +232,26 @@ export default function AliceRoomGame() {
       blocked?: boolean;
     },
   ) => {
-    // Same SFX stack as Bonklandia Bandit.
+    // Same SFX + timing pattern as Bonklandia Bandit.
     void playLeverPull();
     void playSpinSequence();
-    setSpinning(true);
     setLeverPulled(true);
     setJustLanded(false);
-    setSpinKey(k => k + 1);
-    await sleep(LEVER_PULL_MS);
+    setSpinning(false);
+
+    // Precompute outcome so strip is built with the winning symbols before animation.
     const result = getResult();
+
+    await sleep(LEVER_PULL_MS);
+
+    // Set results + spinKey + spinning together so reel math and art stay aligned.
     setResults(result.reels);
     setMessage(result.message);
-    await sleep(REEL_SPIN_MS + 200);
+    setSpinKey(k => k + 1);
+    setSpinning(true);
+
+    // Spin duration + last reel stop delay (800ms) + settle
+    await sleep(REEL_SPIN_MS + 900);
     setSpinning(false);
     setLeverPulled(false);
     setJustLanded(true);

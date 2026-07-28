@@ -6399,39 +6399,51 @@ body {
   max-width: 100%;
   box-sizing: border-box;
 }
+/*
+ * FIXED 160px reel cell height — MUST match REEL_ITEM_HEIGHT in AliceRoomGame.tsx.
+ * Fluid clamp() broke translateY stop math → black reels after spin.
+ */
 .alice-cabinet .slot-reels {
-  --slot-reel-height: clamp(120px, 32vw, 200px);
+  --slot-reel-height: 160px;
   width: 100%;
   max-width: 100%;
   box-sizing: border-box;
-  padding: 0.3rem;
+  padding: 0.35rem;
   gap: 0;
+  background: #0a0610 !important;
 }
 .alice-cabinet .slot-reel-column {
   flex: 1 1 0;
   min-width: 0;
 }
 .alice-cabinet .slot-reel-window {
-  height: var(--slot-reel-height, 140px);
+  height: 160px !important;
+  /* Lighter window so transparent PNGs read clearly */
+  background:
+    linear-gradient(180deg, #1a1028 0%, #2a1840 8%, #1a1028 15%, #120a1c 50%, #1a1028 85%, #2a1840 92%, #1a1028 100%) !important;
 }
 .alice-cabinet .slot-symbol,
 .alice-slot-symbol {
-  height: var(--slot-reel-height, 140px);
+  height: 160px !important;
   width: 100%;
   justify-content: center;
   gap: 0;
   box-sizing: border-box;
+  flex-shrink: 0;
+  padding: 4px 2px !important;
+  /* Dark cell so transparent entity art shows (not cream Bandit tiles) */
+  background: linear-gradient(180deg, #1e1230 0%, #140a22 50%, #1e1230 100%) !important;
 }
 .alice-cabinet .alice-symbol-frame,
 .alice-cabinet .slot-symbol-frame {
-  width: clamp(72px, 28vw, 160px);
-  height: clamp(72px, 28vw, 160px);
-  max-width: 96%;
+  width: min(132px, 90%);
+  height: min(132px, 90%);
+  max-width: 100%;
 }
 .alice-cabinet .alice-symbol-img,
 .alice-cabinet .slot-symbol-img {
-  width: clamp(68px, 26vw, 152px) !important;
-  height: clamp(68px, 26vw, 152px) !important;
+  width: min(124px, 88%) !important;
+  height: min(124px, 88%) !important;
   max-width: 100%;
   object-fit: contain;
 }
@@ -6440,7 +6452,16 @@ body {
   display: none !important;
 }
 .alice-symbol-emoji-fallback {
-  font-size: clamp(1.8rem, 8vw, 3rem) !important;
+  font-size: 2.6rem !important;
+}
+/* Soften heavy black drum shadows that were covering the art */
+.alice-cabinet .slot-reel-drum-shadow-top {
+  height: 18%;
+  background: linear-gradient(180deg, rgba(0, 0, 0, 0.75) 0%, transparent 100%) !important;
+}
+.alice-cabinet .slot-reel-drum-shadow-bottom {
+  height: 18%;
+  background: linear-gradient(0deg, rgba(0, 0, 0, 0.75) 0%, transparent 100%) !important;
 }
 .alice-trip-strip {
   display: flex;
