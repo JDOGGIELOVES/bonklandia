@@ -428,22 +428,23 @@ export default function AliceRoomGame() {
 
   const meltClass = `alice-melt-${Math.min(10, Math.max(0, melt || level - 1))}`;
 
+  const inPlay = phase !== 'intro';
+
   return (
-    <div className={`alice-room alice-machine-scene ${meltClass}`}>
+    <div
+      className={`alice-room alice-machine-scene ${meltClass} ${inPlay ? 'alice-room-playing' : ''}`}
+    >
       <div className="alice-room-bg" aria-hidden />
       <div className="casino-scene-vignette alice-vignette" />
       <div className="alice-room-content">
-        <header className="casino-header alice-machine-header">
-          <div className="casino-top-bar">
+        <header className={`casino-header alice-machine-header ${inPlay ? 'alice-header-play' : ''}`}>
+          <div className="casino-top-bar alice-top-bar-compact">
             <div className="alice-room-nav">
               <Link href="/" className="alice-nav-link">
-                ← {BRAND.name}
+                ← Home
               </Link>
               <Link href="/cashier" className="alice-nav-link">
-                {BRAND.cashier}
-              </Link>
-              <Link href="/depths" className="alice-nav-link">
-                {BRAND.depths}
+                Cashier
               </Link>
             </div>
             <div className="casino-audio-bar alice-audio-bar">
@@ -454,7 +455,7 @@ export default function AliceRoomGame() {
                 aria-label={muted ? 'Unmute Alice Machine audio' : 'Mute Alice Machine audio'}
                 title={CASINO_AMBIENCE_CREDIT}
               >
-                {muted ? '🔇 Sound Off' : '🔊 Sound On'}
+                {muted ? '🔇' : '🔊'}
               </button>
               {!audioReady && (
                 <button
@@ -462,31 +463,28 @@ export default function AliceRoomGame() {
                   className="casino-audio-unlock"
                   onClick={() => void unlockAudio()}
                 >
-                  Tap to enable sound
+                  Sound
                 </button>
               )}
             </div>
-            <div className="casino-wallet-bar">
+            <div className="casino-wallet-bar alice-wallet-compact">
               <div className="casino-wallet-connect">
                 <WalletMultiButton />
               </div>
-              <p className="casino-wallet-status">
-                {connected && publicKey
-                  ? `Connected · ${publicKey.toBase58().slice(0, 4)}…${publicKey.toBase58().slice(-4)}`
-                  : 'Connect wallet to bank final tally'}
-              </p>
             </div>
           </div>
-          <p className="casino-eyebrow alice-eyebrow-line">
-            {phase === 'intro'
-              ? `${BRAND.aliceRoomNav} — 10-layer DMT voyage`
-              : `${levelInfo.depthLabel} · ${levelInfo.name}`}
-          </p>
-          <h1 className="casino-title alice-page-title">{BRAND.aliceRoom}</h1>
-          <p className="casino-tagline alice-tagline-desktop">
-            Alice Machine · win spin → encounter → defense (3× this being) → strategy doors. Only
-            post-boss tally is spendable.
-          </p>
+          {!inPlay && (
+            <>
+              <p className="casino-eyebrow alice-eyebrow-line">
+                {BRAND.aliceRoomNav} — 10-layer DMT voyage
+              </p>
+              <h1 className="casino-title alice-page-title">{BRAND.aliceRoom}</h1>
+              <p className="casino-tagline alice-tagline-desktop">
+                Alice Machine · win spin → encounter → defense → strategy doors. Only post-boss tally
+                is spendable.
+              </p>
+            </>
+          )}
         </header>
 
         {phase === 'intro' && (
@@ -778,11 +776,6 @@ export default function AliceRoomGame() {
                 </section>
               )}
 
-              {log.length > 0 && (
-                <p className="alice-log-one-line" aria-live="polite">
-                  {log[0]?.text}
-                </p>
-              )}
             </div>
           </div>
         )}

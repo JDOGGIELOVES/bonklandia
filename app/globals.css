@@ -6326,41 +6326,60 @@ body {
   filter: hue-rotate(40deg) saturate(1.55) contrast(1.12) brightness(0.95);
 }
 
-/* Alice layout: machine-first, no side columns, fluid reels */
+/*
+ * Alice MACHINE = full viewport width. No side columns. No log panel.
+ * Overrides .alice-room-content max-width: 920px and .slot-cabinet min(100%, 920px).
+ */
 .alice-room {
   overflow-x: hidden;
   width: 100%;
   max-width: 100vw;
-}
-.alice-room-content {
-  width: 100%;
-  max-width: 100%;
   box-sizing: border-box;
-  padding-left: 0.65rem;
-  padding-right: 0.65rem;
-  overflow-x: hidden;
+}
+.alice-room-playing .alice-room-content {
+  max-width: 100% !important;
+  width: 100% !important;
+  margin: 0 !important;
+  padding: 0.35rem 0 1.25rem !important;
+  box-sizing: border-box;
+}
+.alice-room-playing .alice-header-play {
+  padding: 0 0.5rem 0.35rem;
+  margin-bottom: 0.25rem;
+}
+.alice-room-playing .alice-page-title,
+.alice-room-playing .alice-tagline-desktop,
+.alice-room-playing .alice-eyebrow-line {
+  display: none !important;
 }
 .alice-stage-solo {
   display: flex;
   flex-direction: column;
   align-items: stretch;
-  gap: 0.55rem;
-  width: 100%;
-  max-width: min(520px, 100%);
-  margin: 0 auto;
+  gap: 0.4rem;
+  width: 100% !important;
+  max-width: 100% !important;
+  margin: 0 !important;
+  padding: 0 !important;
   box-sizing: border-box;
 }
 .alice-slot-stage {
-  width: 100%;
-  max-width: 100%;
+  width: 100% !important;
+  max-width: 100% !important;
   min-width: 0;
+  padding: 0 !important;
+  justify-content: stretch !important;
   box-sizing: border-box;
 }
+.alice-room-playing .alice-cabinet.slot-cabinet,
 .alice-cabinet {
   width: 100% !important;
   max-width: 100% !important;
+  min-width: 0 !important;
+  border-radius: 0 !important;
   box-sizing: border-box;
   overflow: hidden;
+  transform: none !important;
 }
 .alice-cabinet .slot-cabinet-face {
   min-width: 0;
@@ -6381,69 +6400,71 @@ body {
   box-sizing: border-box;
 }
 .alice-cabinet .slot-reels {
-  --slot-reel-height: 156px;
+  --slot-reel-height: clamp(120px, 32vw, 200px);
   width: 100%;
   max-width: 100%;
   box-sizing: border-box;
-  padding: 0.35rem;
+  padding: 0.3rem;
   gap: 0;
 }
 .alice-cabinet .slot-reel-column {
   flex: 1 1 0;
   min-width: 0;
 }
+.alice-cabinet .slot-reel-window {
+  height: var(--slot-reel-height, 140px);
+}
 .alice-cabinet .slot-symbol,
 .alice-slot-symbol {
-  height: var(--slot-reel-height, 156px);
+  height: var(--slot-reel-height, 140px);
   width: 100%;
   justify-content: center;
-  gap: 0.1rem;
+  gap: 0;
   box-sizing: border-box;
 }
 .alice-cabinet .alice-symbol-frame,
 .alice-cabinet .slot-symbol-frame {
-  width: min(112px, 28vw);
-  height: min(112px, 28vw);
-  max-width: 100%;
+  width: clamp(72px, 28vw, 160px);
+  height: clamp(72px, 28vw, 160px);
+  max-width: 96%;
 }
 .alice-cabinet .alice-symbol-img,
 .alice-cabinet .slot-symbol-img {
-  width: min(104px, 26vw) !important;
-  height: min(104px, 26vw) !important;
+  width: clamp(68px, 26vw, 152px) !important;
+  height: clamp(68px, 26vw, 152px) !important;
   max-width: 100%;
   object-fit: contain;
 }
 .alice-cabinet .alice-symbol-label,
 .alice-cabinet .slot-symbol-label {
-  font-size: 0.58rem;
-  max-width: 100%;
+  display: none !important;
 }
 .alice-symbol-emoji-fallback {
-  font-size: 2.4rem !important;
+  font-size: clamp(1.8rem, 8vw, 3rem) !important;
 }
 .alice-trip-strip {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 0.5rem;
-  padding: 0.45rem 0.6rem;
-  border-radius: 0.75rem;
-  background: rgba(24, 10, 45, 0.9);
-  border: 1px solid rgba(192, 132, 252, 0.4);
-  width: 100%;
+  gap: 0.4rem;
+  padding: 0.4rem 0.55rem;
+  margin: 0 0.35rem;
+  border-radius: 0.65rem;
+  background: rgba(24, 10, 45, 0.92);
+  border: 1px solid rgba(192, 132, 252, 0.35);
   box-sizing: border-box;
   min-width: 0;
 }
 .alice-trip-strip-entity {
   display: flex;
   align-items: center;
-  gap: 0.45rem;
+  gap: 0.4rem;
   min-width: 0;
   flex: 1;
 }
 .alice-trip-strip-img {
-  width: 40px;
-  height: 40px;
+  width: 36px;
+  height: 36px;
   object-fit: contain;
   flex-shrink: 0;
 }
@@ -6451,24 +6472,23 @@ body {
   display: flex;
   flex-direction: column;
   min-width: 0;
-  gap: 0.02rem;
 }
 .alice-trip-strip-layer {
-  font-size: 0.62rem;
+  font-size: 0.6rem;
   letter-spacing: 0.06em;
   text-transform: uppercase;
   color: #67e8f9;
 }
 .alice-trip-strip-name {
   font-weight: 800;
-  font-size: 0.88rem;
+  font-size: 0.85rem;
   color: #f5d0fe;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
 }
 .alice-trip-strip-need {
-  font-size: 0.65rem;
+  font-size: 0.6rem;
   color: rgba(196, 181, 253, 0.7);
 }
 .alice-trip-strip-stats {
@@ -6476,111 +6496,84 @@ body {
   flex-direction: column;
   align-items: flex-end;
   flex-shrink: 0;
-  gap: 0.05rem;
 }
 .alice-trip-strip-coins {
   font-weight: 800;
-  font-size: 0.95rem;
+  font-size: 0.9rem;
   color: #f0abfc;
 }
 .alice-trip-strip-coins small {
-  font-size: 0.65rem;
-  font-weight: 600;
+  font-size: 0.6rem;
   opacity: 0.75;
 }
 .alice-trip-strip-spend {
-  font-size: 0.65rem;
+  font-size: 0.6rem;
   color: rgba(196, 181, 253, 0.75);
 }
-/* Single-line log — not a column */
-.alice-log-one-line {
-  margin: 0.15rem 0 0;
-  padding: 0.35rem 0.5rem;
-  font-size: 0.7rem;
-  line-height: 1.25;
-  color: rgba(233, 213, 255, 0.65);
-  background: rgba(0, 0, 0, 0.28);
-  border-radius: 0.45rem;
-  border: 1px solid rgba(167, 139, 250, 0.15);
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  max-width: 100%;
+.alice-machine-actions {
+  padding: 0 0.5rem;
+  box-sizing: border-box;
 }
-.alice-machine-header .casino-top-bar {
+.alice-tricks-under-machine {
+  margin: 0.5rem 0.35rem 0;
+  box-sizing: border-box;
+  width: auto;
+}
+.alice-top-bar-compact {
   flex-wrap: wrap;
   justify-content: center;
-  gap: 0.4rem;
+  gap: 0.35rem;
   width: 100%;
 }
-.alice-room-nav {
-  flex-wrap: wrap;
-  justify-content: center;
+/* Kill any leftover log UI */
+.alice-log,
+.alice-log-under,
+.alice-log-one-line,
+.alice-side-column {
+  display: none !important;
 }
 @media (max-width: 720px) {
-  .alice-tagline-desktop {
-    display: none;
+  .alice-room-playing .alice-room-content {
+    padding: 0.2rem 0 0.75rem !important;
   }
-  .alice-cabinet .alice-symbol-label,
-  .alice-cabinet .slot-symbol-label {
-    display: none;
-  }
-  .alice-cabinet .slot-reels {
-    --slot-reel-height: 132px;
-  }
-  .alice-cabinet .alice-symbol-frame,
-  .alice-cabinet .slot-symbol-frame {
-    width: min(96px, 26vw);
-    height: min(96px, 26vw);
-  }
-  .alice-cabinet .alice-symbol-img,
-  .alice-cabinet .slot-symbol-img {
-    width: min(90px, 24vw) !important;
-    height: min(90px, 24vw) !important;
+  .alice-trip-strip {
+    margin: 0;
+    border-radius: 0;
+    border-left: none;
+    border-right: none;
   }
   .alice-cabinet .slot-cabinet-face {
     flex-direction: column;
-    padding: 0.65rem;
+    padding: 0.45rem;
   }
   .alice-cabinet .slot-lever-column {
     width: 100%;
     flex-direction: row;
     justify-content: center;
     min-height: 0;
-    padding: 0.35rem 0 0;
+    padding: 0.25rem 0 0;
   }
   .alice-cabinet .slot-lever-housing {
-    width: 56px;
-    height: 120px;
+    width: 52px;
+    height: 110px;
   }
   .alice-cabinet .slot-display-bar {
-    flex-wrap: wrap;
-    gap: 0.25rem;
+    flex-wrap: nowrap;
+    gap: 0.15rem;
+    padding: 0.35rem 0.4rem;
   }
   .alice-cabinet .slot-led-panel {
-    flex: 1 1 auto;
-    min-width: 4.5rem;
+    flex: 1 1 0;
+    min-width: 0;
+    padding: 0.2rem 0.25rem;
   }
-  .alice-page-title {
-    font-size: 1.45rem !important;
+  .alice-cabinet .slot-led-label {
+    font-size: 0.55rem;
   }
-  .alice-tricks-under-machine {
-    width: 100%;
-    box-sizing: border-box;
+  .alice-cabinet .slot-led-value {
+    font-size: 0.85rem;
   }
-}
-@media (min-width: 721px) {
-  .alice-cabinet .slot-reels {
-    --slot-reel-height: 180px;
-  }
-  .alice-cabinet .alice-symbol-frame,
-  .alice-cabinet .slot-symbol-frame {
-    width: 132px;
-    height: 132px;
-  }
-  .alice-cabinet .alice-symbol-img,
-  .alice-cabinet .slot-symbol-img {
-    width: 124px !important;
-    height: 124px !important;
+  .alice-cabinet .slot-marquee-title {
+    font-size: 1.25rem !important;
   }
 }
