@@ -3,7 +3,7 @@
  * Kevin MacLeod / incompetech.com (Creative Commons BY 3.0).
  *
  * Primary: Folk Round — lively tempo / pulse for Machine Elves and deeper layers.
- * Lever/reel SFX still come from CasinoAudioEngine (Bandit).
+ * Lever/reel SFX still come from CasinoAudioEngine (Bandit) — music-only stop there.
  */
 
 /** Primary bed — more rhythm than sparse piano */
@@ -53,10 +53,11 @@ export class AliceAudioEngine {
   private musicBuffer: AudioBuffer | null = null;
   private musicLoadPromise: Promise<AudioBuffer | null> | null = null;
   private musicRunning = false;
+  private musicGeneration = 0;
   /** Bed level when no dialogue is speaking (Folk Round is denser than piano). */
-  private musicGain = 0.3;
+  private musicGain = 0.26;
   /** Bed level while entity VO is speaking so lines stay intelligible. */
-  private musicDuckGain = 0.1;
+  private musicDuckGain = 0.08;
   private musicDucked = false;
   private level = 1;
 
@@ -96,8 +97,8 @@ export class AliceAudioEngine {
   setMuted(muted: boolean) {
     this.muted = muted;
     this.applyGain();
-    if (muted) this.stopMusicLoop();
-    else if (this.musicRunning) void this.startMusicLoop();
+    // Never auto-restart on unmute — that stacked Folk Round with itself / lobby.
+    if (muted) this.stopAmbience();
   }
 
   toggleMute() {
@@ -109,21 +110,17 @@ export class AliceAudioEngine {
     if (!this.master || !this.musicBus || !this.ctx) return;
     const t = this.ctx.currentTime;
     const m = this.muted ? 0 : 1;
-    // Slightly lower on late trip layers for intimacy / void feel
     const depth = 1 - Math.min(0.18, Math.max(0, this.level - 1) * 0.015);
     const bed = this.musicDucked ? this.musicDuckGain : this.musicGain;
     this.master.gain.setTargetAtTime(m, t, 0.05);
-    // Faster ramp when ducking for dialogue so VO isn’t buried mid-sentence
     this.musicBus.gain.setTargetAtTime(bed * m * depth, t, this.musicDucked ? 0.06 : 0.14);
   }
 
-  /** Soft volume morph only — same track, depth fade. */
   setLevel(level: number) {
     this.level = Math.max(1, Math.min(10, Math.floor(level)));
     this.applyGain();
   }
 
-  /** Drop music under spoken entity lines; restore when dialogue ends. */
   setMusicDucked(ducked: boolean) {
     this.musicDucked = ducked;
     this.applyGain();
@@ -133,25 +130,39 @@ export class AliceAudioEngine {
     return this.musicDucked;
   }
 
+  get isMusicRunning() {
+    return this.musicRunning && !!this.musicSource;
+  }
+
   async startAmbience(level = 1) {
     const ctx = await this.ensureContext();
     if (!ctx || this.muted) return;
-    // Exclusive bed: kill Bandit lobby so two tracks never stack.
+
+    const { setActiveMusicBed, getActiveMusicBed } = await import('@/lib/music-bed');
+    setActiveMusicBed('alice');
     try {
       const { getCasinoAudioEngine } = await import('@/lib/casino-audio');
-      getCasinoAudioEngine().stopAmbience();
+      // Music only — lever/reel SFX live on the casino engine.
+      getCasinoAudioEngine().stopMusicOnly();
     } catch {
       /* */
     }
+
     this.level = Math.max(1, Math.min(10, Math.floor(level)));
     this.musicRunning = true;
     this.applyGain();
     await this.startMusicLoop();
+
+    if (getActiveMusicBed() !== 'alice') {
+      this.stopAmbience();
+    }
   }
 
   stopAmbience() {
     this.musicRunning = false;
-    this.stopMusicLoop();
+    this.musicDucked = false;
+    this.musicGeneration += 1;
+    this.killMusicGraph();
   }
 
   private async loadMusicBuffer(): Promise<AudioBuffer | null> {
@@ -176,38 +187,63 @@ export class AliceAudioEngine {
   }
 
   private async startMusicLoop() {
-    if (!this.ctx || !this.musicBus || this.musicSource || this.muted) return;
+    if (!this.ctx || !this.musicBus || this.muted || !this.musicRunning) return;
+
+    const gen = ++this.musicGeneration;
+    this.killMusicGraph();
 
     const buffer = await this.loadMusicBuffer();
-    if (!buffer || !this.ctx || !this.musicBus || this.muted) return;
+    if (
+      gen !== this.musicGeneration ||
+      !buffer ||
+      !this.ctx ||
+      !this.musicBus ||
+      this.muted ||
+      !this.musicRunning
+    ) {
+      return;
+    }
 
     const source = this.ctx.createBufferSource();
     source.buffer = buffer;
     source.loop = true;
-    // Gentle fade-in so Satie doesn’t slam in
     const fade = this.ctx.createGain();
     fade.gain.value = 0;
     source.connect(fade);
     fade.connect(this.musicBus);
     const t = this.ctx.currentTime;
-    fade.gain.linearRampToValueAtTime(1, t + 2.5);
+    fade.gain.linearRampToValueAtTime(1, t + 1.8);
     source.start();
     this.musicSource = source;
   }
 
-  private stopMusicLoop() {
-    if (!this.musicSource) return;
-    try {
-      this.musicSource.stop();
-    } catch {
-      /* already stopped */
+  /**
+   * Disconnect music bus so any orphaned BufferSources die with it,
+   * then rebuild a clean bus for the next loop.
+   */
+  private killMusicGraph() {
+    if (this.musicSource) {
+      try {
+        this.musicSource.stop();
+      } catch {
+        /* already stopped */
+      }
+      try {
+        this.musicSource.disconnect();
+      } catch {
+        /* */
+      }
+      this.musicSource = null;
     }
+    if (!this.ctx || !this.master) return;
     try {
-      this.musicSource.disconnect();
+      this.musicBus?.disconnect();
     } catch {
       /* */
     }
-    this.musicSource = null;
+    this.musicBus = this.ctx.createGain();
+    this.musicBus.connect(this.master);
+    this.applyGain();
   }
 }
 

@@ -60,6 +60,7 @@ export type AliceLevelInfo = {
   loving: boolean;
   entityId: string;
   attackLine: string;
+  failLine: string;
 };
 
 export function getLevelInfo(level: number): AliceLevelInfo {
@@ -74,6 +75,7 @@ export function getLevelInfo(level: number): AliceLevelInfo {
     loving: enc.loving,
     entityId: enc.entityId,
     attackLine: enc.attackLine,
+    failLine: enc.failLine,
   };
 }
 

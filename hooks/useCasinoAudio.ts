@@ -40,6 +40,7 @@ export function useCasinoAudio() {
     }
     const engine = engineRef.current;
     await engine.ensureContext();
+    if (!isAppAudioMuted()) engine.setMuted(false);
     if (!engine.isUnlocked) return false;
     setAudioReady(true);
     if (!isAppAudioMuted()) await engine.startAmbience();
@@ -52,7 +53,9 @@ export function useCasinoAudio() {
     setMuted(nowMuted);
     if (!nowMuted) {
       await engine.ensureContext();
+      engine.setMuted(false);
       setAudioReady(engine.isUnlocked);
+      // Explicit start only — setMuted never auto-restarts music.
       if (engine.isUnlocked) await engine.startAmbience();
     }
     return nowMuted;

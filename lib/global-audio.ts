@@ -7,19 +7,21 @@ import { getAliceAudioEngine } from '@/lib/alice-audio';
 import { stopAliceSpeech } from '@/lib/alice-voice';
 import { getCasinoAudioEngine } from '@/lib/casino-audio';
 import { getCombatAudioEngine } from '@/lib/combat-audio';
+import { getActiveMusicBed, setActiveMusicBed, type MusicBed } from '@/lib/music-bed';
 
-export type MusicBed = 'casino' | 'alice';
+export type { MusicBed };
+export { getActiveMusicBed };
 
-/** Hard-stop every looping music bed + entity speech. */
+/** Hard-stop every looping music bed + entity speech. Keeps SFX engines alive. */
 export function stopAllMusicBeds(): void {
+  setActiveMusicBed('none');
   try {
-    getCasinoAudioEngine().stopAmbience();
+    getCasinoAudioEngine().stopMusicOnly();
   } catch {
     /* */
   }
   try {
     getAliceAudioEngine().stopAmbience();
-    getAliceAudioEngine().setMusicDucked(false);
   } catch {
     /* */
   }
@@ -31,20 +33,21 @@ export function stopAllMusicBeds(): void {
 }
 
 /**
- * Only one music bed may run. Call before starting casino or Alice ambience.
+ * Only one music bed may run. Stops the other bed’s music without killing SFX.
  */
 export function claimMusicBed(bed: MusicBed): void {
+  setActiveMusicBed(bed);
   if (bed === 'casino') {
     try {
       getAliceAudioEngine().stopAmbience();
-      getAliceAudioEngine().setMusicDucked(false);
       stopAliceSpeech();
     } catch {
       /* */
     }
   } else {
     try {
-      getCasinoAudioEngine().stopAmbience();
+      // Music only — Alice lever/reel SFX use the casino engine.
+      getCasinoAudioEngine().stopMusicOnly();
     } catch {
       /* */
     }
@@ -53,6 +56,8 @@ export function claimMusicBed(bed: MusicBed): void {
 
 /** Push mute flag into every engine (does not write localStorage). */
 export function applyMuteToAllEngines(muted: boolean): void {
+  // Stop beds first so setMuted never races with stale loops.
+  if (muted) stopAllMusicBeds();
   try {
     getCasinoAudioEngine().setMuted(muted);
   } catch {
@@ -68,7 +73,6 @@ export function applyMuteToAllEngines(muted: boolean): void {
   } catch {
     /* */
   }
-  if (muted) stopAllMusicBeds();
 }
 
 /** Master mute: persist, sync engines, kill music when off. */

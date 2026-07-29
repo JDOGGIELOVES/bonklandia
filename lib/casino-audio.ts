@@ -18,7 +18,8 @@ export class CasinoAudioEngine {
   private sfxBus: GainNode | null = null;
   private muted = false;
   private musicGain = 0.42;
-  private sfxGain = 0.72;
+  /** Louder than music so lever/reels cut through lobby / Alice beds. */
+  private sfxGain = 1.05;
 
   private musicSource: AudioBufferSourceNode | null = null;
   private musicBuffer: AudioBuffer | null = null;
@@ -26,6 +27,8 @@ export class CasinoAudioEngine {
 
   private reelStopTimers: ReturnType<typeof setTimeout>[] = [];
   private musicRunning = false;
+  /** Bumps on every stop/start so concurrent startMusicLoop races can't leave orphan loops. */
+  private musicGeneration = 0;
   private unlocked = false;
 
   async ensureContext(): Promise<AudioContext | null> {
@@ -69,8 +72,8 @@ export class CasinoAudioEngine {
   setMuted(muted: boolean) {
     this.muted = muted;
     this.applyGain();
-    if (muted) this.stopMusicLoop();
-    else if (this.musicRunning) void this.startMusicLoop();
+    // Mute only silences / stops music. Never auto-restart on unmute (that stacked beds).
+    if (muted) this.stopMusicOnly();
   }
 
   toggleMute() {
@@ -79,34 +82,48 @@ export class CasinoAudioEngine {
   }
 
   private applyGain() {
-    if (!this.master || !this.musicBus || !this.sfxBus) return;
+    if (!this.master || !this.musicBus || !this.sfxBus || !this.ctx) return;
+    const t = this.ctx.currentTime;
     const m = this.muted ? 0 : 1;
-    this.master.gain.setTargetAtTime(m, this.ctx?.currentTime ?? 0, 0.04);
-    this.musicBus.gain.setTargetAtTime(this.musicGain * m, this.ctx?.currentTime ?? 0, 0.04);
-    this.sfxBus.gain.setTargetAtTime(this.sfxGain * m, this.ctx?.currentTime ?? 0, 0.04);
+    // Keep SFX audible under music: master always open when unmuted; music/sfx buses scale separately.
+    this.master.gain.setTargetAtTime(m, t, 0.04);
+    this.musicBus.gain.setTargetAtTime(this.musicGain * m, t, 0.04);
+    this.sfxBus.gain.setTargetAtTime(this.sfxGain * m, t, 0.04);
   }
 
   async startAmbience() {
     const ctx = await this.ensureContext();
     if (!ctx || this.muted) return;
     // Exclusive bed: never layer over Alice Folk Round (or any other trip music).
+    const { setActiveMusicBed, getActiveMusicBed } = await import('@/lib/music-bed');
+    setActiveMusicBed('casino');
     try {
       const { getAliceAudioEngine } = await import('@/lib/alice-audio');
       const { stopAliceSpeech } = await import('@/lib/alice-voice');
       getAliceAudioEngine().stopAmbience();
-      getAliceAudioEngine().setMusicDucked(false);
       stopAliceSpeech();
     } catch {
       /* */
     }
     this.musicRunning = true;
     await this.startMusicLoop();
-    this.playCasinoDoorChime();
+    // Another bed may have claimed while we loaded — drop if we lost exclusivity.
+    if (getActiveMusicBed() !== 'casino') {
+      this.stopMusicOnly();
+      return;
+    }
+    if (this.musicRunning && !this.muted) this.playCasinoDoorChime();
+  }
+
+  /** Stop lobby music only — keeps lever/reel SFX usable (Alice needs this). */
+  stopMusicOnly() {
+    this.musicRunning = false;
+    this.musicGeneration += 1;
+    this.killMusicGraph();
   }
 
   stopAmbience() {
-    this.musicRunning = false;
-    this.stopMusicLoop();
+    this.stopMusicOnly();
     this.stopSpinTicks();
     this.clearReelStopTimers();
   }
@@ -132,7 +149,9 @@ export class CasinoAudioEngine {
    */
   async playLeverPull() {
     const ctx = await this.ensureContext();
-    if (!ctx || !this.sfxBus) return;
+    if (!ctx || !this.sfxBus || this.muted) return;
+    // Re-assert SFX bus gain (Alice can leave music stopped while SFX must stay loud).
+    this.applyGain();
     const t = ctx.currentTime;
     const bus = this.sfxBus;
 
@@ -187,7 +206,9 @@ export class CasinoAudioEngine {
   }
 
   async playSpinSequence(spinDurationMs: number, spinStartDelayMs: number) {
-    await this.ensureContext();
+    const ctx = await this.ensureContext();
+    if (!ctx || this.muted) return;
+    this.applyGain();
 
     this.stopSpinTicks();
     this.clearReelStopTimers();
@@ -219,7 +240,8 @@ export class CasinoAudioEngine {
 
   async playWinResult(winTier: WinTier) {
     const ctx = await this.ensureContext();
-    if (!ctx || !this.sfxBus) return;
+    if (!ctx || !this.sfxBus || this.muted) return;
+    this.applyGain();
     const t = ctx.currentTime;
 
     switch (winTier) {
@@ -271,10 +293,23 @@ export class CasinoAudioEngine {
   }
 
   private async startMusicLoop() {
-    if (!this.ctx || !this.musicBus || this.musicSource || this.muted) return;
+    if (!this.ctx || !this.musicBus || this.muted || !this.musicRunning) return;
+
+    const gen = ++this.musicGeneration;
+    // Tear down any prior loop (including orphaned concurrent starts).
+    this.killMusicGraph();
 
     const buffer = await this.loadMusicBuffer();
-    if (!buffer || !this.ctx || !this.musicBus || this.muted) return;
+    if (
+      gen !== this.musicGeneration ||
+      !buffer ||
+      !this.ctx ||
+      !this.musicBus ||
+      this.muted ||
+      !this.musicRunning
+    ) {
+      return;
+    }
 
     const source = this.ctx.createBufferSource();
     source.buffer = buffer;
@@ -285,15 +320,36 @@ export class CasinoAudioEngine {
   }
 
   private stopMusicLoop() {
-    if (!this.musicSource) return;
+    this.killMusicGraph();
+  }
 
-    try {
-      this.musicSource.stop();
-    } catch {
-      /* already stopped */
+  /**
+   * Hard-kill music: disconnect bus so orphan BufferSources can't keep playing,
+   * then rebuild a clean music bus for the next loop.
+   */
+  private killMusicGraph() {
+    if (this.musicSource) {
+      try {
+        this.musicSource.stop();
+      } catch {
+        /* already stopped */
+      }
+      try {
+        this.musicSource.disconnect();
+      } catch {
+        /* */
+      }
+      this.musicSource = null;
     }
-    this.musicSource.disconnect();
-    this.musicSource = null;
+    if (!this.ctx || !this.master) return;
+    try {
+      this.musicBus?.disconnect();
+    } catch {
+      /* */
+    }
+    this.musicBus = this.ctx.createGain();
+    this.musicBus.connect(this.master);
+    this.applyGain();
   }
 
   private async playReelTick(intervalMs: number) {
