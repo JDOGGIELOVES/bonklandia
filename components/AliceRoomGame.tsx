@@ -586,9 +586,19 @@ export default function AliceRoomGame() {
             </div>
 
             <div className="slot-stage alice-slot-stage">
+              {/* 3D floor stage: machine stands on a ground plane */}
+              <div className="alice-machine-floor" aria-hidden>
+                <div className="alice-machine-floor-grid" />
+                <div className="alice-machine-floor-shadow" />
+              </div>
+
               <div
-                className={`slot-cabinet alice-cabinet ${spinning ? 'slot-cabinet-active' : ''} ${leverPulled ? 'slot-cabinet-pull' : ''}`}
+                className={`slot-cabinet alice-cabinet alice-cabinet-3d ${spinning ? 'slot-cabinet-active' : ''} ${leverPulled ? 'slot-cabinet-pull' : ''} ${canPullPlayer ? 'alice-cabinet-ready' : ''}`}
               >
+                <div className="alice-cabinet-side alice-cabinet-side-left" aria-hidden />
+                <div className="alice-cabinet-side alice-cabinet-side-right" aria-hidden />
+                <div className="alice-cabinet-top-cap" aria-hidden />
+
                 <div className="slot-cabinet-rivet slot-cabinet-rivet-tl" aria-hidden />
                 <div className="slot-cabinet-rivet slot-cabinet-rivet-tr" aria-hidden />
                 <div className="slot-cabinet-rivet slot-cabinet-rivet-bl" aria-hidden />
@@ -623,7 +633,7 @@ export default function AliceRoomGame() {
                   </div>
                 </div>
 
-                <div className="slot-cabinet-face">
+                <div className="slot-cabinet-face alice-cabinet-face">
                   <div className="slot-reels-panel">
                     <div className="slot-reels-panel-header">
                       <span className="slot-panel-badge">
@@ -664,46 +674,64 @@ export default function AliceRoomGame() {
                         </div>
                       </div>
                       <div className="slot-reel-bezel-label">
-                        {phase === 'elf-attack' ||
-                        phase === 'block-spinning' ||
-                        phase === 'block-result'
+                        {phase === 'block-spinning' || phase === 'block-result'
                           ? `SHIELD — 3× ${defenseEntity.label.toUpperCase()}`
                           : 'WIN LINE'}
                       </div>
                     </div>
                   </div>
 
-                  <div className="slot-lever-column">
-                    <div className="slot-lever-housing" aria-hidden>
-                      <div className={`slot-lever-assembly ${leverPulled ? 'slot-lever-pulled' : ''}`}>
-                        <div className="slot-lever-arm">
-                          <div className="slot-lever-ball alice-lever-ball">
-                            <span className="slot-lever-ball-shine" />
-                          </div>
-                          <div className="slot-lever-stick">
-                            <span className="slot-lever-stick-ridge" />
-                          </div>
-                        </div>
-                        <div className="slot-lever-socket">
-                          <span className="slot-lever-socket-bolt" />
-                          <span className="slot-lever-socket-ring" />
-                        </div>
-                      </div>
-                    </div>
+                  {/* Lever IS the control — no separate PULL button */}
+                  <div className="slot-lever-column alice-lever-column">
                     <button
                       type="button"
-                      className={`slot-pull-btn alice-pull-btn ${!canPullPlayer ? 'slot-pull-btn-disabled' : ''}`}
+                      className={`alice-lever-hit ${!canPullPlayer ? 'alice-lever-hit-disabled' : ''} ${leverPulled ? 'alice-lever-hit-pulled' : ''}`}
                       disabled={!canPullPlayer}
                       onClick={() => {
                         if (canPullPlayer) void doPlayerSpin();
                       }}
+                      aria-label={canPullPlayer ? 'Pull the Alice Machine lever' : 'Lever locked'}
                     >
-                      {canPullPlayer ? 'PULL LEVER' : spinning || busy ? '…' : 'WAIT…'}
+                      <div className="slot-lever-housing">
+                        <div className={`slot-lever-assembly ${leverPulled ? 'slot-lever-pulled' : ''}`}>
+                          <div className="slot-lever-arm">
+                            <div className="slot-lever-ball alice-lever-ball">
+                              <span className="slot-lever-ball-shine" />
+                            </div>
+                            <div className="slot-lever-stick">
+                              <span className="slot-lever-stick-ridge" />
+                            </div>
+                          </div>
+                          <div className="slot-lever-socket">
+                            <span className="slot-lever-socket-bolt" />
+                            <span className="slot-lever-socket-ring" />
+                          </div>
+                        </div>
+                      </div>
+                      <span className="alice-lever-hint" aria-hidden>
+                        {canPullPlayer ? '↓ PULL' : spinning || busy ? '…' : 'LOCKED'}
+                      </span>
                     </button>
                   </div>
                 </div>
 
                 {message && <p className="casino-result alice-cabinet-msg">{message}</p>}
+
+                {/* Pedestal / feet — reads as a standing floor machine */}
+                <div className="alice-cabinet-pedestal" aria-hidden>
+                  <div className="alice-cabinet-hopper">
+                    <span className="alice-hopper-label">ALICE OUT</span>
+                    <div className="alice-hopper-tray">
+                      <span className="alice-coin-glint" />
+                      <span className="alice-coin-glint" />
+                      <span className="alice-coin-glint" />
+                    </div>
+                  </div>
+                  <div className="alice-cabinet-feet">
+                    <span className="alice-foot" />
+                    <span className="alice-foot" />
+                  </div>
+                </div>
               </div>
 
               {phase === 'trick-choices' && (

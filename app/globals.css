@@ -6327,8 +6327,8 @@ body {
 }
 
 /*
- * Alice MACHINE = full viewport width. No side columns. No log panel.
- * Overrides .alice-room-content max-width: 920px and .slot-cabinet min(100%, 920px).
+ * Alice MACHINE = full viewport width floor-standing cabinet.
+ * Lever is the control (no separate PULL button).
  */
 .alice-room {
   overflow-x: hidden;
@@ -6340,7 +6340,7 @@ body {
   max-width: 100% !important;
   width: 100% !important;
   margin: 0 !important;
-  padding: 0.35rem 0 1.25rem !important;
+  padding: 0.35rem 0 2.5rem !important;
   box-sizing: border-box;
 }
 .alice-room-playing .alice-header-play {
@@ -6364,22 +6364,255 @@ body {
   box-sizing: border-box;
 }
 .alice-slot-stage {
+  position: relative;
   width: 100% !important;
   max-width: 100% !important;
   min-width: 0;
-  padding: 0 !important;
+  padding: 0 0 2.5rem !important;
   justify-content: stretch !important;
   box-sizing: border-box;
+  perspective: 1200px;
+}
+/* Ground plane under the machine */
+.alice-machine-floor {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  height: 28%;
+  min-height: 120px;
+  pointer-events: none;
+  z-index: 0;
+  overflow: hidden;
+}
+.alice-machine-floor-grid {
+  position: absolute;
+  inset: 0;
+  background:
+    linear-gradient(180deg, transparent 0%, rgba(40, 16, 70, 0.55) 30%, rgba(12, 6, 24, 0.95) 100%),
+    repeating-linear-gradient(
+      90deg,
+      transparent 0,
+      transparent 47px,
+      rgba(192, 132, 252, 0.06) 48px,
+      rgba(192, 132, 252, 0.06) 49px
+    ),
+    repeating-linear-gradient(
+      0deg,
+      transparent 0,
+      transparent 47px,
+      rgba(103, 232, 249, 0.04) 48px,
+      rgba(103, 232, 249, 0.04) 49px
+    );
+  transform: perspective(500px) rotateX(58deg);
+  transform-origin: center bottom;
+  opacity: 0.9;
+}
+.alice-machine-floor-shadow {
+  position: absolute;
+  left: 8%;
+  right: 8%;
+  bottom: 18px;
+  height: 28px;
+  border-radius: 50%;
+  background: radial-gradient(ellipse at center, rgba(0, 0, 0, 0.65), transparent 70%);
+  filter: blur(6px);
+  z-index: 1;
 }
 .alice-room-playing .alice-cabinet.slot-cabinet,
-.alice-cabinet {
-  width: 100% !important;
+.alice-cabinet.alice-cabinet-3d {
+  position: relative;
+  z-index: 2;
+  width: min(100%, 720px) !important;
   max-width: 100% !important;
   min-width: 0 !important;
-  border-radius: 0 !important;
+  margin: 0 auto !important;
+  border-radius: 18px 18px 6px 6px !important;
   box-sizing: border-box;
-  overflow: hidden;
-  transform: none !important;
+  overflow: visible !important;
+  transform: perspective(1100px) rotateX(7deg) translateZ(0) !important;
+  transform-style: preserve-3d;
+  box-shadow:
+    0 0 0 1px rgba(80, 30, 100, 0.8),
+    0 0 0 4px rgba(40, 16, 60, 0.9),
+    0 28px 50px rgba(0, 0, 0, 0.75),
+    0 50px 80px rgba(0, 0, 0, 0.45),
+    inset 0 2px 0 rgba(255, 255, 255, 0.1) !important;
+}
+.alice-cabinet.alice-cabinet-3d.slot-cabinet-pull {
+  transform: perspective(1100px) rotateX(7deg) translateY(4px) !important;
+}
+.alice-cabinet.alice-cabinet-ready {
+  box-shadow:
+    0 0 0 1px rgba(192, 132, 252, 0.7),
+    0 0 0 4px rgba(40, 16, 60, 0.9),
+    0 0 40px rgba(232, 121, 249, 0.25),
+    0 28px 50px rgba(0, 0, 0, 0.75),
+    0 50px 80px rgba(0, 0, 0, 0.45) !important;
+}
+/* Fake 3D side panels */
+.alice-cabinet-side {
+  position: absolute;
+  top: 6%;
+  bottom: 8%;
+  width: 14px;
+  z-index: 0;
+  pointer-events: none;
+}
+.alice-cabinet-side-left {
+  left: -10px;
+  background: linear-gradient(90deg, #0a0414, #2a1040 55%, #1a0a2e);
+  transform: perspective(400px) rotateY(28deg);
+  transform-origin: right center;
+  border-radius: 4px 0 0 4px;
+  box-shadow: inset 2px 0 8px rgba(0, 0, 0, 0.5);
+}
+.alice-cabinet-side-right {
+  right: -10px;
+  background: linear-gradient(270deg, #0a0414, #2a1040 55%, #1a0a2e);
+  transform: perspective(400px) rotateY(-28deg);
+  transform-origin: left center;
+  border-radius: 0 4px 4px 0;
+  box-shadow: inset -2px 0 8px rgba(0, 0, 0, 0.5);
+}
+.alice-cabinet-top-cap {
+  position: absolute;
+  top: -8px;
+  left: 4%;
+  right: 4%;
+  height: 12px;
+  background: linear-gradient(180deg, #5b21b6, #2e1065);
+  border-radius: 6px 6px 0 0;
+  z-index: 3;
+  box-shadow: 0 -2px 8px rgba(0, 0, 0, 0.4);
+}
+.alice-cabinet-face {
+  overflow: visible !important;
+}
+/* Pedestal / feet */
+.alice-cabinet-pedestal {
+  position: relative;
+  z-index: 2;
+  margin-top: -2px;
+  padding: 0.65rem 1rem 0.85rem;
+  background:
+    linear-gradient(180deg, #1a0b2e 0%, #0f0618 40%, #080410 100%);
+  border-top: 2px solid rgba(192, 132, 252, 0.25);
+  border-radius: 0 0 10px 10px;
+  box-shadow: inset 0 8px 16px rgba(0, 0, 0, 0.45);
+}
+.alice-cabinet-hopper {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.25rem;
+  margin-bottom: 0.45rem;
+}
+.alice-hopper-label {
+  font-size: 0.55rem;
+  letter-spacing: 0.2em;
+  color: rgba(196, 181, 253, 0.5);
+  font-family: "Courier New", monospace;
+}
+.alice-hopper-tray {
+  width: min(70%, 220px);
+  height: 22px;
+  border-radius: 0 0 8px 8px;
+  background: linear-gradient(180deg, #0a0610, #1a1028);
+  border: 2px solid rgba(90, 60, 120, 0.6);
+  box-shadow: inset 0 4px 10px rgba(0, 0, 0, 0.7);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.45rem;
+}
+.alice-coin-glint {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background: radial-gradient(circle at 30% 30%, #f0abfc, #a21caf 60%, #4a044e);
+  box-shadow: 0 0 6px rgba(240, 171, 252, 0.5);
+  opacity: 0.75;
+}
+.alice-cabinet-feet {
+  display: flex;
+  justify-content: space-between;
+  padding: 0 8%;
+}
+.alice-foot {
+  width: 48px;
+  height: 10px;
+  border-radius: 3px;
+  background: linear-gradient(180deg, #3b1760, #12061f);
+  box-shadow: 0 4px 0 #05020a, 0 6px 8px rgba(0, 0, 0, 0.5);
+}
+/* Clickable lever (no separate PULL button) */
+.alice-lever-column {
+  background: linear-gradient(90deg, transparent, rgba(20, 8, 40, 0.55) 25%, rgba(30, 12, 50, 0.7)) !important;
+  border-left: 2px solid rgba(167, 139, 250, 0.25) !important;
+  overflow: visible !important;
+  min-width: 120px;
+  padding-bottom: 0.75rem !important;
+}
+.alice-lever-hit {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 0.35rem;
+  width: 100%;
+  min-height: 220px;
+  padding: 0.25rem;
+  margin: 0;
+  border: none;
+  background: transparent;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+  touch-action: manipulation;
+}
+.alice-lever-hit:not(:disabled):hover .alice-lever-ball,
+.alice-lever-hit:not(:disabled):focus-visible .alice-lever-ball {
+  box-shadow:
+    0 4px 0 #6a0810,
+    0 8px 18px rgba(0, 0, 0, 0.55),
+    0 0 28px rgba(255, 100, 140, 0.75),
+    inset 0 -5px 10px rgba(0, 0, 0, 0.35),
+    inset 0 4px 8px rgba(255, 255, 255, 0.25);
+  transform: scale(1.06);
+}
+.alice-lever-hit:not(:disabled):hover .slot-lever-arm {
+  transform: rotate(4deg);
+}
+.alice-lever-hit:not(:disabled):active .slot-lever-arm {
+  transform: rotate(70deg);
+  transition: transform 0.12s ease-out;
+}
+.alice-lever-hit-disabled {
+  cursor: not-allowed;
+  opacity: 0.55;
+}
+.alice-lever-hit-disabled .alice-lever-ball {
+  filter: grayscale(0.35) brightness(0.85);
+}
+.alice-lever-hint {
+  font-size: 0.65rem;
+  font-weight: 800;
+  letter-spacing: 0.18em;
+  color: #f0abfc;
+  text-shadow: 0 0 12px rgba(240, 171, 252, 0.6);
+  animation: alice-lever-pulse 1.4s ease-in-out infinite;
+}
+.alice-lever-hit-disabled .alice-lever-hint {
+  animation: none;
+  color: rgba(196, 181, 253, 0.4);
+  text-shadow: none;
+}
+@keyframes alice-lever-pulse {
+  0%, 100% { opacity: 0.65; transform: translateY(0); }
+  50% { opacity: 1; transform: translateY(2px); }
+}
+.alice-lever-hit .slot-lever-housing {
+  pointer-events: none;
 }
 .alice-cabinet .slot-cabinet-face {
   min-width: 0;
@@ -6740,7 +6973,7 @@ body {
 }
 @media (max-width: 720px) {
   .alice-room-playing .alice-room-content {
-    padding: 0.2rem 0 0.75rem !important;
+    padding: 0.2rem 0 1.5rem !important;
   }
   .alice-trip-strip {
     margin: 0;
@@ -6748,20 +6981,41 @@ body {
     border-left: none;
     border-right: none;
   }
-  .alice-cabinet .slot-cabinet-face {
-    flex-direction: column;
-    padding: 0.45rem;
+  .alice-room-playing .alice-cabinet.slot-cabinet,
+  .alice-cabinet.alice-cabinet-3d {
+    width: 100% !important;
+    border-radius: 12px 12px 4px 4px !important;
+    transform: perspective(900px) rotateX(5deg) !important;
   }
-  .alice-cabinet .slot-lever-column {
-    width: 100%;
-    flex-direction: row;
-    justify-content: center;
-    min-height: 0;
-    padding: 0.25rem 0 0;
+  .alice-cabinet-side {
+    display: none;
   }
-  .alice-cabinet .slot-lever-housing {
-    width: 52px;
-    height: 110px;
+  .alice-cabinet-face {
+    flex-direction: row !important;
+    padding: 0.45rem 0.35rem 0.45rem 0.45rem !important;
+    align-items: stretch;
+  }
+  .alice-lever-column {
+    width: 88px !important;
+    min-width: 88px !important;
+    flex-direction: column !important;
+    padding: 0.25rem 0.2rem !important;
+  }
+  .alice-lever-hit {
+    min-height: 180px;
+  }
+  .alice-lever-hit .slot-lever-housing {
+    width: 64px;
+    height: 160px;
+  }
+  .alice-lever-hit .slot-lever-arm {
+    height: 120px;
+    bottom: 18px;
+  }
+  .alice-lever-hit .slot-lever-ball {
+    width: 36px;
+    height: 36px;
+    margin-left: -18px;
   }
   .alice-cabinet .slot-display-bar {
     flex-wrap: nowrap;
@@ -6781,5 +7035,9 @@ body {
   }
   .alice-cabinet .slot-marquee-title {
     font-size: 1.25rem !important;
+  }
+  .alice-machine-floor {
+    height: 22%;
+    min-height: 80px;
   }
 }
