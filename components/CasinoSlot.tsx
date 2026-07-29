@@ -515,10 +515,10 @@ export default function CasinoSlot({
                 type="button"
                 className="casino-audio-btn"
                 onClick={() => void toggleMute()}
-                aria-label={muted ? 'Unmute casino audio' : 'Mute casino audio'}
-                title={CASINO_AMBIENCE_CREDIT}
+                aria-label={muted ? 'Unmute all music and sound' : 'Mute all music and sound'}
+                title={`${CASINO_AMBIENCE_CREDIT} · Same as MUSIC button (bottom-right)`}
               >
-                {muted ? '🔇 Sound Off' : '🔊 Lobby Lounge'}
+                {muted ? '🔇 Music Off' : '🔊 Music On'}
               </button>
               {!audioReady && (
                 <button

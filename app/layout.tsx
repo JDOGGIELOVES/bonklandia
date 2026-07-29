@@ -4,6 +4,7 @@ import { Analytics } from "@vercel/analytics/next";
 import "@solana/wallet-adapter-react-ui/styles.css";
 import "./globals.css";
 import { WalletProviderLazy } from "@/components/WalletProviderLazy";
+import GlobalMusicToggle from "@/components/GlobalMusicToggle";
 import { BRAND } from "@/lib/brand";
 
 const playfair = Playfair_Display({
@@ -54,6 +55,7 @@ export default function RootLayout({
       <body className={`${playfair.variable} ${cormorant.variable} font-body bg-black text-white min-h-screen antialiased`}>
         <WalletProviderLazy>
           {children}
+          <GlobalMusicToggle />
         </WalletProviderLazy>
         <Analytics />
       </body>

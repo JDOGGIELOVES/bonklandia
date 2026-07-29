@@ -1,11 +1,24 @@
 'use client';
 
-import { useCallback, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { getAbilitySoundType, getCombatAudioEngine } from '@/lib/combat-audio';
+import {
+  applyMuteToAllEngines,
+  isAppAudioMuted,
+  setAppAudioMuted,
+  subscribeAppAudioMuted,
+} from '@/lib/global-audio';
 
 export function useCombatAudio() {
   const engineRef = useRef(getCombatAudioEngine());
   const [muted, setMuted] = useState(false);
+
+  useEffect(() => {
+    const initial = isAppAudioMuted();
+    setMuted(initial);
+    applyMuteToAllEngines(initial);
+    return subscribeAppAudioMuted(setMuted);
+  }, []);
 
   const playAttackWindup = useCallback(async (abilityId: string) => {
     const engine = engineRef.current;
@@ -59,7 +72,7 @@ export function useCombatAudio() {
   }, []);
 
   const toggleMute = useCallback(() => {
-    const nowMuted = engineRef.current.toggleMute();
+    const nowMuted = setAppAudioMuted(!isAppAudioMuted());
     setMuted(nowMuted);
     return nowMuted;
   }, []);

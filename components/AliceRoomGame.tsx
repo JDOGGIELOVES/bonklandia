@@ -485,10 +485,10 @@ export default function AliceRoomGame() {
                 type="button"
                 className="casino-audio-btn"
                 onClick={() => void toggleMute()}
-                aria-label={muted ? 'Unmute Alice Machine audio' : 'Mute Alice Machine audio'}
-                title={ambienceCredit}
+                aria-label={muted ? 'Unmute all music and sound' : 'Mute all music and sound'}
+                title={`${ambienceCredit} · Same as MUSIC button (bottom-right)`}
               >
-                {muted ? '🔇' : '🔊'}
+                {muted ? '🔇 Music Off' : '🔊 Music On'}
               </button>
               {!audioReady && (
                 <button

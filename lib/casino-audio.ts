@@ -89,6 +89,16 @@ export class CasinoAudioEngine {
   async startAmbience() {
     const ctx = await this.ensureContext();
     if (!ctx || this.muted) return;
+    // Exclusive bed: never layer over Alice Folk Round (or any other trip music).
+    try {
+      const { getAliceAudioEngine } = await import('@/lib/alice-audio');
+      const { stopAliceSpeech } = await import('@/lib/alice-voice');
+      getAliceAudioEngine().stopAmbience();
+      getAliceAudioEngine().setMusicDucked(false);
+      stopAliceSpeech();
+    } catch {
+      /* */
+    }
     this.musicRunning = true;
     await this.startMusicLoop();
     this.playCasinoDoorChime();

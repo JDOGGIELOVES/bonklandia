@@ -7084,3 +7084,79 @@ body {
     min-height: 80px;
   }
 }
+
+/* ── Global music dock (every page, same corner) ───────────────── */
+.global-music-dock {
+  position: fixed;
+  z-index: 10050;
+  right: max(0.75rem, env(safe-area-inset-right, 0px));
+  bottom: max(0.85rem, env(safe-area-inset-bottom, 0px));
+  pointer-events: none;
+}
+.global-music-btn {
+  pointer-events: auto;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.45rem;
+  min-height: 48px;
+  padding: 0.55rem 1rem 0.55rem 0.75rem;
+  border-radius: 999px;
+  border: 2px solid rgba(240, 216, 120, 0.75);
+  background: linear-gradient(165deg, rgba(40, 20, 12, 0.96), rgba(12, 6, 10, 0.98));
+  color: #f5e6c8;
+  font-family: var(--font-display), Georgia, serif;
+  font-size: 0.85rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  cursor: pointer;
+  box-shadow:
+    0 0 0 1px rgba(0, 0, 0, 0.6),
+    0 8px 28px rgba(0, 0, 0, 0.55),
+    0 0 24px rgba(212, 175, 55, 0.25);
+  transition: border-color 0.15s, background 0.15s, transform 0.12s, box-shadow 0.15s;
+  -webkit-tap-highlight-color: transparent;
+  touch-action: manipulation;
+}
+.global-music-btn:hover,
+.global-music-btn:focus-visible {
+  border-color: #f0d878;
+  box-shadow:
+    0 0 0 1px rgba(0, 0, 0, 0.6),
+    0 10px 32px rgba(0, 0, 0, 0.6),
+    0 0 32px rgba(240, 216, 120, 0.4);
+  outline: none;
+  transform: translateY(-1px);
+}
+.global-music-btn:active {
+  transform: translateY(1px);
+}
+.global-music-btn-on {
+  border-color: rgba(110, 231, 183, 0.7);
+  box-shadow:
+    0 0 0 1px rgba(0, 0, 0, 0.55),
+    0 8px 28px rgba(0, 0, 0, 0.55),
+    0 0 22px rgba(52, 211, 153, 0.28);
+}
+.global-music-btn-off {
+  border-color: rgba(251, 113, 133, 0.75);
+  color: rgba(254, 205, 211, 0.95);
+  box-shadow:
+    0 0 0 1px rgba(0, 0, 0, 0.55),
+    0 8px 28px rgba(0, 0, 0, 0.55),
+    0 0 20px rgba(244, 63, 94, 0.25);
+}
+.global-music-icon {
+  font-size: 1.25rem;
+  line-height: 1;
+}
+.global-music-label {
+  white-space: nowrap;
+}
+@media (max-width: 420px) {
+  .global-music-btn {
+    min-height: 46px;
+    padding: 0.5rem 0.85rem 0.5rem 0.65rem;
+    font-size: 0.78rem;
+  }
+}

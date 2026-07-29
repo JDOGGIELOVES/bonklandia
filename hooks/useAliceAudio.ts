@@ -9,16 +9,29 @@ import {
 } from '@/lib/casino-audio';
 import { ALICE_AMBIENCE_CREDIT, getAliceAudioEngine } from '@/lib/alice-audio';
 import { speakAliceLine, stopAliceSpeech } from '@/lib/alice-voice';
+import {
+  applyMuteToAllEngines,
+  isAppAudioMuted,
+  setAppAudioMuted,
+  subscribeAppAudioMuted,
+} from '@/lib/global-audio';
 
 /**
  * Alice Room audio: Bandit lever/reel/win SFX + trip ambience + entity VO.
- * Music ducks while entities speak so lines stay clear over the bed.
+ * Mute is app-wide (same as fixed MUSIC button). Music ducks while entities speak.
  */
 export function useAliceAudio(level = 1) {
   const sfxRef = useRef(getCasinoAudioEngine());
   const musicRef = useRef(getAliceAudioEngine());
   const [muted, setMuted] = useState(false);
   const [audioReady, setAudioReady] = useState(false);
+
+  useEffect(() => {
+    const initial = isAppAudioMuted();
+    setMuted(initial);
+    applyMuteToAllEngines(initial);
+    return subscribeAppAudioMuted(setMuted);
+  }, []);
 
   useEffect(() => {
     const sfx = sfxRef.current;
@@ -31,23 +44,24 @@ export function useAliceAudio(level = 1) {
     };
   }, []);
 
-  // Morph trip bed as the player descends.
   useEffect(() => {
     if (!audioReady || muted) return;
     musicRef.current.setLevel(level);
   }, [level, audioReady, muted]);
 
   const unlockAudio = useCallback(async () => {
+    if (isAppAudioMuted()) {
+      applyMuteToAllEngines(true);
+      return false;
+    }
     const sfx = sfxRef.current;
     const music = musicRef.current;
     await sfx.ensureContext();
     await music.ensureContext();
     if (!sfx.isUnlocked && !music.isUnlocked) return false;
     setAudioReady(true);
-    // Stop casino lounge if it was started earlier.
     sfx.stopAmbience();
-    if (!music.isMuted) await music.startAmbience(level);
-    // Warm speech voices after the same user gesture.
+    if (!isAppAudioMuted()) await music.startAmbience(level);
     try {
       window.speechSynthesis?.getVoices();
     } catch {
@@ -63,9 +77,8 @@ export function useAliceAudio(level = 1) {
 
   const speakEntityLine = useCallback(
     (text: string, entityId?: string) => {
-      if (muted || !text.trim()) return;
+      if (muted || isAppAudioMuted() || !text.trim()) return;
       const music = musicRef.current;
-      // Cancel prior line; duck before speak so first syllables aren’t buried.
       stopAliceSpeech();
       music.setMusicDucked(true);
       speakAliceLine(text, {
@@ -80,24 +93,21 @@ export function useAliceAudio(level = 1) {
   );
 
   const toggleMute = useCallback(async () => {
-    const sfx = sfxRef.current;
-    const music = musicRef.current;
-    await sfx.ensureContext();
-    await music.ensureContext();
-    // Keep both engines in sync for mute.
-    const nowMuted = !muted;
-    sfx.setMuted(nowMuted);
-    music.setMuted(nowMuted);
+    const nowMuted = setAppAudioMuted(!isAppAudioMuted());
     setMuted(nowMuted);
-    setAudioReady(sfx.isUnlocked || music.isUnlocked);
     if (nowMuted) {
       stopEntitySpeech();
     } else {
+      const sfx = sfxRef.current;
+      const music = musicRef.current;
+      await sfx.ensureContext();
+      await music.ensureContext();
+      setAudioReady(sfx.isUnlocked || music.isUnlocked);
       sfx.stopAmbience();
-      await music.startAmbience(level);
+      if (sfx.isUnlocked || music.isUnlocked) await music.startAmbience(level);
     }
     return nowMuted;
-  }, [muted, level, stopEntitySpeech]);
+  }, [level, stopEntitySpeech]);
 
   const playLeverPull = useCallback(async () => {
     const sfx = sfxRef.current;

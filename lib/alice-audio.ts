@@ -136,6 +136,13 @@ export class AliceAudioEngine {
   async startAmbience(level = 1) {
     const ctx = await this.ensureContext();
     if (!ctx || this.muted) return;
+    // Exclusive bed: kill Bandit lobby so two tracks never stack.
+    try {
+      const { getCasinoAudioEngine } = await import('@/lib/casino-audio');
+      getCasinoAudioEngine().stopAmbience();
+    } catch {
+      /* */
+    }
     this.level = Math.max(1, Math.min(10, Math.floor(level)));
     this.musicRunning = true;
     this.applyGain();

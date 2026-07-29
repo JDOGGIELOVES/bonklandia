@@ -611,7 +611,7 @@ export default function DepthsGame() {
               onClick={() => toggleMute()}
               aria-pressed={muted}
             >
-              {muted ? '🔇 SFX off' : '🔊 SFX on'}
+              {muted ? '🔇 Music Off' : '🔊 Music On'}
             </button>
             <span className="depths-chip-pill">{chips.toLocaleString()} chips</span>
           </div>
@@ -672,7 +672,7 @@ export default function DepthsGame() {
             onClick={() => toggleMute()}
             aria-pressed={muted}
           >
-            {muted ? '🔇 SFX off' : '🔊 SFX on'}
+            {muted ? '🔇 Music Off' : '🔊 Music On'}
           </button>
           <span className="depths-chip-pill">
             Cleared {chambersCleared} · Bank {chips.toLocaleString()}
