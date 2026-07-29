@@ -6,7 +6,7 @@
  * We convert with black→alpha so they behave like Bonk Fam portraits (RGBA PNG).
  */
 
-export const ALICE_ASSET_VERSION = '2026-07-28a';
+export const ALICE_ASSET_VERSION = '2026-07-28b';
 
 export type AliceSymbolKind = 'elf' | 'entity' | 'guide' | 'wild' | 'loving';
 
@@ -15,8 +15,10 @@ export type AliceSymbol = {
   label: string;
   emoji: string;
   kind: AliceSymbolKind;
-  /** Path under /public */
+  /** Still PNG for reels / poster */
   image: string | null;
+  /** Short Grok loop — lazy-loaded only on choice encounter screen */
+  video: string | null;
   /** Trip level 1–10 (defense needs 3 of this entity). */
   level: number;
 };
@@ -25,9 +27,14 @@ function entityImage(file: string): string {
   return `/assets/alice/entities/${file}?v=${ALICE_ASSET_VERSION}`;
 }
 
+function entityVideo(file: string): string {
+  return `/assets/alice/entities/anim/${file}?v=${ALICE_ASSET_VERSION}`;
+}
+
 /**
  * One hero entity per trip level (order matches design doc).
  * Defense pull: land three of the current level's entity.
+ * Videos match files in public/assets/alice/entities/anim/
  */
 export const LEVEL_ENTITIES: AliceSymbol[] = [
   {
@@ -37,6 +44,7 @@ export const LEVEL_ENTITIES: AliceSymbol[] = [
     emoji: '🧝',
     kind: 'elf',
     image: entityImage('machine-elf.png'),
+    video: entityVideo('machineelf.mp4'),
   },
   {
     level: 2,
@@ -45,6 +53,7 @@ export const LEVEL_ENTITIES: AliceSymbol[] = [
     emoji: '🃏',
     kind: 'entity',
     image: entityImage('jester.png'),
+    video: entityVideo('jester.mp4'),
   },
   {
     level: 3,
@@ -53,6 +62,7 @@ export const LEVEL_ENTITIES: AliceSymbol[] = [
     emoji: '🦗',
     kind: 'entity',
     image: entityImage('mantis.png'),
+    video: entityVideo('mantis.mp4'),
   },
   {
     level: 4,
@@ -61,6 +71,7 @@ export const LEVEL_ENTITIES: AliceSymbol[] = [
     emoji: '👽',
     kind: 'entity',
     image: entityImage('grey.png'),
+    video: entityVideo('greys.mp4'),
   },
   {
     level: 5,
@@ -69,6 +80,7 @@ export const LEVEL_ENTITIES: AliceSymbol[] = [
     emoji: '✨',
     kind: 'loving',
     image: entityImage('light-being.png'),
+    video: entityVideo('lightbeing.mp4'),
   },
   {
     level: 6,
@@ -77,6 +89,7 @@ export const LEVEL_ENTITIES: AliceSymbol[] = [
     emoji: '👑',
     kind: 'loving',
     image: entityImage('goddess.png'),
+    video: entityVideo('goddess.mp4'),
   },
   {
     level: 7,
@@ -85,6 +98,7 @@ export const LEVEL_ENTITIES: AliceSymbol[] = [
     emoji: '🔷',
     kind: 'entity',
     image: entityImage('fractal-being.png'),
+    video: entityVideo('fractal.mp4'),
   },
   {
     level: 8,
@@ -93,6 +107,7 @@ export const LEVEL_ENTITIES: AliceSymbol[] = [
     emoji: '🐍',
     kind: 'entity',
     image: entityImage('serpent.png'),
+    video: entityVideo('serpent.mp4'),
   },
   {
     level: 9,
@@ -101,6 +116,7 @@ export const LEVEL_ENTITIES: AliceSymbol[] = [
     emoji: '🕯️',
     kind: 'loving',
     image: entityImage('ancestor.png'),
+    video: entityVideo('ancestors.mp4'),
   },
   {
     level: 10,
@@ -109,6 +125,7 @@ export const LEVEL_ENTITIES: AliceSymbol[] = [
     emoji: '🌀',
     kind: 'wild',
     image: entityImage('the-other.png'),
+    video: entityVideo('others.mp4'),
   },
 ];
 

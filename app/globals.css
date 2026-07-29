@@ -6571,7 +6571,21 @@ body {
   filter: blur(8px);
   z-index: 0;
 }
-.alice-encounter-portrait {
+.alice-entity-media {
+  position: relative;
+  z-index: 1;
+  width: min(92vw, 420px);
+  max-width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  animation: alice-encounter-rise 0.55s ease-out both;
+}
+.alice-encounter-media {
+  width: min(100vw, 480px);
+}
+.alice-encounter-portrait,
+.alice-entity-poster {
   position: relative;
   z-index: 1;
   width: min(92vw, 420px);
@@ -6579,7 +6593,31 @@ body {
   max-height: min(58vh, 440px);
   object-fit: contain;
   filter: drop-shadow(0 12px 40px rgba(0, 0, 0, 0.75)) drop-shadow(0 0 28px rgba(192, 132, 252, 0.35));
-  animation: alice-encounter-rise 0.55s ease-out both;
+}
+.alice-entity-media .alice-encounter-portrait {
+  width: 100%;
+  max-width: min(92vw, 420px);
+}
+.alice-entity-poster-hidden {
+  opacity: 0;
+  position: absolute;
+  pointer-events: none;
+}
+.alice-encounter-video {
+  position: relative;
+  z-index: 2;
+  width: min(92vw, 420px);
+  max-width: 100%;
+  height: auto;
+  max-height: min(58vh, 440px);
+  object-fit: contain;
+  background: transparent;
+  filter: drop-shadow(0 12px 40px rgba(0, 0, 0, 0.75)) drop-shadow(0 0 28px rgba(192, 132, 252, 0.35));
+  opacity: 0;
+  transition: opacity 0.35s ease;
+}
+.alice-encounter-video-ready {
+  opacity: 1;
 }
 .alice-encounter-emoji {
   position: relative;
@@ -6656,7 +6694,14 @@ body {
   outline: none;
 }
 @media (max-width: 640px) {
-  .alice-encounter-portrait {
+  .alice-encounter-media,
+  .alice-entity-media {
+    width: 100vw;
+    max-width: 100vw;
+  }
+  .alice-encounter-portrait,
+  .alice-entity-poster,
+  .alice-encounter-video {
     width: 100vw;
     max-width: 100vw;
     max-height: min(48vh, 360px);

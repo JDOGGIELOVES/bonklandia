@@ -26,6 +26,7 @@ import {
 } from '@/lib/alice-room/game';
 import { getEntityForLevel } from '@/lib/alice-room/symbols';
 import { ALL_ALICE_SYMBOLS, type AliceSymbol } from '@/lib/alice-room/symbols';
+import AliceEntityPortrait from '@/components/AliceEntityPortrait';
 import { BRAND } from '@/lib/brand';
 import { loadChipLedgerToken, saveChipLedgerToken } from '@/lib/chip-ledger-client';
 import { CASINO_SPIN_DURATION_MS, CASINO_SPIN_START_DELAY_MS } from '@/lib/casino-audio';
@@ -711,21 +712,12 @@ export default function AliceRoomGame() {
                 <section className="alice-encounter" aria-label={`${levelInfo.name} encounter`}>
                   <div className="alice-encounter-stage">
                     <div className="alice-encounter-glow" aria-hidden />
-                    {defenseEntity.image ? (
-                      <Image
-                        src={defenseEntity.image}
-                        alt={defenseEntity.label}
-                        width={720}
-                        height={720}
-                        className="alice-encounter-portrait"
-                        priority
-                        unoptimized
-                      />
-                    ) : (
-                      <span className="alice-encounter-emoji" aria-hidden>
-                        {defenseEntity.emoji}
-                      </span>
-                    )}
+                    <AliceEntityPortrait
+                      entity={defenseEntity}
+                      playVideo
+                      priority
+                      className="alice-encounter-media"
+                    />
                     <div className="alice-encounter-caption">
                       <p className="alice-encounter-layer">
                         Layer {level}/{TOTAL_LEVELS}
