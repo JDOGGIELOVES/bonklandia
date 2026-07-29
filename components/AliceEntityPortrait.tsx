@@ -92,7 +92,7 @@ export default function AliceEntityPortrait({
         <video
           key={entity.video}
           ref={videoRef}
-          className={`alice-encounter-video ${videoReady ? 'alice-encounter-video-ready' : ''}`}
+          className={`alice-encounter-video alice-entity-video-keyblack ${videoReady ? 'alice-encounter-video-ready' : ''}`}
           src={entity.video}
           poster={entity.image ?? undefined}
           muted

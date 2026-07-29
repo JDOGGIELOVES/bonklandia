@@ -1,25 +1,34 @@
 /**
- * Alice Room ambience — free classical from the same family as Bandit music:
+ * Alice Room ambience — free music from the same family as Bandit music:
  * Kevin MacLeod / incompetech.com (Creative Commons BY 3.0).
  *
- * Track: Gymnopedie No. 1 (Erik Satie, arrangement by Kevin MacLeod)
- * Dreamy, sparse piano — fits Wonderland / rabbit-hole better than casino lounge.
- *
+ * Primary: Folk Round — lively tempo / pulse for Machine Elves and deeper layers.
  * Lever/reel SFX still come from CasinoAudioEngine (Bandit).
  */
 
-/** Primary classical bed */
-export const ALICE_AMBIENCE_URL = '/audio/alice/gymnopedie-no1.mp3';
+/** Primary bed — more rhythm than sparse piano */
+export const ALICE_AMBIENCE_URL = '/audio/alice/folk-round.mp3';
 
 /**
  * Attribution (CC BY 3.0) — required when using Kevin MacLeod / incompetech.
- * Gymnopedie No. 1 is Satie’s work in public domain; this recording/arrangement is MacLeod’s.
  */
 export const ALICE_AMBIENCE_CREDIT =
-  'Gymnopedie No. 1 · Erik Satie / Kevin MacLeod (incompetech.com) · CC BY 3.0';
+  'Folk Round · Kevin MacLeod (incompetech.com) · CC BY 3.0';
 
-/** Optional second classical beds for future layer morphing */
+/** Optional beds for future layer morphing / A-B */
 export const ALICE_AMBIENCE_ALTS = {
+  folkRound: {
+    url: '/audio/alice/folk-round.mp3',
+    credit: 'Folk Round · Kevin MacLeod (incompetech.com) · CC BY 3.0',
+  },
+  tellerOfTheTales: {
+    url: '/audio/alice/teller-of-the-tales.mp3',
+    credit: 'Teller of the Tales · Kevin MacLeod (incompetech.com) · CC BY 3.0',
+  },
+  gymnopedieNo1: {
+    url: '/audio/alice/gymnopedie-no1.mp3',
+    credit: 'Gymnopedie No. 1 · Erik Satie / Kevin MacLeod (incompetech.com) · CC BY 3.0',
+  },
   dreamsBecomeReal: {
     url: '/audio/alice/dreams-become-real.mp3',
     credit: 'Dreams Become Real · Kevin MacLeod (incompetech.com) · CC BY 3.0',

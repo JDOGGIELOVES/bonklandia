@@ -6365,13 +6365,27 @@ body {
 }
 .alice-slot-stage {
   position: relative;
+  /* Base .slot-stage is row flex — that put the machine BESIDE choices and covered them */
+  flex-direction: column !important;
+  align-items: stretch !important;
   width: 100% !important;
   max-width: 100% !important;
   min-width: 0;
   padding: 0 0 2.5rem !important;
-  justify-content: stretch !important;
+  justify-content: flex-start !important;
   box-sizing: border-box;
   perspective: 1200px;
+}
+/* Choice screen: hide cabinet so reel "boxes" cannot cover doors */
+.alice-slot-stage-encounter {
+  perspective: none;
+}
+.alice-slot-stage-encounter .alice-machine-floor {
+  display: none;
+}
+.alice-slot-stage-encounter .alice-cabinet[hidden],
+.alice-slot-stage-encounter .alice-cabinet[aria-hidden='true'] {
+  display: none !important;
 }
 /* Ground plane under the machine */
 .alice-machine-floor {
@@ -6774,15 +6788,23 @@ body {
   width: auto;
 }
 
-/* Dramatic entity encounter + choices (full-width under machine) */
+/* Dramatic entity encounter + choices (full-width; machine hidden during choices) */
 .alice-encounter {
+  position: relative;
+  z-index: 40;
   width: 100%;
+  max-width: 100%;
   margin: 0;
-  padding: 0 0 1rem;
+  padding: 0.5rem 0 1.25rem;
   box-sizing: border-box;
+  flex: 1 1 auto;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
   background:
     radial-gradient(ellipse 90% 55% at 50% 18%, rgba(168, 85, 247, 0.28), transparent 55%),
-    linear-gradient(180deg, rgba(12, 4, 24, 0.2) 0%, rgba(8, 2, 16, 0.95) 40%, #05010c 100%);
+    linear-gradient(180deg, rgba(12, 4, 24, 0.55) 0%, rgba(8, 2, 16, 0.97) 40%, #05010c 100%);
 }
 .alice-encounter-stage {
   position: relative;
@@ -6790,9 +6812,11 @@ body {
   flex-direction: column;
   align-items: center;
   width: 100%;
-  padding: 0.75rem 0.5rem 0.5rem;
+  max-width: 100%;
+  padding: 0.75rem 0.75rem 0.5rem;
   box-sizing: border-box;
-  overflow: hidden;
+  overflow: visible;
+  flex-shrink: 0;
 }
 .alice-encounter-glow {
   position: absolute;
@@ -6807,29 +6831,30 @@ body {
 .alice-entity-media {
   position: relative;
   z-index: 1;
-  width: min(92vw, 420px);
+  width: min(92%, 420px);
   max-width: 100%;
   display: flex;
   align-items: center;
   justify-content: center;
   animation: alice-encounter-rise 0.55s ease-out both;
+  /* Glow lives on wrapper so video can use mix-blend without filter fighting it */
+  filter: drop-shadow(0 12px 40px rgba(0, 0, 0, 0.55)) drop-shadow(0 0 28px rgba(192, 132, 252, 0.35));
 }
 .alice-encounter-media {
-  width: min(100vw, 480px);
+  width: min(100%, 480px);
 }
 .alice-encounter-portrait,
 .alice-entity-poster {
   position: relative;
   z-index: 1;
-  width: min(92vw, 420px);
+  width: min(92%, 420px);
   height: auto;
-  max-height: min(58vh, 440px);
+  max-height: min(42vh, 360px);
   object-fit: contain;
-  filter: drop-shadow(0 12px 40px rgba(0, 0, 0, 0.75)) drop-shadow(0 0 28px rgba(192, 132, 252, 0.35));
 }
 .alice-entity-media .alice-encounter-portrait {
   width: 100%;
-  max-width: min(92vw, 420px);
+  max-width: min(92%, 420px);
 }
 .alice-entity-poster-hidden {
   opacity: 0;
@@ -6839,18 +6864,24 @@ body {
 .alice-encounter-video {
   position: relative;
   z-index: 2;
-  width: min(92vw, 420px);
+  width: min(92%, 420px);
   max-width: 100%;
   height: auto;
-  max-height: min(58vh, 440px);
+  max-height: min(42vh, 360px);
   object-fit: contain;
   background: transparent;
-  filter: drop-shadow(0 12px 40px rgba(0, 0, 0, 0.75)) drop-shadow(0 0 28px rgba(192, 132, 252, 0.35));
   opacity: 0;
   transition: opacity 0.35s ease;
 }
 .alice-encounter-video-ready {
   opacity: 1;
+}
+/*
+ * Entity loops ship with solid black backgrounds (not true alpha).
+ * screen blend keys pure black out against the dark purple encounter stage.
+ */
+.alice-encounter-video.alice-entity-video-keyblack.alice-encounter-video-ready {
+  mix-blend-mode: screen;
 }
 .alice-encounter-emoji {
   position: relative;
@@ -6908,17 +6939,29 @@ body {
   color: rgba(196, 181, 253, 0.75);
 }
 .alice-encounter-choices {
+  position: relative;
+  z-index: 50;
   width: 100%;
   max-width: 640px;
   margin: 0.85rem auto 0;
-  padding: 0 0.5rem;
+  padding: 0 0.75rem;
   box-sizing: border-box;
+  flex-shrink: 0;
+  /* Ensure doors never sit under entity/media */
+  isolation: isolate;
 }
 .alice-encounter .alice-trick-card {
-  background: rgba(30, 10, 48, 0.92);
+  position: relative;
+  z-index: 1;
+  background: rgba(30, 10, 48, 0.96);
   border: 1px solid rgba(232, 121, 249, 0.4);
   text-align: left;
   padding: 0.85rem 1rem;
+  width: 100%;
+  min-width: 0;
+  box-sizing: border-box;
+  overflow-wrap: break-word;
+  word-break: break-word;
 }
 .alice-encounter .alice-trick-card:hover,
 .alice-encounter .alice-trick-card:focus-visible {
@@ -6929,21 +6972,21 @@ body {
 @media (max-width: 640px) {
   .alice-encounter-media,
   .alice-entity-media {
-    width: 100vw;
-    max-width: 100vw;
+    width: 100%;
+    max-width: 100%;
   }
   .alice-encounter-portrait,
   .alice-entity-poster,
   .alice-encounter-video {
-    width: 100vw;
-    max-width: 100vw;
-    max-height: min(48vh, 360px);
+    width: 100%;
+    max-width: 100%;
+    max-height: min(36vh, 280px);
   }
   .alice-encounter-caption {
     padding: 0 0.65rem;
   }
   .alice-encounter-choices {
-    padding: 0 0.4rem;
+    padding: 0 0.55rem;
   }
   .alice-encounter .alice-trick-grid {
     grid-template-columns: 1fr;

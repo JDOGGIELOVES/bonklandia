@@ -585,7 +585,9 @@ export default function AliceRoomGame() {
               </div>
             </div>
 
-            <div className="slot-stage alice-slot-stage">
+            <div
+              className={`slot-stage alice-slot-stage ${phase === 'trick-choices' ? 'alice-slot-stage-encounter' : ''}`}
+            >
               {/* 3D floor stage: machine stands on a ground plane */}
               <div className="alice-machine-floor" aria-hidden>
                 <div className="alice-machine-floor-grid" />
@@ -594,6 +596,8 @@ export default function AliceRoomGame() {
 
               <div
                 className={`slot-cabinet alice-cabinet alice-cabinet-3d ${spinning ? 'slot-cabinet-active' : ''} ${leverPulled ? 'slot-cabinet-pull' : ''} ${canPullPlayer ? 'alice-cabinet-ready' : ''}`}
+                hidden={phase === 'trick-choices'}
+                aria-hidden={phase === 'trick-choices'}
               >
                 <div className="alice-cabinet-side alice-cabinet-side-left" aria-hidden />
                 <div className="alice-cabinet-side alice-cabinet-side-right" aria-hidden />
