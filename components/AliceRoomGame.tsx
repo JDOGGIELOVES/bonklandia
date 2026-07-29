@@ -256,12 +256,80 @@ export default function AliceRoomGame() {
     return result;
   };
 
+  /** Seamless: after shield success or a choice, go straight to next layer’s prize pull. */
+  const goToNextLayer = useCallback(
+    async (fromLevel: number) => {
+      setMelt(m => Math.min(10, m + 1));
+      setChoices([]);
+      setJustLanded(false);
+
+      if (fromLevel >= TOTAL_LEVELS) {
+        setPhase('victory');
+        setMessage('Through the layers. Bank your final tally when ready.');
+        pushLog('Boss cleared. Bank the final tally with your wallet.');
+        setBusy(false);
+        return;
+      }
+
+      const nextLevel = fromLevel + 1;
+      const next = getLevelInfo(nextLevel);
+      setLevel(nextLevel);
+      setMessage(`Deeper… ${next.name}. Pull when ready.`);
+      pushLog(`Layer cleared → ${next.name}.`);
+      setResults(null);
+      // Brief beat so the strip/entity updates, then unlock the next prize pull.
+      await sleep(900);
+      setPhase('player-spin');
+      setBusy(false);
+    },
+    [pushLog],
+  );
+
+  const runDefenseSpin = useCallback(
+    async (forLevel: number) => {
+      const info = getLevelInfo(forLevel);
+      const entity = getEntityForLevel(forLevel);
+      setPhase('block-spinning');
+      setMessage(`${info.attackLine} — shielding…`);
+      pushLog(`── ${info.name} ── Defense: three ${entity.label}s.`);
+
+      const result = await runReelSpin(() => {
+        const r = spinBlockReels(forLevel);
+        return { reels: r.reels, message: r.message, blocked: r.blocked };
+      });
+      pushLog(result.message);
+
+      if (result.blocked) {
+        void playWinResult('fam-any');
+        setTripKill(s => resetTripKillStreak(s));
+        setMessage(result.message);
+        setPhase('block-result');
+        await sleep(1100);
+        await goToNextLayer(forLevel);
+        return;
+      }
+
+      void playWinResult('none');
+      const doors = buildTrickChoices(forLevel, runSeed, doubleUsed);
+      setChoices(doors);
+      setPhase('trick-choices');
+      setMessage(
+        info.loving
+          ? 'The presence offers paths…'
+          : 'Shield failed — choose a path.',
+      );
+      setBusy(false);
+    },
+    [runReelSpin, playWinResult, pushLog, runSeed, doubleUsed, goToNextLayer],
+  );
+
   const doPlayerSpin = async () => {
     if (busy || spinning || phase !== 'player-spin') return;
     setBusy(true);
     setPhase('spinning');
+    const forLevel = level;
     const result = await runReelSpin(() => {
-      const r = spinPlayerReels(level);
+      const r = spinPlayerReels(forLevel);
       return { reels: r.reels, message: r.message, aliceCoins: r.aliceCoins };
     });
     if (result.aliceCoins) {
@@ -271,64 +339,16 @@ export default function AliceRoomGame() {
     } else {
       void playWinResult('none');
     }
+    // Auto-chain into defense — no "Face entity" click.
     setPhase('player-result');
-    setBusy(false);
-  };
-
-  const beginEncounter = () => {
-    if (phase !== 'player-result') return;
-    setPhase('elf-attack');
-    setMessage(levelInfo.attackLine);
-    pushLog(`── ${levelInfo.name} ── Defense: three ${defenseEntity.label}s.`);
-  };
-
-  const doBlockSpin = async () => {
-    if (busy || spinning || phase !== 'elf-attack') return;
-    setBusy(true);
-    setPhase('block-spinning');
-    const result = await runReelSpin(() => {
-      const r = spinBlockReels(level);
-      return { reels: r.reels, message: r.message, blocked: r.blocked };
-    });
-    pushLog(result.message);
-
-    if (result.blocked) {
-      void playWinResult('fam-any');
-      setTripKill(s => resetTripKillStreak(s));
-      setPhase('block-result');
-      setBusy(false);
-      return;
-    }
-
-    void playWinResult('none');
-    const doors = buildTrickChoices(level, runSeed, doubleUsed);
-    setChoices(doors);
-    setPhase('trick-choices');
-    pushLog(
-      levelInfo.loving
-        ? 'Loving presence — losses capped at 50%. A rare double door may appear.'
-        : 'Four paths. One safe. Labels mislead.',
-    );
-    setBusy(false);
-  };
-
-  const advanceAfterDefense = () => {
-    setMelt(m => Math.min(10, m + 1));
-    if (level >= TOTAL_LEVELS) {
-      setPhase('victory');
-      setMessage('Through the layers. Final Alice Coins are the only cashable tally.');
-      pushLog('Boss cleared. Bank the final tally with your wallet.');
-      return;
-    }
-    setLevel(l => l + 1);
-    setPhase('level-clear');
-    const next = getLevelInfo(level + 1);
-    setMessage(`Deeper… ${next.depthLabel}: ${next.name}`);
-    pushLog(`Layer cleared. Descending to ${next.name}.`);
+    setMessage(result.message);
+    await sleep(1000);
+    await runDefenseSpin(forLevel);
   };
 
   const onPickTrick = (choice: TrickChoice) => {
-    if (phase !== 'trick-choices') return;
+    if (phase !== 'trick-choices' || busy) return;
+    setBusy(true);
 
     const { state: nextKill, result: killResult } = evaluateTripKill(tripKill, choice);
     setTripKill(nextKill);
@@ -339,11 +359,11 @@ export default function AliceRoomGame() {
       setPhase('defeat');
       setMessage(killResult.message);
       pushLog(killResult.message);
+      setBusy(false);
       return;
     }
     if (killResult.warn && killResult.message) {
       pushLog(killResult.message);
-      setMessage(killResult.message);
     }
 
     const applied = applyChoice(aliceCoins, choice);
@@ -361,14 +381,12 @@ export default function AliceRoomGame() {
     }
     setMessage(`${choice.label}: ${applied.flavor}`);
     setChoices([]);
-    advanceAfterDefense();
-  };
-
-  const continueToNextLevel = () => {
-    setPhase('player-spin');
-    setMessage(`Layer ${level} — ${getLevelInfo(level).name}. Pull for Alice Coins.`);
-    setResults(null);
-    setJustLanded(false);
+    setPhase('block-result');
+    // Auto-descend — no "next level" button.
+    void (async () => {
+      await sleep(900);
+      await goToNextLayer(level);
+    })();
   };
 
   const bankFinalTally = async () => {
@@ -418,7 +436,6 @@ export default function AliceRoomGame() {
   };
 
   const canPullPlayer = phase === 'player-spin' && !busy && !spinning;
-  const canPullBlock = phase === 'elf-attack' && !busy && !spinning;
   const statusLed =
     spinning || phase === 'spinning' || phase === 'block-spinning'
       ? 'SPINNING'
@@ -428,8 +445,8 @@ export default function AliceRoomGame() {
           ? 'CLEARED'
           : phase === 'defeat'
             ? 'EJECTED'
-            : phase === 'elf-attack' || phase === 'block-result'
-              ? 'DEFEND'
+            : phase === 'block-result' || phase === 'player-result' || phase === 'level-clear'
+              ? '…'
               : phase === 'intro'
                 ? 'READY'
                 : 'PULL';
@@ -504,15 +521,15 @@ export default function AliceRoomGame() {
                 Fractal → Serpent → Ancestors → <strong>The Other</strong> (boss).
               </li>
               <li>
-                Each layer: <strong>pull to win</strong> Alice Coins (dream-wealth), then face the being.
+                Each layer: <strong>one pull</strong> for Alice Coins — defense runs automatically after.
               </li>
               <li>
-                <strong>Defense pull</strong> — land <strong>three of that level’s entity</strong> to keep
-                everything.
+                <strong>Auto shield spin</strong> — need <strong>three of that level’s entity</strong> or choose a
+                path.
               </li>
               <li>
-                Fail shield → <strong>4 strategy doors</strong> (5 on loving floors, with a rare{' '}
-                <strong>double</strong>). Options rotate each run.
+                Fail shield → <strong>strategy doors</strong> (loving floors may offer a <strong>double</strong>).
+                Then you drop straight into the next layer.
               </li>
               <li>
                 <strong>Soft anti-rush</strong> — only ejects if you pick the <em>same harsh door type</em>{' '}
@@ -675,37 +692,18 @@ export default function AliceRoomGame() {
                     </div>
                     <button
                       type="button"
-                      className={`slot-pull-btn alice-pull-btn ${!canPullPlayer && !canPullBlock ? 'slot-pull-btn-disabled' : ''}`}
-                      disabled={!canPullPlayer && !canPullBlock}
+                      className={`slot-pull-btn alice-pull-btn ${!canPullPlayer ? 'slot-pull-btn-disabled' : ''}`}
+                      disabled={!canPullPlayer}
                       onClick={() => {
                         if (canPullPlayer) void doPlayerSpin();
-                        else if (canPullBlock) void doBlockSpin();
                       }}
                     >
-                      {canPullBlock ? 'DEFENSE PULL' : canPullPlayer ? 'PULL LEVER' : 'WAIT…'}
+                      {canPullPlayer ? 'PULL LEVER' : spinning || busy ? '…' : 'WAIT…'}
                     </button>
                   </div>
                 </div>
 
                 {message && <p className="casino-result alice-cabinet-msg">{message}</p>}
-              </div>
-
-              <div className="alice-machine-actions">
-                {phase === 'player-result' && (
-                  <button type="button" className="alice-btn alice-btn-danger" onClick={beginEncounter}>
-                    Face {levelInfo.name} →
-                  </button>
-                )}
-                {phase === 'block-result' && (
-                  <button type="button" className="alice-btn alice-btn-primary" onClick={advanceAfterDefense}>
-                    {level >= BOSS_LEVEL ? 'Exit the voyage' : 'Descend deeper →'}
-                  </button>
-                )}
-                {phase === 'level-clear' && (
-                  <button type="button" className="alice-btn alice-btn-primary" onClick={continueToNextLevel}>
-                    Enter layer {level}: {getLevelInfo(level).name}
-                  </button>
-                )}
               </div>
 
               {phase === 'trick-choices' && (
