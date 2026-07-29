@@ -5926,7 +5926,7 @@ body {
   color: #f5f3ff;
 }
 .alice-coins { color: #f0abfc; }
-.alice-wallet :global(button),
+/* Plain CSS (not CSS modules) — no :global() pseudo */
 .alice-wallet button {
   font-size: 0.8rem !important;
   height: auto !important;
