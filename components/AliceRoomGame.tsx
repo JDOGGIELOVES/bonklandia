@@ -142,6 +142,8 @@ export default function AliceRoomGame() {
     playLeverPull,
     playSpinSequence,
     playWinResult,
+    speakEntityLine,
+    stopEntitySpeech,
     ambienceCredit,
   } = useAliceAudio(level);
   const [aliceCoins, setAliceCoins] = useState(0);
@@ -259,6 +261,7 @@ export default function AliceRoomGame() {
   /** Seamless: after shield success or a choice, go straight to next layer’s prize pull. */
   const goToNextLayer = useCallback(
     async (fromLevel: number) => {
+      stopEntitySpeech();
       setMelt(m => Math.min(10, m + 1));
       setChoices([]);
       setJustLanded(false);
@@ -282,7 +285,7 @@ export default function AliceRoomGame() {
       setPhase('player-spin');
       setBusy(false);
     },
-    [pushLog],
+    [pushLog, stopEntitySpeech],
   );
 
   const runDefenseSpin = useCallback(
@@ -292,6 +295,8 @@ export default function AliceRoomGame() {
       setPhase('block-spinning');
       setMessage(`${info.attackLine} — shielding…`);
       pushLog(`── ${info.name} ── Defense: three ${entity.label}s.`);
+      // Entity speaks over ducked music so the line is clear.
+      speakEntityLine(info.attackLine, entity.id);
 
       const result = await runReelSpin(() => {
         const r = spinBlockReels(forLevel);
@@ -318,9 +323,11 @@ export default function AliceRoomGame() {
           ? 'The presence offers paths…'
           : 'Shield failed — choose a path.',
       );
+      // Full presence line again on the choice screen (Jester, Elves, etc.).
+      speakEntityLine(`${info.attackLine} ${info.failLine}`, entity.id);
       setBusy(false);
     },
-    [runReelSpin, playWinResult, pushLog, runSeed, doubleUsed, goToNextLayer],
+    [runReelSpin, playWinResult, pushLog, runSeed, doubleUsed, goToNextLayer, speakEntityLine],
   );
 
   const doPlayerSpin = async () => {
@@ -349,6 +356,7 @@ export default function AliceRoomGame() {
   const onPickTrick = (choice: TrickChoice) => {
     if (phase !== 'trick-choices' || busy) return;
     setBusy(true);
+    stopEntitySpeech();
 
     const { state: nextKill, result: killResult } = evaluateTripKill(tripKill, choice);
     setTripKill(nextKill);

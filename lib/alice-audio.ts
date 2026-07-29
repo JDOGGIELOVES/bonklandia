@@ -53,7 +53,11 @@ export class AliceAudioEngine {
   private musicBuffer: AudioBuffer | null = null;
   private musicLoadPromise: Promise<AudioBuffer | null> | null = null;
   private musicRunning = false;
-  private musicGain = 0.4;
+  /** Bed level when no dialogue is speaking (Folk Round is denser than piano). */
+  private musicGain = 0.3;
+  /** Bed level while entity VO is speaking so lines stay intelligible. */
+  private musicDuckGain = 0.1;
+  private musicDucked = false;
   private level = 1;
 
   async ensureContext(): Promise<AudioContext | null> {
@@ -107,14 +111,26 @@ export class AliceAudioEngine {
     const m = this.muted ? 0 : 1;
     // Slightly lower on late trip layers for intimacy / void feel
     const depth = 1 - Math.min(0.18, Math.max(0, this.level - 1) * 0.015);
+    const bed = this.musicDucked ? this.musicDuckGain : this.musicGain;
     this.master.gain.setTargetAtTime(m, t, 0.05);
-    this.musicBus.gain.setTargetAtTime(this.musicGain * m * depth, t, 0.12);
+    // Faster ramp when ducking for dialogue so VO isn’t buried mid-sentence
+    this.musicBus.gain.setTargetAtTime(bed * m * depth, t, this.musicDucked ? 0.06 : 0.14);
   }
 
-  /** Soft volume morph only — classical track stays the same bed. */
+  /** Soft volume morph only — same track, depth fade. */
   setLevel(level: number) {
     this.level = Math.max(1, Math.min(10, Math.floor(level)));
     this.applyGain();
+  }
+
+  /** Drop music under spoken entity lines; restore when dialogue ends. */
+  setMusicDucked(ducked: boolean) {
+    this.musicDucked = ducked;
+    this.applyGain();
+  }
+
+  get isMusicDucked() {
+    return this.musicDucked;
   }
 
   async startAmbience(level = 1) {
