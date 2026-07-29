@@ -1068,7 +1068,7 @@ export default function Home() {
             onClick={() => toggleCombatMute()}
             className="text-base underline text-[#d4af37]/60 hover:text-[#d4af37]"
           >
-            {combatMuted ? 'Sound Off' : 'Sound On'}
+            {combatMuted ? 'Music Off' : 'Music On'}
           </button>
         </div>
 
