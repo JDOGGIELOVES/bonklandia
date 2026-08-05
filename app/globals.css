@@ -7449,3 +7449,99 @@ body {
 .cashier-content {
   padding-bottom: max(6rem, calc(5rem + env(safe-area-inset-bottom, 0px)));
 }
+.cashier-quota {
+  margin-top: 0.85rem;
+  padding: 0.75rem 0.9rem;
+  border-radius: 0.65rem;
+  border: 1px solid rgba(212, 175, 55, 0.35);
+  background: rgba(20, 12, 8, 0.55);
+}
+.cashier-quota-title {
+  margin: 0 0 0.4rem;
+  font-size: 0.78rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: #f0d878;
+  font-weight: 700;
+}
+.cashier-quota-list {
+  margin: 0;
+  padding: 0 0 0 1.1rem;
+  font-size: 0.86rem;
+  line-height: 1.45;
+  color: rgba(245, 230, 200, 0.88);
+}
+.cashier-quota-note {
+  list-style: none;
+  margin-left: -1.1rem;
+  margin-top: 0.35rem;
+  font-size: 0.75rem;
+  color: rgba(245, 230, 200, 0.55);
+}
+.alice-stats-card {
+  margin: 0 0 1rem;
+  padding: 0.85rem 1rem;
+  border-radius: 0.85rem;
+  border: 1px solid rgba(192, 132, 252, 0.35);
+  background: rgba(24, 10, 45, 0.75);
+}
+.alice-stats-title {
+  margin: 0 0 0.55rem;
+  font-size: 0.72rem;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: #a78bfa;
+  font-weight: 700;
+}
+.alice-stats-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.55rem 0.75rem;
+}
+.alice-stats-label {
+  display: block;
+  font-size: 0.65rem;
+  color: rgba(196, 181, 253, 0.7);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+.alice-stats-value {
+  display: block;
+  font-size: 0.95rem;
+  font-weight: 800;
+  color: #f5d0fe;
+}
+.alice-run-recap {
+  margin: 0 auto 1rem;
+  max-width: 28rem;
+  padding: 0.85rem 1rem;
+  border-radius: 0.85rem;
+  border: 1px solid rgba(103, 232, 249, 0.35);
+  background: rgba(12, 30, 48, 0.45);
+  text-align: left;
+}
+.alice-run-recap-title {
+  margin: 0 0 0.45rem;
+  font-size: 0.72rem;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: #67e8f9;
+  font-weight: 700;
+  text-align: center;
+}
+.alice-run-recap-list {
+  margin: 0;
+  padding: 0 0 0 1.1rem;
+  font-size: 0.9rem;
+  line-height: 1.5;
+  color: rgba(233, 213, 255, 0.9);
+}
+.alice-run-recap-best {
+  margin-top: 0.25rem;
+  color: #fde68a;
+}
+.alice-run-recap-best-solo {
+  margin: 0.75rem 0;
+  font-size: 0.88rem;
+  color: #fde68a;
+}

@@ -31,6 +31,13 @@ import {
   dismissAliceCoach,
   isAliceCoachDismissed,
 } from '@/lib/alice-coach';
+import {
+  loadAliceStats,
+  noteAliceBanked,
+  noteAliceDiveStarted,
+  noteAliceVoyageEnd,
+  type AliceLocalStats,
+} from '@/lib/alice-stats';
 import { loadChipLedgerToken, saveChipLedgerToken } from '@/lib/chip-ledger-client';
 import { CASINO_SPIN_DURATION_MS, CASINO_SPIN_START_DELAY_MS } from '@/lib/casino-audio';
 import { useAliceAudio } from '@/hooks/useAliceAudio';
@@ -183,6 +190,8 @@ export default function AliceRoomGame() {
   } | null>(null);
   /** Level id whose attack line was already spoken this shield cycle. */
   const spokeAttackForLevel = useRef<number | null>(null);
+  const voyageRecorded = useRef(false);
+  const [localStats, setLocalStats] = useState<AliceLocalStats | null>(null);
 
   const levelInfo = getLevelInfo(level);
   const defenseEntity = getEntityForLevel(level);
@@ -193,6 +202,7 @@ export default function AliceRoomGame() {
 
   useEffect(() => {
     setShowCoach(!isAliceCoachDismissed());
+    setLocalStats(loadAliceStats());
   }, []);
 
   const pushLog = useCallback((text: string) => {
@@ -225,7 +235,8 @@ export default function AliceRoomGame() {
     setDoubleUsed(false);
     setTripKill(emptyTripKillState());
     setMelt(0);
-    // User gesture — unlock Bandit-style audio (lever, reels, ambience).
+    voyageRecorded.current = false;
+    // User gesture — unlock Bandit-style audio (lever, reels, ambience). Music loads only now.
     void unlockAudio();
     try {
       const wallet = publicKey?.toBase58() ?? null;
@@ -252,6 +263,7 @@ export default function AliceRoomGame() {
       setResults(null);
       setChoices([]);
       setLog([]);
+      setLocalStats(noteAliceDiveStarted());
       setPhase('player-spin');
       setMessage('Layer 1 — pull the Alice Machine. Dream-wealth only until the end.');
       pushLog('Eat the Mushroom. Ten layers. Reality softens.');
@@ -261,6 +273,15 @@ export default function AliceRoomGame() {
     }
     setBusy(false);
   };
+
+  const markVoyageEnd = useCallback(
+    (opts: { aliceCoins: number; layersCleared: number }) => {
+      if (voyageRecorded.current) return;
+      voyageRecorded.current = true;
+      setLocalStats(noteAliceVoyageEnd(opts));
+    },
+    [],
+  );
 
   const runReelSpin = async (
     getResult: () => {
@@ -298,7 +319,7 @@ export default function AliceRoomGame() {
 
   /** Seamless: after shield success or a choice, go straight to next layer’s prize pull. */
   const goToNextLayer = useCallback(
-    async (fromLevel: number) => {
+    async (fromLevel: number, coinsAtEnd?: number) => {
       stopEntitySpeech();
       setMelt(m => Math.min(10, m + 1));
       setChoices([]);
@@ -308,6 +329,10 @@ export default function AliceRoomGame() {
         setPhase('victory');
         setMessage('Through the layers. Bank your final tally when ready.');
         pushLog('Boss cleared. Bank the final tally with your wallet.');
+        markVoyageEnd({
+          aliceCoins: typeof coinsAtEnd === 'number' ? coinsAtEnd : aliceCoins,
+          layersCleared: TOTAL_LEVELS,
+        });
         setBusy(false);
         return;
       }
@@ -323,7 +348,7 @@ export default function AliceRoomGame() {
       setPhase('player-spin');
       setBusy(false);
     },
-    [pushLog, stopEntitySpeech],
+    [pushLog, stopEntitySpeech, markVoyageEnd, aliceCoins],
   );
 
   const runDefenseSpin = useCallback(
@@ -438,6 +463,7 @@ export default function AliceRoomGame() {
       setPhase('defeat');
       setMessage(killResult.message);
       pushLog(killResult.message);
+      markVoyageEnd({ aliceCoins: 0, layersCleared: Math.max(0, level - 1) });
       setBusy(false);
       return;
     }
@@ -467,7 +493,7 @@ export default function AliceRoomGame() {
     // Auto-descend — no "next level" button.
     void (async () => {
       await sleep(900);
-      await goToNextLayer(level);
+      await goToNextLayer(level, applied.nextCoins);
     })();
   };
 
@@ -508,9 +534,16 @@ export default function AliceRoomGame() {
       if (data.ledgerToken) {
         saveChipLedgerToken(wallet, data.ledgerToken, data.chips ?? 0, { force: true });
       }
-      setSpendableEarned(data.spendable ?? 0);
+      const earned = data.spendable ?? 0;
+      setSpendableEarned(earned);
       setClaimMsg(data.message ?? 'Banked.');
       setSessionToken(null);
+      setLocalStats(
+        noteAliceBanked({
+          aliceCoins,
+          spendable: earned,
+        }),
+      );
     } catch {
       setClaimMsg('Network error banking tally.');
     }
@@ -597,6 +630,35 @@ export default function AliceRoomGame() {
         {phase === 'intro' && (
           <section className="alice-panel alice-intro">
             <h2>The voyage</h2>
+            {localStats && (localStats.bestAliceCoins > 0 || localStats.runsCompleted > 0) && (
+              <div className="alice-stats-card" aria-label="Your Alice record on this device">
+                <p className="alice-stats-title">Your record (this device)</p>
+                <div className="alice-stats-grid">
+                  <div>
+                    <span className="alice-stats-label">Best Alice Coins</span>
+                    <span className="alice-stats-value">{localStats.bestAliceCoins.toLocaleString()}</span>
+                  </div>
+                  <div>
+                    <span className="alice-stats-label">Best banked chips</span>
+                    <span className="alice-stats-value">{localStats.bestSpendable.toLocaleString()}</span>
+                  </div>
+                  <div>
+                    <span className="alice-stats-label">Deepest layer</span>
+                    <span className="alice-stats-value">
+                      {localStats.bestLayers}/{TOTAL_LEVELS}
+                    </span>
+                  </div>
+                  <div>
+                    <span className="alice-stats-label">Last banked</span>
+                    <span className="alice-stats-value">
+                      {localStats.lastBankedSpendable > 0
+                        ? `+${localStats.lastBankedSpendable.toLocaleString()} chips`
+                        : '—'}
+                    </span>
+                  </div>
+                </div>
+              </div>
+            )}
             {showCoach && (
               <div className="alice-coach" role="region" aria-label="How to play">
                 <div className="alice-coach-head">
@@ -940,13 +1002,35 @@ export default function AliceRoomGame() {
               {phase === 'victory' && (
                 <section className="alice-panel alice-victory">
                   <h2>Voyage complete</h2>
-                  <p className="alice-final-tally">
-                    Final Alice Coins: <strong>{aliceCoins.toLocaleString()}</strong>
-                  </p>
-                  <p>
-                    Spendable estimate:{' '}
-                    <strong>{aliceCoinsToSpendable(aliceCoins).toLocaleString()} Bonk Chips</strong>
-                  </p>
+                  <div className="alice-run-recap" aria-label="Run recap">
+                    <p className="alice-run-recap-title">Run recap</p>
+                    <ul className="alice-run-recap-list">
+                      <li>
+                        Layers cleared:{' '}
+                        <strong>
+                          {TOTAL_LEVELS}/{TOTAL_LEVELS}
+                        </strong>
+                      </li>
+                      <li>
+                        Final Alice Coins: <strong>{aliceCoins.toLocaleString()}</strong>
+                      </li>
+                      <li>
+                        Spendable estimate:{' '}
+                        <strong>
+                          {aliceCoinsToSpendable(aliceCoins).toLocaleString()} Bonk Chips
+                        </strong>
+                      </li>
+                      {localStats && localStats.bestAliceCoins > 0 && (
+                        <li className="alice-run-recap-best">
+                          Device best: {localStats.bestAliceCoins.toLocaleString()} AC
+                          {localStats.bestSpendable > 0
+                            ? ` · ${localStats.bestSpendable.toLocaleString()} chips banked`
+                            : ''}
+                          {aliceCoins >= localStats.bestAliceCoins ? ' · New high!' : ''}
+                        </li>
+                      )}
+                    </ul>
+                  </div>
                   <p className="alice-bank-trust">
                     Only chips the server records after you bank can cash out at the Cashier. Alice Coins
                     alone are dream-wealth.
@@ -998,6 +1082,14 @@ export default function AliceRoomGame() {
                   <h2>Trip kill</h2>
                   <p className="alice-warn">{message}</p>
                   <p>Repeating the same strategy without presence ejects the voyage. No spendable tally.</p>
+                  {localStats && localStats.bestLayers > 0 && (
+                    <p className="alice-run-recap-best-solo">
+                      Device deepest: layer {localStats.bestLayers}/{TOTAL_LEVELS}
+                      {localStats.bestAliceCoins > 0
+                        ? ` · best ${localStats.bestAliceCoins.toLocaleString()} AC`
+                        : ''}
+                    </p>
+                  )}
                   <div className="alice-actions">
                     <button type="button" className="alice-btn alice-btn-primary" onClick={() => void startDive()}>
                       Begin again — slower

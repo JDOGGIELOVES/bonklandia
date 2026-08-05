@@ -244,7 +244,7 @@ export async function POST(request: Request) {
   }
 }
 
-export async function GET() {
+export async function GET(request: Request) {
   const {
     getTreasuryPublicKey,
     isTreasuryPayoutsReady,
@@ -253,6 +253,11 @@ export async function GET() {
   const { treasuryPayoutsAllowed, treasuryPayoutsBlockedReason } = await import(
     '@/lib/security/payout-guard'
   );
+  const { getWalletExchangeQuota } = await import('@/lib/security/exchange-limits');
+
+  const { searchParams } = new URL(request.url);
+  const wallet = searchParams.get('wallet')?.trim() || null;
+  const walletQuota = wallet ? getWalletExchangeQuota(wallet) : null;
 
   return NextResponse.json({
     treasury: getTreasuryPublicKey(),
@@ -276,6 +281,8 @@ export async function GET() {
       spendableChipsServerOnly: true,
       note: 'Only server-ledger chips (earned in-game) can be cashed. Fake localStorage chips cannot. Micro-prize USD caps apply.',
     },
+    /** Best-effort remaining headroom for this wallet today (UTC; per-instance memory). */
+    walletQuota,
     security: {
       treasuryNeverPaysSol: true,
       treasuryNeverCreatesTokenAccounts: true,

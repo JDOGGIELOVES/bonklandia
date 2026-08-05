@@ -13,8 +13,8 @@ type AliceEntityPortraitProps = {
 };
 
 /**
- * Still PNG for reels; optional lazy video loop for encounter/choice screen.
- * Only one video loads at a time (current level) to limit bandwidth.
+ * Still PNG first (instant); video mounts after a short paint delay so the
+ * choice screen is interactive before multi‑MB loops start downloading.
  */
 export default function AliceEntityPortrait({
   entity,
@@ -25,15 +25,44 @@ export default function AliceEntityPortrait({
   const videoRef = useRef<HTMLVideoElement | null>(null);
   const [videoReady, setVideoReady] = useState(false);
   const [videoFailed, setVideoFailed] = useState(false);
+  /** Defer actual <video> mount so poster paints first. */
+  const [videoMount, setVideoMount] = useState(false);
 
   useEffect(() => {
     setVideoReady(false);
     setVideoFailed(false);
+    setVideoMount(false);
   }, [entity.id, entity.video]);
 
   useEffect(() => {
+    if (!playVideo || !entity.video) {
+      setVideoMount(false);
+      return;
+    }
+    // Let the still PNG + doors layout paint before bandwidth fight.
+    let idleId: number | undefined;
+    const win = window as Window & {
+      requestIdleCallback?: (cb: () => void, opts?: { timeout: number }) => number;
+      cancelIdleCallback?: (id: number) => void;
+    };
+    const t = window.setTimeout(() => {
+      if (typeof win.requestIdleCallback === 'function') {
+        idleId = win.requestIdleCallback(() => setVideoMount(true), { timeout: 600 });
+      } else {
+        setVideoMount(true);
+      }
+    }, 180);
+    return () => {
+      window.clearTimeout(t);
+      if (idleId !== undefined && typeof win.cancelIdleCallback === 'function') {
+        win.cancelIdleCallback(idleId);
+      }
+    };
+  }, [playVideo, entity.video, entity.id]);
+
+  useEffect(() => {
     const el = videoRef.current;
-    if (!el || !playVideo || !entity.video || videoFailed) return;
+    if (!el || !videoMount || !playVideo || !entity.video || videoFailed) return;
 
     el.muted = true;
     el.defaultMuted = true;
@@ -41,7 +70,7 @@ export default function AliceEntityPortrait({
 
     const tryPlay = () => {
       void el.play().catch(() => {
-        // Autoplay blocked — poster still shows
+        /* Autoplay blocked — poster still shows */
       });
     };
 
@@ -59,13 +88,19 @@ export default function AliceEntityPortrait({
         el.removeEventListener('canplay', onReady);
         el.removeEventListener('loadeddata', onReady);
         el.pause();
+        try {
+          el.removeAttribute('src');
+          el.load();
+        } catch {
+          /* */
+        }
       };
     }
 
     return () => {
       el.pause();
     };
-  }, [playVideo, entity.video, entity.id, videoFailed]);
+  }, [videoMount, playVideo, entity.video, entity.id, videoFailed]);
 
   if (!entity.image && !entity.video) {
     return (
@@ -75,26 +110,25 @@ export default function AliceEntityPortrait({
     );
   }
 
-  const showVideo = playVideo && entity.video && !videoFailed;
+  const showVideoEl = playVideo && videoMount && entity.video && !videoFailed;
 
   return (
     <div
-      className={`alice-entity-media ${showVideo ? 'alice-entity-media-keyed' : ''} ${className}`}
+      className={`alice-entity-media ${showVideoEl ? 'alice-entity-media-keyed' : ''} ${className}`}
     >
-      {/* Soft stage under keyed video so screen-blend blacks dissolve into purple, not a hard box */}
-      {showVideo && <div className="alice-entity-key-stage" aria-hidden />}
+      {showVideoEl && <div className="alice-entity-key-stage" aria-hidden />}
       {entity.image && (
         <Image
           src={entity.image}
           alt={entity.label}
           width={720}
           height={720}
-          className={`alice-encounter-portrait alice-entity-poster ${videoReady && showVideo ? 'alice-entity-poster-hidden' : ''}`}
+          className={`alice-encounter-portrait alice-entity-poster ${videoReady && showVideoEl ? 'alice-entity-poster-hidden' : ''}`}
           priority={priority}
           unoptimized
         />
       )}
-      {showVideo && entity.video && (
+      {showVideoEl && entity.video && (
         <video
           key={entity.video}
           ref={videoRef}
@@ -105,7 +139,7 @@ export default function AliceEntityPortrait({
           playsInline
           loop
           autoPlay
-          preload="metadata"
+          preload="none"
           onLoadedData={() => setVideoReady(true)}
           onCanPlay={() => setVideoReady(true)}
           onError={() => setVideoFailed(true)}

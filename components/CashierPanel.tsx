@@ -63,6 +63,21 @@ export default function CashierPanel({ showBackLink = true }: CashierPanelProps)
   const [treasuryStatus, setTreasuryStatus] = useState<TreasurySnapshot | null>(null);
   const [treasuryLoading, setTreasuryLoading] = useState(true);
   const [message, setMessage] = useState<{ text: string; ok: boolean; txUrl?: string } | null>(null);
+  const [fairness, setFairness] = useState<{
+    maxUsdPerExchange: number;
+    maxUsdPerWalletPerDay: number;
+    maxChipCostPerExchange: number;
+    maxExchangesPerWalletPerDay: number;
+  } | null>(null);
+  const [walletQuota, setWalletQuota] = useState<{
+    remainingUsd: number;
+    usdMax: number;
+    remainingChips: number;
+    chipsMax: number;
+    exchangesUsed: number;
+    exchangesMax: number;
+    maxUsdPerExchange: number;
+  } | null>(null);
 
   const treasuryReady = treasuryStatus?.payoutsReady ?? null;
   const treasuryTokenMap = Object.fromEntries(
@@ -91,6 +106,40 @@ export default function CashierPanel({ showBackLink = true }: CashierPanelProps)
   useEffect(() => {
     refreshTreasury();
   }, [refreshTreasury]);
+
+  useEffect(() => {
+    const q = walletAddress
+      ? `/api/exchange?wallet=${encodeURIComponent(walletAddress)}`
+      : '/api/exchange';
+    fetch(q)
+      .then(r => r.json())
+      .then(data => {
+        if (data?.fairness) {
+          setFairness({
+            maxUsdPerExchange: Number(data.fairness.maxUsdPerExchange) || 1,
+            maxUsdPerWalletPerDay: Number(data.fairness.maxUsdPerWalletPerDay) || 3,
+            maxChipCostPerExchange: Number(data.fairness.maxChipCostPerExchange) || 30,
+            maxExchangesPerWalletPerDay: Number(data.fairness.maxExchangesPerWalletPerDay) || 12,
+          });
+        }
+        if (data?.walletQuota) {
+          setWalletQuota({
+            remainingUsd: Number(data.walletQuota.remainingUsd) || 0,
+            usdMax: Number(data.walletQuota.usdMax) || 0,
+            remainingChips: Number(data.walletQuota.remainingChips) || 0,
+            chipsMax: Number(data.walletQuota.chipsMax) || 0,
+            exchangesUsed: Number(data.walletQuota.exchangesUsed) || 0,
+            exchangesMax: Number(data.walletQuota.exchangesMax) || 0,
+            maxUsdPerExchange: Number(data.walletQuota.maxUsdPerExchange) || 1,
+          });
+        } else {
+          setWalletQuota(null);
+        }
+      })
+      .catch(() => {
+        /* policy panel optional */
+      });
+  }, [walletAddress]);
 
   const showExchangeMessage = useCallback((msg: { text: string; ok: boolean; txUrl?: string }) => {
     setMessage(msg);
@@ -295,9 +344,33 @@ export default function CashierPanel({ showBackLink = true }: CashierPanelProps)
           </p>
           <p className="cashier-notice-body cashier-notice-body-2">
             <strong>BONGA in Solflare</strong> is separate (you need some so we can send more). Cashouts are{' '}
-            <strong>micro-prizes only</strong> (~<strong>$1 max</strong> per cashout, daily caps apply) — fun rewards,
-            not a bank.
+            <strong>micro-prizes only</strong>
+            {fairness
+              ? ` (~$${fairness.maxUsdPerExchange} max per cashout, ~$${fairness.maxUsdPerWalletPerDay}/day wallet cap)`
+              : ' (~$1 max per cashout, daily caps apply)'}{' '}
+            — fun rewards, not a bank.
           </p>
+          {walletQuota && connected && (
+            <div className="cashier-quota" aria-label="Daily cash-out headroom">
+              <p className="cashier-quota-title">Your remaining headroom today (UTC)</p>
+              <ul className="cashier-quota-list">
+                <li>
+                  ~${walletQuota.remainingUsd.toFixed(2)} of ~${walletQuota.usdMax.toFixed(2)} USD left
+                </li>
+                <li>
+                  {walletQuota.remainingChips.toLocaleString()} of {walletQuota.chipsMax.toLocaleString()} chips left
+                </li>
+                <li>
+                  {Math.max(0, walletQuota.exchangesMax - walletQuota.exchangesUsed)} of{' '}
+                  {walletQuota.exchangesMax} exchanges left
+                </li>
+                <li className="cashier-quota-note">
+                  Per cashout still capped at ~${walletQuota.maxUsdPerExchange}. Resets daily (UTC). Best-effort on
+                  this region.
+                </li>
+              </ul>
+            </div>
+          )}
         </div>
 
         <div className="cashier-top-grid mb-8">
