@@ -114,18 +114,19 @@ export function useAliceAudio(level = 1) {
     (text: string, entityId?: string, opts?: { force?: boolean }) => {
       if (!text.trim()) return;
       if (!isAliceSpeechSupported()) {
-        setVoiceStatus('Speech not supported in this browser.');
+        setVoiceStatus('Speech not supported in this browser. Try Chrome or Edge on desktop.');
         return;
       }
       // Opt-in VO for auto lines. “Hear them” / Voice On sample uses force.
       if (!opts?.force) {
         if (!isAliceVoiceEnabled()) return;
-        // Music mute no longer blocks TTS — only the Voice toggle does.
       }
       const music = musicRef.current;
-      stopAliceSpeech();
+      // Do NOT call stopEntitySpeech() here — that cancel+delay breaks iOS gestures.
+      // speakAliceLine() replaces any in-flight line safely.
       setEntitySpeaking(true);
-      setVoiceStatus(null);
+      setVoiceStatus('Speaking…');
+      // Duck trip music hard so system TTS is audible
       if (!isMusicMuted()) music.setMusicDucked(true);
       speakAliceLine(text, {
         entityId,
@@ -137,6 +138,7 @@ export function useAliceAudio(level = 1) {
         onEnd: () => {
           music.setMusicDucked(false);
           setEntitySpeaking(false);
+          setVoiceStatus(null);
         },
         onError: reason => {
           setVoiceStatus(reason);
@@ -170,29 +172,25 @@ export function useAliceAudio(level = 1) {
     setVoiceEnabledState(next);
     if (!next) {
       stopEntitySpeech();
-      setVoiceStatus(null);
+      setVoiceStatus('Voice off.');
       return next;
     }
-    // Confirm voice works right away in this user gesture
-    speakEntityLine(
-      'Voice on. The beings will speak when you face them. You can also tap Hear them speak.',
-      undefined,
-      { force: true },
-    );
+    // Short plain test line — easiest for system TTS to speak
+    speakEntityLine('Voice is on.', undefined, { force: true });
     return next;
   }, [stopEntitySpeech, speakEntityLine]);
 
   /** Enable VO (if needed) and speak a line now — used by “Hear them speak”. */
   const hearEntityLine = useCallback(
     (text: string, entityId?: string) => {
-      if (!text.trim()) return;
+      const line = text.trim() || 'Hello from the Alice Room.';
       warmAliceVoices();
       if (!isAliceVoiceEnabled()) {
         setAliceVoiceEnabled(true);
         setVoiceEnabledState(true);
       }
-      // force: ignore pref edge cases; must be called from a click handler
-      speakEntityLine(text, entityId, { force: true });
+      // Must be called from a click handler (user gesture)
+      speakEntityLine(line, entityId, { force: true });
     },
     [speakEntityLine],
   );

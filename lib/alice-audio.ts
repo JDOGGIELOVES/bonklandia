@@ -56,8 +56,8 @@ export class AliceAudioEngine {
   private musicGeneration = 0;
   /** Bed level when no dialogue is speaking (Folk Round is denser than piano). */
   private musicGain = 0.26;
-  /** Bed level while entity VO is speaking so lines stay intelligible. */
-  private musicDuckGain = 0.08;
+  /** Near-mute under entity VO so system TTS can be heard. */
+  private musicDuckGain = 0.04;
   private musicDucked = false;
   private level = 1;
 

@@ -8071,6 +8071,25 @@ html {
   color: #fde68a;
   line-height: 1.35;
 }
+.alice-audio-bar-voice {
+  display: flex !important;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 0.4rem;
+  width: 100%;
+}
+.alice-voice-test-btn {
+  border-color: rgba(110, 231, 183, 0.5) !important;
+  color: #a7f3d0 !important;
+}
+/* Always show voice controls while playing (desktop + mobile) */
+.alice-room-playing .alice-audio-bar {
+  display: flex !important;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 0.35rem;
+  margin-bottom: 0.35rem;
+}
 .alice-encounter-caption .alice-voice-status {
   margin-top: 0.45rem;
 }
