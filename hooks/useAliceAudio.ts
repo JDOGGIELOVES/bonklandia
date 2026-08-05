@@ -133,13 +133,16 @@ export function useAliceAudio(level = 1) {
     return nextMusic;
   }, [level, stopEntitySpeech]);
 
-  const playLeverPull = useCallback(async () => {
-    if (isSfxMuted()) return;
-    const sfx = sfxRef.current;
-    await unlockAudio();
-    await sfx.ensureContext();
-    await sfx.playLeverPull();
-  }, [unlockAudio]);
+  const playLeverPull = useCallback(
+    async (style: 'default' | 'prize' | 'shield' = 'prize') => {
+      if (isSfxMuted()) return;
+      const sfx = sfxRef.current;
+      await unlockAudio();
+      await sfx.ensureContext();
+      await sfx.playLeverPull(style);
+    },
+    [unlockAudio],
+  );
 
   const playSpinSequence = useCallback(async () => {
     if (isSfxMuted()) return;
@@ -150,6 +153,13 @@ export function useAliceAudio(level = 1) {
     window.setTimeout(() => {
       if (!isMusicMuted()) musicRef.current.setMusicDucked(false);
     }, CASINO_SPIN_DURATION_MS + 1200);
+  }, []);
+
+  const playLandClunk = useCallback(async (style: 'prize' | 'shield' | 'soft' = 'soft') => {
+    if (isSfxMuted()) return;
+    const sfx = sfxRef.current;
+    await sfx.ensureContext();
+    await sfx.playLandClunk(style);
   }, []);
 
   const playWinResult = useCallback(async (winTier: WinTier) => {
@@ -169,6 +179,7 @@ export function useAliceAudio(level = 1) {
     toggleMute,
     playLeverPull,
     playSpinSequence,
+    playLandClunk,
     playWinResult,
     speakEntityLine,
     stopEntitySpeech,

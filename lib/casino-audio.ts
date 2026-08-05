@@ -171,62 +171,87 @@ export class CasinoAudioEngine {
    * Iconic American one-armed-bandit lever:
    * grip → engage clunk → ratchet scrape down → bottom thunk → spring return.
    * Timed to the ~0.85s lever-arm-yank visual.
+   * @param style prize = warmer/heavier; shield = brighter metallic + extra body
    */
-  async playLeverPull() {
+  async playLeverPull(style: 'default' | 'prize' | 'shield' = 'default') {
     const ctx = await this.ensureContext();
     if (!ctx || !this.sfxBus || this.sfxMuted) return;
     this.applyGain();
     const t = ctx.currentTime;
     const bus = this.sfxBus;
+    const g = style === 'shield' ? 1.28 : style === 'prize' ? 1.18 : 1;
+    const p = style === 'shield' ? 1.1 : style === 'prize' ? 0.96 : 1;
 
-    // 1. Hand on the red ball (soft grip)
-    this.playNoiseBurst(ctx, bus, t, 0.035, 1100, 0.1, 'bandpass');
-    this.playTone(ctx, bus, t, 210, 'sine', 0.07, 0.008, 0.04);
+    // 1. Hand on the ball
+    this.playNoiseBurst(ctx, bus, t, 0.035, 1100 * p, 0.1 * g, 'bandpass');
+    this.playTone(ctx, bus, t, 210 * p, 'sine', 0.07 * g, 0.008, 0.04);
 
     // 2. Mechanism engages — heavy “ka-chunk”
     const engage = t + 0.06;
-    this.playTone(ctx, bus, engage, 78, 'sine', 0.42, 0.006, 0.14);
-    this.playTone(ctx, bus, engage, 155, 'triangle', 0.22, 0.008, 0.1);
-    this.playTone(ctx, bus, engage + 0.012, 310, 'square', 0.08, 0.004, 0.04, 0, 900);
-    this.playNoiseBurst(ctx, bus, engage, 0.055, 280, 0.32, 'lowpass');
+    this.playTone(ctx, bus, engage, 78 * p, 'sine', 0.5 * g, 0.006, 0.15);
+    this.playTone(ctx, bus, engage, 155 * p, 'triangle', 0.28 * g, 0.008, 0.11);
+    this.playTone(ctx, bus, engage + 0.012, 310 * p, 'square', 0.1 * g, 0.004, 0.04, 0, 900);
+    this.playNoiseBurst(ctx, bus, engage, 0.06, 280 * p, 0.38 * g, 'lowpass');
 
     // 3. Arm swings down — metal scrape + spring load
     const swingStart = t + 0.1;
     this.playLeverScrape(ctx, bus, swingStart, 0.26, 'down');
-    this.playTone(ctx, bus, swingStart, 55, 'sine', 0.14, 0.05, 0.22, 0, 140);
-    this.playTone(ctx, bus, swingStart, 140, 'triangle', 0.1, 0.04, 0.2, -80, 400);
+    this.playTone(ctx, bus, swingStart, 55 * p, 'sine', 0.18 * g, 0.05, 0.22, 0, 140);
+    this.playTone(ctx, bus, swingStart, 140 * p, 'triangle', 0.12 * g, 0.04, 0.2, -80, 400);
 
-    // 4. Ratchet teeth clicking through the stroke
+    // 4. Ratchet teeth
     for (let i = 0; i < 8; i++) {
       const rt = swingStart + 0.018 + i * 0.028;
-      this.playRatchetClick(ctx, bus, rt, 0.85 - i * 0.06);
+      this.playRatchetClick(ctx, bus, rt, (0.9 - i * 0.06) * g);
     }
 
-    // 5. Bottom stop — the iconic solid metal THUNK
+    // 5. Bottom stop — solid metal THUNK (the money moment)
     const bottom = t + 0.36;
-    this.playTone(ctx, bus, bottom, 62, 'sine', 0.55, 0.004, 0.18);
-    this.playTone(ctx, bus, bottom, 118, 'triangle', 0.32, 0.005, 0.14);
-    this.playTone(ctx, bus, bottom + 0.01, 240, 'sine', 0.16, 0.004, 0.08);
-    this.playNoiseBurst(ctx, bus, bottom, 0.09, 180, 0.45, 'lowpass');
-    this.playNoiseBurst(ctx, bus, bottom + 0.015, 0.05, 900, 0.18, 'highpass');
-    this.playTone(ctx, bus, bottom + 0.03, 480, 'sine', 0.08, 0.01, 0.12, 0, 1200);
+    this.playTone(ctx, bus, bottom, 58 * p, 'sine', 0.68 * g, 0.004, 0.2);
+    this.playTone(ctx, bus, bottom, 110 * p, 'triangle', 0.4 * g, 0.005, 0.16);
+    this.playTone(ctx, bus, bottom + 0.01, 230 * p, 'sine', 0.2 * g, 0.004, 0.09);
+    this.playNoiseBurst(ctx, bus, bottom, 0.1, 170 * p, 0.55 * g, 'lowpass');
+    this.playNoiseBurst(ctx, bus, bottom + 0.015, 0.055, 900 * p, 0.22 * g, 'highpass');
+    this.playTone(ctx, bus, bottom + 0.03, 480 * p, 'sine', 0.1 * g, 0.01, 0.12, 0, 1200);
+    // Extra cabinet body for Alice-style pulls
+    if (style !== 'default') {
+      this.playTone(ctx, bus, bottom + 0.02, 42, 'sine', 0.35 * g, 0.008, 0.22, 0, 120);
+      this.playNoiseBurst(ctx, bus, bottom + 0.025, 0.08, 90, 0.28 * g, 'lowpass');
+    }
 
-    // 6. Spring tension at bottom of stroke
-    this.playTone(ctx, bus, bottom + 0.08, 90, 'sine', 0.06, 0.04, 0.16, 0, 200);
+    // 6. Spring tension
+    this.playTone(ctx, bus, bottom + 0.08, 90 * p, 'sine', 0.07 * g, 0.04, 0.16, 0, 200);
 
-    // 7. Spring return — arm flies back up
+    // 7. Spring return
     const ret = t + 0.54;
     this.playLeverScrape(ctx, bus, ret, 0.2, 'up');
     this.playSpringZing(ctx, bus, ret, 0.18);
     for (let i = 0; i < 5; i++) {
-      this.playRatchetClick(ctx, bus, ret + 0.02 + i * 0.032, 0.35 - i * 0.04);
+      this.playRatchetClick(ctx, bus, ret + 0.02 + i * 0.032, (0.4 - i * 0.04) * g);
     }
 
-    // 8. Settles home at the top
+    // 8. Settles home
     const home = t + 0.78;
-    this.playTone(ctx, bus, home, 130, 'sine', 0.2, 0.005, 0.08);
-    this.playTone(ctx, bus, home + 0.008, 260, 'triangle', 0.1, 0.004, 0.05);
-    this.playNoiseBurst(ctx, bus, home, 0.04, 500, 0.16, 'bandpass');
+    this.playTone(ctx, bus, home, 130 * p, 'sine', 0.24 * g, 0.005, 0.09);
+    this.playTone(ctx, bus, home + 0.008, 260 * p, 'triangle', 0.12 * g, 0.004, 0.05);
+    this.playNoiseBurst(ctx, bus, home, 0.045, 500 * p, 0.2 * g, 'bandpass');
+  }
+
+  /** Sharp final clunk when reels settle — pairs with payline flash. */
+  async playLandClunk(style: 'prize' | 'shield' | 'soft' = 'soft') {
+    const ctx = await this.ensureContext();
+    if (!ctx || !this.sfxBus || this.sfxMuted) return;
+    this.applyGain();
+    const t = ctx.currentTime;
+    const bus = this.sfxBus;
+    const g = style === 'soft' ? 0.55 : style === 'shield' ? 1.1 : 1;
+    const f = style === 'shield' ? 1.12 : 1;
+    this.playTone(ctx, bus, t, 70 * f, 'sine', 0.45 * g, 0.004, 0.14);
+    this.playTone(ctx, bus, t, 140 * f, 'triangle', 0.28 * g, 0.005, 0.1);
+    this.playNoiseBurst(ctx, bus, t, 0.06, 220 * f, 0.35 * g, 'lowpass');
+    if (style !== 'soft') {
+      this.playTone(ctx, bus, t + 0.04, 520 * f, 'sine', 0.12 * g, 0.004, 0.08, 0, 2000);
+    }
   }
 
   async playSpinSequence(spinDurationMs: number, spinStartDelayMs: number) {

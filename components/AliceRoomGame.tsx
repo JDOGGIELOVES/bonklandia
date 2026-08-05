@@ -158,6 +158,7 @@ export default function AliceRoomGame() {
     toggleMute,
     playLeverPull,
     playSpinSequence,
+    playLandClunk,
     playWinResult,
     speakEntityLine,
     stopEntitySpeech,
@@ -174,6 +175,9 @@ export default function AliceRoomGame() {
   const [leverPulled, setLeverPulled] = useState(false);
   const [spinKey, setSpinKey] = useState(0);
   const [justLanded, setJustLanded] = useState(false);
+  const [cabinetBump, setCabinetBump] = useState(false);
+  const [paylineFx, setPaylineFx] = useState<'prize' | 'big' | 'shield' | null>(null);
+  const [spinMode, setSpinMode] = useState<'prize' | 'shield'>('prize');
   const [log, setLog] = useState<LogLine[]>([]);
   const [claimMsg, setClaimMsg] = useState<string | null>(null);
   const [spendableEarned, setSpendableEarned] = useState<number | null>(null);
@@ -283,6 +287,13 @@ export default function AliceRoomGame() {
     [],
   );
 
+  const flashPayline = (kind: 'prize' | 'big' | 'shield') => {
+    setPaylineFx(kind);
+    window.setTimeout(() => {
+      setPaylineFx(cur => (cur === kind ? null : cur));
+    }, 1300);
+  };
+
   const runReelSpin = async (
     getResult: () => {
       reels: [AliceSymbol, AliceSymbol, AliceSymbol];
@@ -290,18 +301,22 @@ export default function AliceRoomGame() {
       aliceCoins?: number;
       blocked?: boolean;
     },
+    mode: 'prize' | 'shield' = 'prize',
   ) => {
-    // Same SFX + timing pattern as Bonklandia Bandit.
-    void playLeverPull();
+    setSpinMode(mode);
+    void playLeverPull(mode);
     void playSpinSequence();
     setLeverPulled(true);
+    setCabinetBump(true);
     setJustLanded(false);
+    setPaylineFx(null);
     setSpinning(false);
 
     // Precompute outcome so strip is built with the winning symbols before animation.
     const result = getResult();
 
     await sleep(LEVER_PULL_MS);
+    setCabinetBump(false);
 
     // Set results + spinKey + spinning together so reel math and art stay aligned.
     setResults(result.reels);
@@ -364,12 +379,14 @@ export default function AliceRoomGame() {
       const result = await runReelSpin(() => {
         const r = spinBlockReels(forLevel);
         return { reels: r.reels, message: r.message, blocked: r.blocked };
-      });
+      }, 'shield');
       pushLog(result.message);
 
       if (result.blocked) {
         stopEntitySpeech();
+        void playLandClunk('shield');
         void playWinResult('fam-any');
+        flashPayline('shield');
         setTripKill(s => resetTripKillStreak(s));
         setMessage(result.message);
         setPhase('block-result');
@@ -378,13 +395,14 @@ export default function AliceRoomGame() {
           title: 'SHIELD HELD',
           sub: `Three ${entity.label}s — the layer yields.`,
         });
-        await sleep(1100);
+        await sleep(1200);
         setShieldBeat(null);
         await goToNextLayer(forLevel);
         return;
       }
 
       stopEntitySpeech();
+      void playLandClunk('soft');
       void playWinResult('none');
       setPhase('block-result');
       setShieldBeat({
@@ -420,6 +438,7 @@ export default function AliceRoomGame() {
       goToNextLayer,
       speakEntityLine,
       stopEntitySpeech,
+      playLandClunk,
     ],
   );
 
@@ -431,13 +450,16 @@ export default function AliceRoomGame() {
     const result = await runReelSpin(() => {
       const r = spinPlayerReels(forLevel);
       return { reels: r.reels, message: r.message, aliceCoins: r.aliceCoins };
-    });
+    }, 'prize');
     if (result.aliceCoins) {
       setAliceCoins(c => c + result.aliceCoins!);
       flashCoins(`+${result.aliceCoins.toLocaleString()} AC`, 'gain');
       pushLog(`+${result.aliceCoins.toLocaleString()} Alice Coins — ${result.message}`);
+      void playLandClunk(result.aliceCoins >= 3500 ? 'prize' : 'prize');
       void playWinResult(aliceWinTier(result.aliceCoins));
+      flashPayline(result.aliceCoins >= 3500 ? 'big' : 'prize');
     } else {
+      void playLandClunk('soft');
       void playWinResult('none');
     }
     // Pause for the fun part: player must pull again for the shield spin.
@@ -806,7 +828,20 @@ export default function AliceRoomGame() {
               </div>
 
               <div
-                className={`slot-cabinet alice-cabinet alice-cabinet-3d ${spinning ? 'slot-cabinet-active' : ''} ${leverPulled ? 'slot-cabinet-pull' : ''} ${canPullPlayer ? 'alice-cabinet-ready' : ''}`}
+                className={[
+                  'slot-cabinet',
+                  'alice-cabinet',
+                  'alice-cabinet-3d',
+                  spinning ? 'slot-cabinet-active' : '',
+                  leverPulled ? 'slot-cabinet-pull' : '',
+                  canPullPrize ? 'alice-cabinet-ready alice-cabinet-prize-ready' : '',
+                  canPullShield ? 'alice-cabinet-ready alice-cabinet-shield-ready' : '',
+                  cabinetBump ? 'alice-cabinet-bump' : '',
+                  spinMode === 'shield' && (spinning || leverPulled) ? 'alice-cabinet-shield-spin' : '',
+                  spinMode === 'prize' && (spinning || leverPulled) ? 'alice-cabinet-prize-spin' : '',
+                ]
+                  .filter(Boolean)
+                  .join(' ')}
                 hidden={phase === 'trick-choices'}
                 aria-hidden={phase === 'trick-choices'}
               >
@@ -836,8 +871,14 @@ export default function AliceRoomGame() {
                     <span className="slot-led-label">Alice Coins</span>
                     <span className="slot-led-value">{aliceCoins.toLocaleString()}</span>
                   </div>
-                  <div className="slot-led-panel slot-led-panel-center">
-                    <span className="slot-led-label">Status</span>
+                  <div
+                    className={`slot-led-panel slot-led-panel-center ${canPullShield || phase === 'block-spinning' ? 'alice-led-shield' : ''} ${canPullPrize || phase === 'spinning' ? 'alice-led-prize' : ''}`}
+                  >
+                    <span className="slot-led-label">
+                      {canPullShield || phase === 'block-spinning' || phase === 'block-result'
+                        ? 'Shield'
+                        : 'Status'}
+                    </span>
                     <span className="slot-led-value slot-led-status">{statusLed}</span>
                   </div>
                   <div className="slot-led-panel">
@@ -859,7 +900,7 @@ export default function AliceRoomGame() {
                     <div className="slot-reel-bezel">
                       <div className="slot-reel-case">
                         <div
-                          className={`slot-reels ${justLanded ? 'slot-reels-landed' : ''} ${spinning ? 'slot-reels-spinning' : ''}`}
+                          className={`slot-reels ${justLanded ? 'slot-reels-landed' : ''} ${spinning ? 'slot-reels-spinning' : ''} ${paylineFx ? `alice-reels-celebrate alice-reels-celebrate-${paylineFx}` : ''}`}
                         >
                           <AliceReel
                             result={displayReels[0]}
@@ -882,18 +923,32 @@ export default function AliceRoomGame() {
                             spinKey={spinKey + 2}
                           />
                         </div>
-                        <div className="slot-payline-overlay" aria-hidden>
+                        <div
+                          className={`slot-payline-overlay ${paylineFx ? `alice-payline-fx alice-payline-fx-${paylineFx}` : ''} ${canPullShield ? 'alice-payline-shield-idle' : ''} ${canPullPrize ? 'alice-payline-prize-idle' : ''}`}
+                          aria-hidden
+                        >
                           <span className="slot-payline-arrow slot-payline-arrow-l">◀</span>
                           <span className="slot-payline-bar" />
                           <span className="slot-payline-arrow slot-payline-arrow-r">▶</span>
                         </div>
                       </div>
-                      <div className="slot-reel-bezel-label">
+                      <div
+                        className={`slot-reel-bezel-label ${
+                          phase === 'elf-attack' ||
+                          phase === 'block-spinning' ||
+                          phase === 'block-result' ||
+                          spinMode === 'shield'
+                            ? 'alice-bezel-shield'
+                            : 'alice-bezel-prize'
+                        }`}
+                      >
                         {phase === 'elf-attack' ||
                         phase === 'block-spinning' ||
                         phase === 'block-result'
                           ? `SHIELD — 3× ${defenseEntity.label.toUpperCase()}`
-                          : 'WIN LINE'}
+                          : canPullPrize
+                            ? 'PRIZE LINE — PULL'
+                            : 'WIN LINE'}
                       </div>
                     </div>
                   </div>
@@ -902,7 +957,7 @@ export default function AliceRoomGame() {
                   <div className="slot-lever-column alice-lever-column">
                     <button
                       type="button"
-                      className={`alice-lever-hit ${!canPullPlayer ? 'alice-lever-hit-disabled' : ''} ${leverPulled ? 'alice-lever-hit-pulled' : ''} ${canPullShield ? 'alice-lever-hit-shield' : ''}`}
+                      className={`alice-lever-hit ${!canPullPlayer ? 'alice-lever-hit-disabled' : ''} ${leverPulled ? 'alice-lever-hit-pulled' : ''} ${canPullShield ? 'alice-lever-hit-shield' : ''} ${canPullPrize ? 'alice-lever-hit-prize' : ''}`}
                       disabled={!canPullPlayer}
                       onClick={() => {
                         if (canPullPrize) void doPlayerSpin();
