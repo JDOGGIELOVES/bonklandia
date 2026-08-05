@@ -4190,7 +4190,7 @@ body {
   color: rgba(255, 200, 80, 0.6);
 }
 
-/* ── One-armed bandit lever (pivots from side socket) ── */
+/* ── One-armed bandit lever (hinge at socket; arm tips toward player) ── */
 
 .slot-lever-column {
   position: relative;
@@ -4212,6 +4212,9 @@ body {
   height: 220px;
   z-index: 2;
   overflow: visible;
+  /* Stage so the arm can tip in 3D toward the camera */
+  perspective: 420px;
+  perspective-origin: 50% 85%;
 }
 
 /* Assembly fills the housing; socket is the fixed hinge at the bottom */
@@ -4219,12 +4222,15 @@ body {
   position: absolute;
   inset: 0;
   overflow: visible;
+  transform-style: preserve-3d;
 }
 
 /*
-  Rigid arm: stick + red ball.
-  transform-origin = hinge bolt in the socket (bottom center of arm).
-  Resting upright; pull swings the ball down in a real bandit arc.
+  Rigid arm: stick + ball.
+  Hinge = bottom of arm (socket bolt).
+  Primary motion is rotateX: tip the ball DOWN toward the player (camera),
+  not rotateZ (which flung the ball off the right edge of the screen).
+  Tiny rotateZ keeps a natural side-lever character without leaving the column.
 */
 .slot-lever-arm {
   position: absolute;
@@ -4234,38 +4240,47 @@ body {
   height: 168px;
   margin-left: -22px;
   transform-origin: 50% 100%;
-  transform: rotate(-6deg);
+  transform-style: preserve-3d;
+  transform: rotateX(8deg) rotateZ(-4deg);
   z-index: 3;
-  filter: drop-shadow(3px 6px 10px rgba(0, 0, 0, 0.5));
+  filter: drop-shadow(2px 8px 12px rgba(0, 0, 0, 0.55));
   will-change: transform;
+  backface-visibility: hidden;
 }
 
 .slot-lever-pulled .slot-lever-arm {
   animation: lever-arm-yank 0.85s cubic-bezier(0.22, 0.82, 0.28, 1) forwards;
 }
 
-/* Down hard, slight overshoot, spring return — classic bandit feel */
+/*
+  Classic bandit yank: rest upright → tip hard toward player → hold → spring home.
+  rotateX ~0 = upright; rotateX ~88° = ball near the socket plane (down / toward you).
+*/
 @keyframes lever-arm-yank {
   0% {
-    transform: rotate(-6deg);
+    transform: rotateX(8deg) rotateZ(-4deg);
   }
-  12% {
-    transform: rotate(8deg); /* tiny wind-up as Bonga grabs */
+  10% {
+    /* light preload toward player */
+    transform: rotateX(14deg) rotateZ(-3deg);
   }
-  38% {
-    transform: rotate(98deg); /* red ball fully down */
+  36% {
+    /* full stroke — arm down toward the player */
+    transform: rotateX(88deg) rotateZ(-6deg);
   }
   48% {
-    transform: rotate(92deg); /* settle at bottom of stroke */
+    transform: rotateX(84deg) rotateZ(-5deg);
   }
-  62% {
-    transform: rotate(92deg); /* hold while reels catch */
+  60% {
+    /* hold at bottom while reels catch */
+    transform: rotateX(84deg) rotateZ(-5deg);
   }
   82% {
-    transform: rotate(-14deg); /* spring past rest */
+    /* spring past rest */
+    transform: rotateX(2deg) rotateZ(-5deg);
   }
   100% {
-    transform: rotate(-6deg);
+    transform: rotateX(8deg) rotateZ(-4deg);
   }
 }
 
@@ -6704,12 +6719,20 @@ body {
     inset 0 4px 8px rgba(255, 255, 255, 0.25);
   transform: scale(1.06);
 }
+/* Hover/active tip the arm toward the player — never sideways off-screen */
 .alice-lever-hit:not(:disabled):hover .slot-lever-arm {
-  transform: rotate(4deg);
+  transform: rotateX(18deg) rotateZ(-4deg);
+  transition: transform 0.15s ease-out;
 }
 .alice-lever-hit:not(:disabled):active .slot-lever-arm {
-  transform: rotate(70deg);
-  transition: transform 0.12s ease-out;
+  transform: rotateX(72deg) rotateZ(-5deg);
+  transition: transform 0.12s cubic-bezier(0.2, 0.9, 0.25, 1);
+}
+/* While pulled animation runs, do NOT override transform (was freezing at rotate 72° right) */
+.alice-lever-hit-pulled:not(:disabled):hover .slot-lever-arm,
+.alice-lever-hit-pulled:not(:disabled):active .slot-lever-arm {
+  /* let lever-arm-yank keyframes own the motion */
+  transition: none;
 }
 .alice-lever-hit-disabled {
   cursor: not-allowed;
@@ -6745,12 +6768,16 @@ body {
     inset 0 -5px 10px rgba(0, 0, 0, 0.35),
     inset 0 4px 8px rgba(255, 255, 255, 0.25);
 }
-.alice-lever-hit-pulled .slot-lever-arm {
-  transform: rotate(72deg) !important;
-  transition: transform 0.18s cubic-bezier(0.2, 0.9, 0.25, 1);
-}
 .alice-lever-hit-disabled .alice-lever-ball {
   filter: grayscale(0.35) brightness(0.85);
+}
+/* Keep the yank inside the lever column on narrow phones */
+.alice-lever-column {
+  overflow: hidden;
+  min-width: 100px;
+}
+.alice-lever-hit .slot-lever-housing {
+  overflow: visible;
 }
 .alice-lever-hint {
   font-size: 0.65rem;
@@ -7203,26 +7230,32 @@ body {
     align-items: stretch;
   }
   .alice-lever-column {
-    width: 88px !important;
-    min-width: 88px !important;
+    width: 96px !important;
+    min-width: 96px !important;
     flex-direction: column !important;
     padding: 0.25rem 0.2rem !important;
+    overflow: hidden;
   }
   .alice-lever-hit {
     min-height: 180px;
   }
   .alice-lever-hit .slot-lever-housing {
-    width: 64px;
-    height: 160px;
+    width: 72px;
+    height: 168px;
+    perspective: 360px;
   }
+  /* Slightly shorter arm so the ball stays on-screen when tipped toward player */
   .alice-lever-hit .slot-lever-arm {
-    height: 120px;
-    bottom: 18px;
+    height: 112px;
+    bottom: 20px;
+  }
+  .alice-lever-hit .slot-lever-stick {
+    height: 78px;
   }
   .alice-lever-hit .slot-lever-ball {
-    width: 36px;
-    height: 36px;
-    margin-left: -18px;
+    width: 34px;
+    height: 34px;
+    margin-left: -17px;
   }
   .alice-cabinet .slot-display-bar {
     flex-wrap: nowrap;
