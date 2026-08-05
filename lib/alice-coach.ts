@@ -1,7 +1,7 @@
 import { BRAND } from '@/lib/brand';
 
 /** Bump when coach copy changes so returning players see updated tips. */
-export const ALICE_COACH_KEY = `${BRAND.storagePrefix}-alice-coach-v2`;
+export const ALICE_COACH_KEY = `${BRAND.storagePrefix}-alice-coach-v3`;
 
 export type AliceCoachTip = {
   id: string;
@@ -29,6 +29,11 @@ export const ALICE_COACH_TIPS: AliceCoachTip[] = [
     id: 'bank',
     title: 'Bank only at the end',
     body: 'Only the final tally after The Other can become spendable chips. Dream coins alone do not cash out.',
+  },
+  {
+    id: 'voice',
+    title: 'Voice is optional',
+    body: 'Entity speech is off by default. Tap “Hear them speak” on a choice screen, or Voice On in the header.',
   },
 ];
 

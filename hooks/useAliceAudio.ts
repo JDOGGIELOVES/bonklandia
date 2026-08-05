@@ -10,6 +10,12 @@ import {
 import { ALICE_AMBIENCE_CREDIT, getAliceAudioEngine } from '@/lib/alice-audio';
 import { speakAliceLine, stopAliceSpeech } from '@/lib/alice-voice';
 import {
+  isAliceVoiceEnabled,
+  setAliceVoiceEnabled,
+  subscribeAliceVoice,
+  toggleAliceVoiceEnabled,
+} from '@/lib/alice-voice-pref';
+import {
   applyAudioChannels,
   claimMusicBed,
   getAppAudioPrefs,
@@ -30,16 +36,24 @@ export function useAliceAudio(level = 1) {
   const [sfxMuted, setSfxMutedState] = useState(false);
   const [audioReady, setAudioReady] = useState(false);
   const [entitySpeaking, setEntitySpeaking] = useState(false);
+  /** Entity TTS — default off (opt-in). */
+  const [voiceEnabled, setVoiceEnabledState] = useState(false);
 
   useEffect(() => {
     const initial = getAppAudioPrefs();
     setMusicMutedState(initial.musicMuted);
     setSfxMutedState(initial.sfxMuted);
     applyAudioChannels(initial);
-    return subscribeAppAudioPrefs(p => {
+    setVoiceEnabledState(isAliceVoiceEnabled());
+    const unsubPrefs = subscribeAppAudioPrefs(p => {
       setMusicMutedState(p.musicMuted);
       setSfxMutedState(p.sfxMuted);
     });
+    const unsubVoice = subscribeAliceVoice(setVoiceEnabledState);
+    return () => {
+      unsubPrefs();
+      unsubVoice();
+    };
   }, []);
 
   useEffect(() => {
@@ -92,13 +106,16 @@ export function useAliceAudio(level = 1) {
   }, []);
 
   const speakEntityLine = useCallback(
-    (text: string, entityId?: string) => {
-      // VO rides with music channel so Music Off also quiets entities.
-      if (musicMuted || isMusicMuted() || !text.trim()) return;
+    (text: string, entityId?: string, opts?: { force?: boolean }) => {
+      if (!text.trim()) return;
+      // Opt-in VO for auto lines. “Hear them” uses force and always speaks.
+      if (!opts?.force) {
+        if (!isAliceVoiceEnabled() || musicMuted || isMusicMuted()) return;
+      }
       const music = musicRef.current;
       stopAliceSpeech();
       setEntitySpeaking(true);
-      music.setMusicDucked(true);
+      if (!isMusicMuted()) music.setMusicDucked(true);
       speakAliceLine(text, {
         entityId,
         volume: 1,
@@ -110,6 +127,35 @@ export function useAliceAudio(level = 1) {
       });
     },
     [musicMuted],
+  );
+
+  const setVoiceEnabled = useCallback(
+    (on: boolean) => {
+      setAliceVoiceEnabled(on);
+      setVoiceEnabledState(on);
+      if (!on) stopEntitySpeech();
+    },
+    [stopEntitySpeech],
+  );
+
+  const toggleVoice = useCallback(() => {
+    const next = toggleAliceVoiceEnabled();
+    setVoiceEnabledState(next);
+    if (!next) stopEntitySpeech();
+    return next;
+  }, [stopEntitySpeech]);
+
+  /** Enable VO (if needed) and speak a line now — used by “Hear them speak”. */
+  const hearEntityLine = useCallback(
+    (text: string, entityId?: string) => {
+      if (!text.trim()) return;
+      if (!isAliceVoiceEnabled()) {
+        setAliceVoiceEnabled(true);
+        setVoiceEnabledState(true);
+      }
+      speakEntityLine(text, entityId, { force: true });
+    },
+    [speakEntityLine],
   );
 
   /** Toggle music only (header button). */
@@ -175,13 +221,17 @@ export function useAliceAudio(level = 1) {
     sfxMuted,
     audioReady,
     entitySpeaking,
+    voiceEnabled,
     unlockAudio,
     toggleMute,
+    toggleVoice,
+    setVoiceEnabled,
     playLeverPull,
     playSpinSequence,
     playLandClunk,
     playWinResult,
     speakEntityLine,
+    hearEntityLine,
     stopEntitySpeech,
     ambienceCredit: ALICE_AMBIENCE_CREDIT,
   };

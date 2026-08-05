@@ -7721,8 +7721,16 @@ body {
     transform: scale(1) translateY(0);
   }
 }
-.alice-speech-skip {
+.alice-voice-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.45rem;
+  justify-content: center;
   margin-top: 0.65rem;
+}
+.alice-speech-skip,
+.alice-speech-hear,
+.alice-speech-mute {
   border: 1px solid rgba(192, 132, 252, 0.45);
   border-radius: 999px;
   background: rgba(40, 16, 70, 0.75);
@@ -7731,13 +7739,47 @@ body {
   font-weight: 700;
   letter-spacing: 0.08em;
   text-transform: uppercase;
-  padding: 0.4rem 0.9rem;
+  padding: 0.45rem 0.95rem;
   cursor: pointer;
-  min-height: 40px;
+  min-height: 44px;
 }
-.alice-speech-skip:hover {
+.alice-speech-hear {
+  border-color: rgba(103, 232, 249, 0.5);
+  color: #a5f3fc;
+  background: rgba(8, 40, 55, 0.75);
+}
+.alice-speech-mute {
+  border-color: rgba(251, 113, 133, 0.4);
+  color: #fecdd3;
+  background: rgba(50, 12, 24, 0.55);
+}
+.alice-speech-skip:hover,
+.alice-speech-hear:hover,
+.alice-speech-mute:hover {
   border-color: #f0abfc;
   background: rgba(76, 29, 149, 0.55);
+}
+.alice-speech-hear:hover {
+  border-color: #67e8f9;
+  background: rgba(14, 60, 80, 0.75);
+}
+.alice-voice-btn-on {
+  border-color: rgba(103, 232, 249, 0.55) !important;
+  color: #a5f3fc !important;
+}
+/* Voice toggle stays visible on mobile (audio bar otherwise hidden in play) */
+@media (max-width: 720px) {
+  .alice-room-playing .alice-audio-bar {
+    display: flex !important;
+    flex-wrap: wrap;
+    justify-content: center;
+    gap: 0.35rem;
+    margin-bottom: 0.25rem;
+  }
+  .alice-room-playing .alice-audio-bar .casino-audio-btn {
+    font-size: 0.65rem;
+    padding: 0.35rem 0.65rem;
+  }
 }
 .alice-encounter .alice-trick-card {
   min-height: 3.25rem;

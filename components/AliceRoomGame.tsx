@@ -154,13 +154,16 @@ export default function AliceRoomGame() {
     muted,
     audioReady,
     entitySpeaking,
+    voiceEnabled,
     unlockAudio,
     toggleMute,
+    toggleVoice,
     playLeverPull,
     playSpinSequence,
     playLandClunk,
     playWinResult,
     speakEntityLine,
+    hearEntityLine,
     stopEntitySpeech,
     ambienceCredit,
   } = useAliceAudio(level);
@@ -640,10 +643,31 @@ export default function AliceRoomGame() {
                 type="button"
                 className="casino-audio-btn"
                 onClick={() => void toggleMute()}
-                aria-label={muted ? 'Unmute all music and sound' : 'Mute all music and sound'}
-                title={`${ambienceCredit} · Music only — use bottom-right for Music / SFX`}
+                aria-label={muted ? 'Unmute music' : 'Mute music'}
+                title={`${ambienceCredit} · Music only — use dock for Music / SFX`}
               >
                 {muted ? '🎵 Music Off' : '🎵 Music On'}
+              </button>
+              <button
+                type="button"
+                className={`casino-audio-btn alice-voice-btn ${voiceEnabled ? 'alice-voice-btn-on' : ''}`}
+                onClick={() => {
+                  void unlockAudio();
+                  toggleVoice();
+                }}
+                aria-pressed={voiceEnabled}
+                aria-label={
+                  voiceEnabled
+                    ? 'Turn entity voices off'
+                    : 'Turn entity voices on — they speak during the trip'
+                }
+                title={
+                  voiceEnabled
+                    ? 'Entity voice ON — click to silence spoken lines'
+                    : 'Entity voice OFF (default) — click to hear them speak'
+                }
+              >
+                {voiceEnabled ? '🗣 Voice On' : '🗣 Voice Off'}
               </button>
               {!audioReady && (
                 <button
@@ -668,8 +692,8 @@ export default function AliceRoomGame() {
               </p>
               <h1 className="casino-title alice-page-title">{BRAND.aliceRoom}</h1>
               <p className="casino-tagline alice-tagline-desktop">
-                Alice Machine · win spin → encounter → defense → strategy doors. Only post-boss tally
-                is spendable.
+                Alice Machine · pull for coins · pull for shield · doors if needed. Entity voice is
+                off by default — tap Hear them speak when you want lines read aloud.
               </p>
             </>
           )}
@@ -1076,15 +1100,40 @@ export default function AliceRoomGame() {
                       <p className="alice-doors-sticky-hint" role="note">
                         One door is kind. Labels mislead — read the whisper under each title.
                       </p>
-                      {entitySpeaking && (
-                        <button
-                          type="button"
-                          className="alice-speech-skip"
-                          onClick={() => stopEntitySpeech()}
-                        >
-                          Skip voice
-                        </button>
-                      )}
+                      <div className="alice-voice-actions">
+                        {entitySpeaking ? (
+                          <button
+                            type="button"
+                            className="alice-speech-skip"
+                            onClick={() => stopEntitySpeech()}
+                          >
+                            Skip voice
+                          </button>
+                        ) : (
+                          <button
+                            type="button"
+                            className="alice-speech-hear"
+                            onClick={() => {
+                              void unlockAudio();
+                              hearEntityLine(
+                                `${levelInfo.attackLine} ${levelInfo.failLine}`,
+                                defenseEntity.id,
+                              );
+                            }}
+                          >
+                            {voiceEnabled ? 'Replay line' : 'Hear them speak'}
+                          </button>
+                        )}
+                        {voiceEnabled && !entitySpeaking && (
+                          <button
+                            type="button"
+                            className="alice-speech-mute"
+                            onClick={() => toggleVoice()}
+                          >
+                            Mute voice
+                          </button>
+                        )}
+                      </div>
                     </div>
                   </div>
 
