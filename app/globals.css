@@ -6689,8 +6689,9 @@ body {
 .alice-lever-column {
   background: linear-gradient(90deg, transparent, rgba(20, 8, 40, 0.55) 25%, rgba(30, 12, 50, 0.7)) !important;
   border-left: 2px solid rgba(167, 139, 250, 0.25) !important;
-  overflow: visible !important;
-  min-width: 120px;
+  /* Contain the arm so the ball never flies off-screen on mobile */
+  overflow: hidden !important;
+  min-width: 112px;
   padding-bottom: 0.75rem !important;
 }
 .alice-lever-hit {
@@ -6770,14 +6771,6 @@ body {
 }
 .alice-lever-hit-disabled .alice-lever-ball {
   filter: grayscale(0.35) brightness(0.85);
-}
-/* Keep the yank inside the lever column on narrow phones */
-.alice-lever-column {
-  overflow: hidden;
-  min-width: 100px;
-}
-.alice-lever-hit .slot-lever-housing {
-  overflow: visible;
 }
 .alice-lever-hint {
   font-size: 0.65rem;
