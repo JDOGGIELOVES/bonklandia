@@ -5743,6 +5743,131 @@ html {
   font-style: italic;
 }
 
+.depths-char-cta {
+  margin-top: 0.25rem;
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: #f0d878;
+}
+
+.depths-roster-heading {
+  margin-bottom: 0.85rem;
+}
+
+.depths-coach {
+  margin: 1rem auto 0;
+  max-width: 36rem;
+  padding: 0.85rem 1rem;
+  text-align: left;
+  border-radius: 0.85rem;
+  border: 1px solid rgba(192, 132, 252, 0.4);
+  background: linear-gradient(165deg, rgba(40, 16, 55, 0.95), rgba(12, 6, 20, 0.98));
+  box-shadow: 0 0 24px rgba(168, 85, 247, 0.12);
+}
+
+.depths-coach-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  margin-bottom: 0.55rem;
+}
+
+.depths-coach-title {
+  margin: 0;
+  font-size: 0.85rem;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: #c084fc;
+}
+
+.depths-coach-dismiss {
+  flex-shrink: 0;
+  border: 1px solid rgba(240, 216, 120, 0.45);
+  border-radius: 999px;
+  background: rgba(60, 40, 10, 0.55);
+  color: #f0d878;
+  font-size: 0.7rem;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  padding: 0.35rem 0.75rem;
+  cursor: pointer;
+}
+
+.depths-coach-list {
+  margin: 0;
+  padding: 0 0 0 1.15rem;
+  font-size: 0.88rem;
+  line-height: 1.45;
+  color: rgba(245, 230, 200, 0.85);
+}
+
+.depths-coach-list li {
+  margin-bottom: 0.4rem;
+}
+
+.depths-coach-list strong {
+  color: #f0d878;
+}
+
+.depths-status-bar {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.4rem;
+}
+
+.depths-progress {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  width: min(100%, 22rem);
+}
+
+.depths-progress-track {
+  flex: 1;
+  height: 6px;
+  border-radius: 999px;
+  background: rgba(40, 20, 50, 0.9);
+  border: 1px solid rgba(192, 132, 252, 0.3);
+  overflow: hidden;
+}
+
+.depths-progress-fill {
+  height: 100%;
+  border-radius: 999px;
+  background: linear-gradient(90deg, #a78bfa, #f0d878);
+  transition: width 0.35s ease;
+}
+
+.depths-progress-label {
+  flex-shrink: 0;
+  font-size: 0.65rem;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: rgba(245, 230, 200, 0.7);
+}
+
+.depths-end-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.65rem;
+  justify-content: center;
+  margin-top: 1rem;
+}
+
+.depths-end-actions .depths-enter-btn {
+  margin-top: 0 !important;
+}
+
+.depths-enter-alice {
+  border-color: rgba(232, 121, 249, 0.5) !important;
+  color: #f0abfc !important;
+}
+
 .depths-diff {
   font-size: 0.75rem;
   letter-spacing: 0.08em;
