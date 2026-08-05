@@ -51,10 +51,11 @@ type CoinFlash = {
 };
 
 /**
- * MUST match CSS `.alice-cabinet .slot-reels { --slot-reel-height: 160px }`
+ * MUST match CSS `.alice-cabinet .slot-reels { --slot-reel-height }`
  * and each `.slot-symbol` height. Mismatch scrolls the strip into empty black.
+ * 176px gives larger character art on mobile without breaking stop math.
  */
-const REEL_ITEM_HEIGHT = 160;
+const REEL_ITEM_HEIGHT = 176;
 const REEL_SPIN_MS = CASINO_SPIN_DURATION_MS;
 const LEVER_PULL_MS = CASINO_SPIN_START_DELAY_MS;
 
@@ -76,8 +77,8 @@ function AliceSymbolCell({ symbol }: { symbol: AliceSymbol }) {
           <Image
             src={symbol.image!}
             alt={symbol.label}
-            width={120}
-            height={120}
+            width={160}
+            height={160}
             className="character-img slot-symbol-img alice-symbol-img object-contain"
             unoptimized
             onError={() => setImgFailed(true)}
