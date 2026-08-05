@@ -38,6 +38,7 @@ import {
   noteAliceVoyageEnd,
   type AliceLocalStats,
 } from '@/lib/alice-stats';
+import { shareAliceRun } from '@/lib/alice-share-card';
 import { loadChipLedgerToken, saveChipLedgerToken } from '@/lib/chip-ledger-client';
 import { CASINO_SPIN_DURATION_MS, CASINO_SPIN_START_DELAY_MS } from '@/lib/casino-audio';
 import { useAliceAudio } from '@/hooks/useAliceAudio';
@@ -199,6 +200,8 @@ export default function AliceRoomGame() {
   const spokeAttackForLevel = useRef<number | null>(null);
   const voyageRecorded = useRef(false);
   const [localStats, setLocalStats] = useState<AliceLocalStats | null>(null);
+  const [shareMsg, setShareMsg] = useState<string | null>(null);
+  const [shareBusy, setShareBusy] = useState(false);
 
   const levelInfo = getLevelInfo(level);
   const defenseEntity = getEntityForLevel(level);
@@ -233,6 +236,31 @@ export default function AliceRoomGame() {
   const onDismissCoach = () => {
     dismissAliceCoach();
     setShowCoach(false);
+  };
+
+  const onShareRun = async () => {
+    if (shareBusy) return;
+    setShareBusy(true);
+    setShareMsg(null);
+    try {
+      const best = localStats?.bestAliceCoins ?? 0;
+      const result = await shareAliceRun({
+        aliceCoins,
+        layersCleared: TOTAL_LEVELS,
+        totalLayers: TOTAL_LEVELS,
+        spendableEarned,
+        spendableEstimate: aliceCoinsToSpendable(aliceCoins),
+        isNewBest: aliceCoins > 0 && aliceCoins >= best,
+        banked: spendableEarned != null,
+      });
+      if (result === 'shared') setShareMsg('Shared — nice pull.');
+      else if (result === 'copied') setShareMsg('Card saved · share text copied.');
+      else if (result === 'downloaded') setShareMsg('Card image downloaded.');
+      else setShareMsg('Share cancelled or unavailable.');
+    } catch {
+      setShareMsg('Could not build share card.');
+    }
+    setShareBusy(false);
   };
 
   const startDive = async () => {
@@ -1207,6 +1235,14 @@ export default function AliceRoomGame() {
                           ? 'Banked'
                           : 'Bank Final Tally'}
                     </button>
+                    <button
+                      type="button"
+                      className="alice-btn alice-btn-share"
+                      disabled={shareBusy}
+                      onClick={() => void onShareRun()}
+                    >
+                      {shareBusy ? 'Making card…' : 'Share voyage card'}
+                    </button>
                     <Link href="/cashier" className="alice-btn alice-btn-ghost">
                       {BRAND.cashier}
                     </Link>
@@ -1214,6 +1250,7 @@ export default function AliceRoomGame() {
                       Dive again
                     </button>
                   </div>
+                  {shareMsg && <p className="alice-share-msg">{shareMsg}</p>}
                   {claimMsg && <p className="alice-claim-msg">{claimMsg}</p>}
                   {spendableEarned != null && (
                     <div className="alice-bank-receipt" role="status">
@@ -1225,9 +1262,19 @@ export default function AliceRoomGame() {
                       <p className="alice-bank-receipt-hint">
                         Open the Cashier to view balance and exchange. Server-ledger chips only.
                       </p>
-                      <Link href="/cashier" className="alice-btn alice-btn-primary alice-bank-cashier-cta">
-                        Go to {BRAND.cashier} →
-                      </Link>
+                      <div className="alice-bank-receipt-actions">
+                        <Link href="/cashier" className="alice-btn alice-btn-primary alice-bank-cashier-cta">
+                          Go to {BRAND.cashier} →
+                        </Link>
+                        <button
+                          type="button"
+                          className="alice-btn alice-btn-share"
+                          disabled={shareBusy}
+                          onClick={() => void onShareRun()}
+                        >
+                          {shareBusy ? 'Making card…' : 'Share banked run'}
+                        </button>
+                      </div>
                     </div>
                   )}
                 </section>

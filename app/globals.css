@@ -6003,6 +6003,33 @@ body {
   color: #c4b5fd;
   border: 1px solid rgba(167, 139, 250, 0.45);
 }
+.alice-btn-share {
+  background: linear-gradient(135deg, rgba(14, 90, 100, 0.95), rgba(8, 40, 55, 0.98));
+  color: #a5f3fc;
+  border: 1px solid rgba(103, 232, 249, 0.55);
+  font-weight: 700;
+}
+.alice-btn-share:hover:not(:disabled) {
+  border-color: #67e8f9;
+  box-shadow: 0 0 18px rgba(34, 211, 238, 0.25);
+}
+.alice-btn-share:disabled {
+  opacity: 0.65;
+  cursor: wait;
+}
+.alice-share-msg {
+  text-align: center;
+  margin: 0.65rem 0 0;
+  font-size: 0.88rem;
+  color: #a5f3fc;
+}
+.alice-bank-receipt-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.55rem;
+  justify-content: center;
+  margin-top: 0.75rem;
+}
 .alice-actions {
   display: flex;
   flex-wrap: wrap;
