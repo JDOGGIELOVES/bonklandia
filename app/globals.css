@@ -6605,6 +6605,20 @@ body {
   cursor: not-allowed;
   opacity: 0.55;
 }
+/* Second pull: shield is ready — pulse stronger so the fun lever is obvious */
+.alice-lever-hit-shield:not(:disabled) .alice-lever-hint {
+  color: #67e8f9;
+  text-shadow: 0 0 14px rgba(103, 232, 249, 0.75);
+  animation: alice-lever-pulse 1.1s ease-in-out infinite;
+}
+.alice-lever-hit-shield:not(:disabled) .alice-lever-ball {
+  box-shadow:
+    0 4px 0 #0e4a5c,
+    0 8px 18px rgba(0, 0, 0, 0.55),
+    0 0 28px rgba(103, 232, 249, 0.55),
+    inset 0 -5px 10px rgba(0, 0, 0, 0.35),
+    inset 0 4px 8px rgba(255, 255, 255, 0.25);
+}
 .alice-lever-hit-disabled .alice-lever-ball {
   filter: grayscale(0.35) brightness(0.85);
 }

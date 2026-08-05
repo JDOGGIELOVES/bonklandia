@@ -357,11 +357,9 @@ export default function AliceRoomGame() {
       const entity = getEntityForLevel(forLevel);
       setShieldBeat(null);
       setPhase('block-spinning');
-      setMessage(`${info.attackLine} — shielding…`);
-      pushLog(`── ${info.name} ── Defense: three ${entity.label}s.`);
-      // One attack monologue per shield — not again on doors.
-      spokeAttackForLevel.current = forLevel;
-      speakEntityLine(info.attackLine, entity.id);
+      setMessage(`Shielding — need three ${entity.label}s…`);
+      pushLog(`Shield pull — three ${entity.label}s on the line.`);
+      // Attack line was spoken when waiting for the second lever pull.
 
       const result = await runReelSpin(() => {
         const r = spinBlockReels(forLevel);
@@ -442,11 +440,25 @@ export default function AliceRoomGame() {
     } else {
       void playWinResult('none');
     }
-    // Auto-chain into defense — no "Face entity" click.
+    // Pause for the fun part: player must pull again for the shield spin.
     setPhase('player-result');
     setMessage(result.message);
-    await sleep(1000);
-    await runDefenseSpin(forLevel);
+    await sleep(700);
+    const info = getLevelInfo(forLevel);
+    const entity = getEntityForLevel(forLevel);
+    setPhase('elf-attack');
+    setMessage(`Pull the lever for shield — land 3× ${entity.label}.`);
+    pushLog(`── ${info.name} ── Pull again to shield (3× ${entity.label}).`);
+    spokeAttackForLevel.current = forLevel;
+    speakEntityLine(info.attackLine, entity.id);
+    setBusy(false);
+  };
+
+  /** Second intentional lever pull: shield defense reels. */
+  const doShieldSpin = async () => {
+    if (busy || spinning || phase !== 'elf-attack') return;
+    setBusy(true);
+    await runDefenseSpin(level);
   };
 
   const onPickTrick = (choice: TrickChoice) => {
@@ -550,21 +562,25 @@ export default function AliceRoomGame() {
     setBusy(false);
   };
 
-  const canPullPlayer = phase === 'player-spin' && !busy && !spinning;
+  const canPullPrize = phase === 'player-spin' && !busy && !spinning;
+  const canPullShield = phase === 'elf-attack' && !busy && !spinning;
+  const canPullPlayer = canPullPrize || canPullShield;
   const statusLed =
     spinning || phase === 'spinning' || phase === 'block-spinning'
       ? 'SPINNING'
-      : phase === 'trick-choices'
-        ? 'CHOOSE'
-        : phase === 'victory'
-          ? 'CLEARED'
-          : phase === 'defeat'
-            ? 'EJECTED'
-            : phase === 'block-result' || phase === 'player-result' || phase === 'level-clear'
-              ? '…'
-              : phase === 'intro'
-                ? 'READY'
-                : 'PULL';
+      : phase === 'elf-attack'
+        ? 'SHIELD'
+        : phase === 'trick-choices'
+          ? 'CHOOSE'
+          : phase === 'victory'
+            ? 'CLEARED'
+            : phase === 'defeat'
+              ? 'EJECTED'
+              : phase === 'block-result' || phase === 'player-result' || phase === 'level-clear'
+                ? '…'
+                : phase === 'intro'
+                  ? 'READY'
+                  : 'PULL';
 
   const meltClass = `alice-melt-${Math.min(10, Math.max(0, melt || level - 1))}`;
 
@@ -688,10 +704,10 @@ export default function AliceRoomGame() {
                 Fractal → Serpent → Ancestors → <strong>The Other</strong> (boss).
               </li>
               <li>
-                Each layer: <strong>one pull</strong> for Alice Coins — defense runs automatically after.
+                Each layer: <strong>pull for Alice Coins</strong>, then <strong>pull again for shield</strong>.
               </li>
               <li>
-                <strong>Auto shield spin</strong> — need <strong>three of that level’s entity</strong> or choose a
+                <strong>Shield pull</strong> — need <strong>three of that level’s entity</strong> or choose a
                 path.
               </li>
               <li>
@@ -873,7 +889,9 @@ export default function AliceRoomGame() {
                         </div>
                       </div>
                       <div className="slot-reel-bezel-label">
-                        {phase === 'block-spinning' || phase === 'block-result'
+                        {phase === 'elf-attack' ||
+                        phase === 'block-spinning' ||
+                        phase === 'block-result'
                           ? `SHIELD — 3× ${defenseEntity.label.toUpperCase()}`
                           : 'WIN LINE'}
                       </div>
@@ -884,12 +902,19 @@ export default function AliceRoomGame() {
                   <div className="slot-lever-column alice-lever-column">
                     <button
                       type="button"
-                      className={`alice-lever-hit ${!canPullPlayer ? 'alice-lever-hit-disabled' : ''} ${leverPulled ? 'alice-lever-hit-pulled' : ''}`}
+                      className={`alice-lever-hit ${!canPullPlayer ? 'alice-lever-hit-disabled' : ''} ${leverPulled ? 'alice-lever-hit-pulled' : ''} ${canPullShield ? 'alice-lever-hit-shield' : ''}`}
                       disabled={!canPullPlayer}
                       onClick={() => {
-                        if (canPullPlayer) void doPlayerSpin();
+                        if (canPullPrize) void doPlayerSpin();
+                        else if (canPullShield) void doShieldSpin();
                       }}
-                      aria-label={canPullPlayer ? 'Pull the Alice Machine lever' : 'Lever locked'}
+                      aria-label={
+                        canPullShield
+                          ? 'Pull the lever for the shield spin'
+                          : canPullPrize
+                            ? 'Pull the Alice Machine lever for Alice Coins'
+                            : 'Lever locked'
+                      }
                     >
                       <div className="slot-lever-housing">
                         <div className={`slot-lever-assembly ${leverPulled ? 'slot-lever-pulled' : ''}`}>
@@ -908,7 +933,13 @@ export default function AliceRoomGame() {
                         </div>
                       </div>
                       <span className="alice-lever-hint" aria-hidden>
-                        {canPullPlayer ? '↓ PULL' : spinning || busy ? '…' : 'LOCKED'}
+                        {canPullShield
+                          ? '↓ SHIELD'
+                          : canPullPrize
+                            ? '↓ PULL'
+                            : spinning || busy
+                              ? '…'
+                              : 'LOCKED'}
                       </span>
                     </button>
                   </div>

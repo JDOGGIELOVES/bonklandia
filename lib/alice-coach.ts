@@ -1,6 +1,7 @@
 import { BRAND } from '@/lib/brand';
 
-export const ALICE_COACH_KEY = `${BRAND.storagePrefix}-alice-coach-v1`;
+/** Bump when coach copy changes so returning players see updated tips. */
+export const ALICE_COACH_KEY = `${BRAND.storagePrefix}-alice-coach-v2`;
 
 export type AliceCoachTip = {
   id: string;
@@ -11,13 +12,13 @@ export type AliceCoachTip = {
 export const ALICE_COACH_TIPS: AliceCoachTip[] = [
   {
     id: 'pull',
-    title: 'Pull the lever',
-    body: 'Each layer starts with one prize pull for Alice Coins. Defense runs automatically after.',
+    title: 'Pull for coins',
+    body: 'Each layer starts with a prize pull for Alice Coins. Enjoy the lever — you pull it yourself.',
   },
   {
     id: 'shield',
-    title: 'Auto shield',
-    body: 'You need three of that layer’s being on the line. Hit it and you skip the doors.',
+    title: 'Pull again for shield',
+    body: 'After the prize, pull a second time. Land three of that layer’s being to skip the doors.',
   },
   {
     id: 'doors',
