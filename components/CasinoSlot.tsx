@@ -168,8 +168,11 @@ export default function CasinoSlot({
     toggleMute,
     playLeverPull,
     playSpinSequence,
+    playLandClunk,
     playWinResult,
   } = useCasinoAudio();
+  const [cabinetBump, setCabinetBump] = useState(false);
+  const [paylineFx, setPaylineFx] = useState<'prize' | 'big' | null>(null);
 
   const idleReels = useMemo(() => spinReels(tier.jackpotBias), [tier.jackpotBias]);
   const displayReels = results ?? idleReels;
@@ -427,10 +430,12 @@ export default function CasinoSlot({
     const nextResults = spinReels(reelBias);
     const outcomeResult = evaluateSpin(nextResults, paytableWave, payoutMultiplier);
 
-    void playLeverPull();
+    void playLeverPull('prize');
     void playSpinSequence();
 
     setLeverPulled(true);
+    setCabinetBump(true);
+    setPaylineFx(null);
     setLastMessage(null);
     setLastWinTier(null);
     setJackpotFlash(false);
@@ -442,6 +447,7 @@ export default function CasinoSlot({
       setSpinning(true);
       setResults(nextResults);
       setSpinKey(k => k + 1);
+      setCabinetBump(false);
     }, PAW_PULL_MS);
 
     setTimeout(() => setLeverPulled(false), 900);
@@ -460,6 +466,17 @@ export default function CasinoSlot({
       setLastWinTier(outcomeResult.winTier);
       if (outcomeResult.payout > 0) setTotalWinnings(w => w + outcomeResult.payout);
       if (outcomeResult.isJackpot) setJackpotFlash(true);
+      if (outcomeResult.payout > 0) {
+        const big =
+          outcomeResult.isJackpot ||
+          outcomeResult.winTier === 'jackpot' ||
+          outcomeResult.winTier === 'fam-triple';
+        setPaylineFx(big ? 'big' : 'prize');
+        void playLandClunk(big ? 'prize' : 'prize');
+        window.setTimeout(() => setPaylineFx(null), 1200);
+      } else {
+        void playLandClunk('soft');
+      }
       void playWinResult(outcomeResult.winTier);
       setTimeout(() => setJustLanded(false), 1000);
     }, totalSpinTime);
@@ -475,6 +492,7 @@ export default function CasinoSlot({
     chipMultiplier,
     playLeverPull,
     playSpinSequence,
+    playLandClunk,
     playWinResult,
   ]);
 
@@ -629,7 +647,17 @@ export default function CasinoSlot({
           </div>
 
           <div className="slot-stage">
-          <div className={`slot-cabinet ${spinning ? 'slot-cabinet-active' : ''} ${leverPulled ? 'slot-cabinet-pull' : ''}`}>
+          <div
+            className={[
+              'slot-cabinet',
+              spinning ? 'slot-cabinet-active' : '',
+              leverPulled ? 'slot-cabinet-pull' : '',
+              canPull ? 'slot-cabinet-ready' : '',
+              cabinetBump ? 'slot-cabinet-bump' : '',
+            ]
+              .filter(Boolean)
+              .join(' ')}
+          >
             <div className="slot-cabinet-rivet slot-cabinet-rivet-tl" aria-hidden />
             <div className="slot-cabinet-rivet slot-cabinet-rivet-tr" aria-hidden />
             <div className="slot-cabinet-rivet slot-cabinet-rivet-bl" aria-hidden />
@@ -702,7 +730,10 @@ export default function CasinoSlot({
                         spinKey={spinKey + 2}
                       />
                     </div>
-                    <div className="slot-payline-overlay" aria-hidden>
+                    <div
+                      className={`slot-payline-overlay ${paylineFx ? `bandit-payline-fx bandit-payline-fx-${paylineFx}` : ''}`}
+                      aria-hidden
+                    >
                       <span className="slot-payline-arrow slot-payline-arrow-l">◀</span>
                       <span className="slot-payline-bar" />
                       <span className="slot-payline-arrow slot-payline-arrow-r">▶</span>
@@ -713,25 +744,36 @@ export default function CasinoSlot({
               </div>
 
               <div className="slot-lever-column">
-                <div className="slot-lever-housing" aria-hidden>
-                  {/*
-                    One-armed bandit: fixed side socket is the hinge.
-                    Stick + red ball form a rigid arm that swings down when pulled.
-                  */}
-                  <div className={`slot-lever-assembly ${leverPulled ? 'slot-lever-pulled' : ''}`}>
-                    <div className="slot-lever-arm">
-                      <div className="slot-lever-ball">
-                        <span className="slot-lever-ball-shine" />
+                {/*
+                  Physical lever is pullable (Alice-style). Bonga paw remains a second control.
+                  Arm tips toward the player via shared lever-arm-yank (rotateX).
+                */}
+                <button
+                  type="button"
+                  className={`bandit-lever-hit ${!canPull ? 'bandit-lever-hit-disabled' : ''} ${leverPulled ? 'bandit-lever-hit-pulled' : ''}`}
+                  disabled={!canPull}
+                  onClick={() => pullLever()}
+                  aria-label={canPull ? 'Pull the Bandit lever' : 'Lever locked'}
+                >
+                  <div className="slot-lever-housing">
+                    <div className={`slot-lever-assembly ${leverPulled ? 'slot-lever-pulled' : ''}`}>
+                      <div className="slot-lever-arm">
+                        <div className="slot-lever-ball">
+                          <span className="slot-lever-ball-shine" />
+                        </div>
+                        <div className="slot-lever-stick">
+                          <span className="slot-lever-stick-ridge" />
+                        </div>
                       </div>
-                      <div className="slot-lever-stick">
-                        <span className="slot-lever-stick-ridge" />
+                      <div className="slot-lever-socket">
+                        <span className="slot-lever-socket-bolt" />
                       </div>
-                    </div>
-                    <div className="slot-lever-socket">
-                      <span className="slot-lever-socket-bolt" />
                     </div>
                   </div>
-                </div>
+                  <span className="bandit-lever-hint" aria-hidden>
+                    {canPull ? '↓ PULL' : spinning ? '…' : 'LOCKED'}
+                  </span>
+                </button>
                 <div className={`slot-bonga-wrap ${pawReady ? 'slot-bonga-ready' : ''}`}>
                   <BongaChillLever
                     pulling={leverPulled}

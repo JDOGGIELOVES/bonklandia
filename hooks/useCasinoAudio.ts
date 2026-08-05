@@ -63,17 +63,27 @@ export function useCasinoAudio() {
     return nextMusic;
   }, []);
 
-  const playLeverPull = useCallback(async () => {
-    if (isSfxMuted()) return;
-    const engine = engineRef.current;
-    await unlockAudio();
-    await engine.playLeverPull();
-  }, [unlockAudio]);
+  const playLeverPull = useCallback(
+    async (style: 'default' | 'prize' | 'shield' = 'prize') => {
+      if (isSfxMuted()) return;
+      const engine = engineRef.current;
+      await unlockAudio();
+      await engine.playLeverPull(style);
+    },
+    [unlockAudio],
+  );
 
   const playSpinSequence = useCallback(async () => {
     if (isSfxMuted()) return;
     const engine = engineRef.current;
     await engine.playSpinSequence(CASINO_SPIN_DURATION_MS, CASINO_SPIN_START_DELAY_MS);
+  }, []);
+
+  const playLandClunk = useCallback(async (style: 'prize' | 'shield' | 'soft' = 'prize') => {
+    if (isSfxMuted()) return;
+    const engine = engineRef.current;
+    await engine.ensureContext();
+    await engine.playLandClunk(style);
   }, []);
 
   const playWinResult = useCallback(async (winTier: WinTier) => {
@@ -91,6 +101,7 @@ export function useCasinoAudio() {
     toggleMute,
     playLeverPull,
     playSpinSequence,
+    playLandClunk,
     playWinResult,
   };
 }
