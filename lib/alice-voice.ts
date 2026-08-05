@@ -1,6 +1,9 @@
 /**
  * Alice entity dialogue via Web Speech API.
- * Music ducking is handled by AliceAudioEngine while a line is speaking.
+ *
+ * Chrome: cancel() then immediate speak() is broken — must delay.
+ * Chrome: synth can stick in paused state — resume() before/after speak.
+ * iOS: speech often only works during a user gesture (click/tap).
  */
 
 export type AliceVoiceStyle = {
@@ -24,11 +27,13 @@ const ENTITY_VOICE: Record<string, AliceVoiceStyle> = {
 
 const DEFAULT_STYLE: AliceVoiceStyle = { rate: 0.95, pitch: 1 };
 
+/** Bumps so late async starts from a cancelled line never speak. */
+let speakGeneration = 0;
+
 function preferredVoice(): SpeechSynthesisVoice | null {
   if (typeof window === 'undefined' || !window.speechSynthesis) return null;
   const voices = window.speechSynthesis.getVoices();
   if (!voices.length) return null;
-  // Prefer English; slightly favor clearer / narrative-ish names when present.
   const en = voices.filter(v => /^en(-|_)/i.test(v.lang) || /english/i.test(v.lang));
   const pool = en.length ? en : voices;
   const ranked = [...pool].sort((a, b) => {
@@ -36,13 +41,30 @@ function preferredVoice(): SpeechSynthesisVoice | null {
       let s = 0;
       const n = v.name.toLowerCase();
       if (v.localService) s += 2;
-      if (/google|microsoft|natural|neural|premium|enhanced/i.test(n)) s += 3;
+      if (/google|microsoft|natural|neural|premium|enhanced|samantha|zira|david/i.test(n)) s += 3;
       if (/female|zira|samantha|susan|karen|moira/i.test(n)) s += 1;
+      // Prefer non-silent / installed voices
+      if (!/compact|eloquence/i.test(n)) s += 1;
       return s;
     };
     return score(b) - score(a);
   });
   return ranked[0] ?? null;
+}
+
+/** Warm the voice list (call from a user gesture when possible). */
+export function warmAliceVoices(): void {
+  if (typeof window === 'undefined') return;
+  try {
+    const synth = window.speechSynthesis;
+    if (!synth) return;
+    synth.getVoices();
+    // Some browsers only populate after this event
+    const once = () => synth.getVoices();
+    synth.addEventListener('voiceschanged', once, { once: true });
+  } catch {
+    /* */
+  }
 }
 
 export type SpeakAliceOptions = {
@@ -51,6 +73,8 @@ export type SpeakAliceOptions = {
   volume?: number;
   onStart?: () => void;
   onEnd?: () => void;
+  /** Called when speech cannot start (no API / blocked). */
+  onError?: (reason: string) => void;
 };
 
 /**
@@ -58,9 +82,13 @@ export type SpeakAliceOptions = {
  * Safe no-op when speechSynthesis is missing or text is empty.
  */
 export function speakAliceLine(text: string, opts: SpeakAliceOptions = {}): void {
-  if (typeof window === 'undefined') return;
+  if (typeof window === 'undefined') {
+    opts.onEnd?.();
+    return;
+  }
   const synth = window.speechSynthesis;
   if (!synth) {
+    opts.onError?.('Speech not supported in this browser');
     opts.onEnd?.();
     return;
   }
@@ -71,20 +99,18 @@ export function speakAliceLine(text: string, opts: SpeakAliceOptions = {}): void
     return;
   }
 
-  synth.cancel();
+  const gen = ++speakGeneration;
 
-  const style = (opts.entityId && ENTITY_VOICE[opts.entityId]) || DEFAULT_STYLE;
-  const utter = new SpeechSynthesisUtterance(cleaned);
-  utter.rate = style.rate;
-  utter.pitch = style.pitch;
-  utter.volume = Math.max(0, Math.min(1, opts.volume ?? 1));
-
-  const voice = preferredVoice();
-  if (voice) {
-    utter.voice = voice;
-    utter.lang = voice.lang || 'en-US';
-  } else {
-    utter.lang = 'en-US';
+  // Hard-reset stuck Chrome speech engine
+  try {
+    synth.cancel();
+  } catch {
+    /* */
+  }
+  try {
+    synth.resume();
+  } catch {
+    /* */
   }
 
   let finished = false;
@@ -94,45 +120,127 @@ export function speakAliceLine(text: string, opts: SpeakAliceOptions = {}): void
     opts.onEnd?.();
   };
 
-  utter.onstart = () => opts.onStart?.();
-  utter.onend = done;
-  utter.onerror = done;
+  const buildUtterance = (): SpeechSynthesisUtterance => {
+    const style = (opts.entityId && ENTITY_VOICE[opts.entityId]) || DEFAULT_STYLE;
+    const utter = new SpeechSynthesisUtterance(cleaned);
+    utter.rate = Math.max(0.7, Math.min(1.4, style.rate));
+    utter.pitch = Math.max(0.5, Math.min(1.6, style.pitch));
+    utter.volume = Math.max(0, Math.min(1, opts.volume ?? 1));
+    const voice = preferredVoice();
+    if (voice) {
+      utter.voice = voice;
+      utter.lang = voice.lang || 'en-US';
+    } else {
+      utter.lang = 'en-US';
+    }
+    utter.onstart = () => {
+      if (gen !== speakGeneration) return;
+      opts.onStart?.();
+    };
+    utter.onend = () => {
+      if (gen !== speakGeneration) return;
+      done();
+    };
+    utter.onerror = event => {
+      if (gen !== speakGeneration) return;
+      // 'interrupted' / 'canceled' from our own cancel — treat as end
+      const err = (event as SpeechSynthesisErrorEvent).error;
+      if (err === 'interrupted' || err === 'canceled') {
+        done();
+        return;
+      }
+      opts.onError?.(err || 'speak failed');
+      done();
+    };
+    return utter;
+  };
 
-  // Chrome often returns empty getVoices() until voiceschanged.
   const start = () => {
+    if (gen !== speakGeneration) return;
     try {
+      try {
+        synth.resume();
+      } catch {
+        /* */
+      }
+      const utter = buildUtterance();
+      // Re-bind voice after delay — list may have populated
       const v = preferredVoice();
       if (v) {
         utter.voice = v;
         utter.lang = v.lang || 'en-US';
       }
       synth.speak(utter);
-    } catch {
+      // Chrome sometimes leaves the engine paused after speak()
+      window.setTimeout(() => {
+        if (gen !== speakGeneration) return;
+        try {
+          if (synth.paused) synth.resume();
+        } catch {
+          /* */
+        }
+      }, 80);
+      // If nothing started, report (helps diagnose silent failures)
+      window.setTimeout(() => {
+        if (gen !== speakGeneration || finished) return;
+        if (!synth.speaking && !synth.pending) {
+          opts.onError?.('Speech did not start — try again or check system voice settings');
+          done();
+        }
+      }, 900);
+    } catch (e) {
+      opts.onError?.(e instanceof Error ? e.message : 'speak threw');
       done();
     }
   };
 
-  if (synth.getVoices().length === 0) {
-    const once = () => {
-      synth.removeEventListener('voiceschanged', once);
+  // Critical: wait after cancel() before speak() (Chrome)
+  const afterCancelMs = 60;
+
+  const kick = () => {
+    if (gen !== speakGeneration) return;
+    // Ensure voices are loaded
+    const voices = synth.getVoices();
+    if (voices.length === 0) {
+      const once = () => {
+        synth.removeEventListener('voiceschanged', once);
+        window.setTimeout(start, 20);
+      };
+      synth.addEventListener('voiceschanged', once);
+      // Fallback if event never fires
+      window.setTimeout(() => {
+        synth.removeEventListener('voiceschanged', once);
+        start();
+      }, 600);
+      // Trigger load on some engines
+      try {
+        synth.getVoices();
+      } catch {
+        /* */
+      }
+    } else {
       start();
-    };
-    synth.addEventListener('voiceschanged', once);
-    // Fallback if event never fires
-    window.setTimeout(() => {
-      synth.removeEventListener('voiceschanged', once);
-      if (!finished && !synth.speaking) start();
-    }, 400);
-  } else {
-    start();
-  }
+    }
+  };
+
+  window.setTimeout(kick, afterCancelMs);
 }
 
 export function stopAliceSpeech(): void {
   if (typeof window === 'undefined') return;
+  speakGeneration += 1;
   try {
     window.speechSynthesis?.cancel();
   } catch {
     /* */
   }
+  try {
+    window.speechSynthesis?.resume();
+  } catch {
+    /* */
+  }
+}
+
+export function isAliceSpeechSupported(): boolean {
+  return typeof window !== 'undefined' && typeof window.speechSynthesis !== 'undefined';
 }

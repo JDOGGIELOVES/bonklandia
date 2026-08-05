@@ -8,7 +8,12 @@ import {
   getCasinoAudioEngine,
 } from '@/lib/casino-audio';
 import { ALICE_AMBIENCE_CREDIT, getAliceAudioEngine } from '@/lib/alice-audio';
-import { speakAliceLine, stopAliceSpeech } from '@/lib/alice-voice';
+import {
+  isAliceSpeechSupported,
+  speakAliceLine,
+  stopAliceSpeech,
+  warmAliceVoices,
+} from '@/lib/alice-voice';
 import {
   isAliceVoiceEnabled,
   setAliceVoiceEnabled,
@@ -38,6 +43,9 @@ export function useAliceAudio(level = 1) {
   const [entitySpeaking, setEntitySpeaking] = useState(false);
   /** Entity TTS — default off (opt-in). */
   const [voiceEnabled, setVoiceEnabledState] = useState(false);
+  const [voiceStatus, setVoiceStatus] = useState<string | null>(null);
+  const speechSupported =
+    typeof window !== 'undefined' ? isAliceSpeechSupported() : true;
 
   useEffect(() => {
     const initial = getAppAudioPrefs();
@@ -45,6 +53,7 @@ export function useAliceAudio(level = 1) {
     setSfxMutedState(initial.sfxMuted);
     applyAudioChannels(initial);
     setVoiceEnabledState(isAliceVoiceEnabled());
+    warmAliceVoices();
     const unsubPrefs = subscribeAppAudioPrefs(p => {
       setMusicMutedState(p.musicMuted);
       setSfxMutedState(p.sfxMuted);
@@ -91,11 +100,7 @@ export function useAliceAudio(level = 1) {
       }
     }
 
-    try {
-      window.speechSynthesis?.getVoices();
-    } catch {
-      /* */
-    }
+    warmAliceVoices();
     return true;
   }, [level]);
 
@@ -108,51 +113,85 @@ export function useAliceAudio(level = 1) {
   const speakEntityLine = useCallback(
     (text: string, entityId?: string, opts?: { force?: boolean }) => {
       if (!text.trim()) return;
-      // Opt-in VO for auto lines. “Hear them” uses force and always speaks.
+      if (!isAliceSpeechSupported()) {
+        setVoiceStatus('Speech not supported in this browser.');
+        return;
+      }
+      // Opt-in VO for auto lines. “Hear them” / Voice On sample uses force.
       if (!opts?.force) {
-        if (!isAliceVoiceEnabled() || musicMuted || isMusicMuted()) return;
+        if (!isAliceVoiceEnabled()) return;
+        // Music mute no longer blocks TTS — only the Voice toggle does.
       }
       const music = musicRef.current;
       stopAliceSpeech();
       setEntitySpeaking(true);
+      setVoiceStatus(null);
       if (!isMusicMuted()) music.setMusicDucked(true);
       speakAliceLine(text, {
         entityId,
         volume: 1,
-        onStart: () => setEntitySpeaking(true),
+        onStart: () => {
+          setEntitySpeaking(true);
+          setVoiceStatus(null);
+        },
         onEnd: () => {
+          music.setMusicDucked(false);
+          setEntitySpeaking(false);
+        },
+        onError: reason => {
+          setVoiceStatus(reason);
           music.setMusicDucked(false);
           setEntitySpeaking(false);
         },
       });
     },
-    [musicMuted],
+    [],
   );
 
   const setVoiceEnabled = useCallback(
     (on: boolean) => {
       setAliceVoiceEnabled(on);
       setVoiceEnabledState(on);
-      if (!on) stopEntitySpeech();
+      if (!on) {
+        stopEntitySpeech();
+        setVoiceStatus(null);
+      }
     },
     [stopEntitySpeech],
   );
 
+  /**
+   * Toggle VO. Turning ON speaks a short confirmation immediately
+   * (must stay in the click gesture for iOS / Chrome).
+   */
   const toggleVoice = useCallback(() => {
+    warmAliceVoices();
     const next = toggleAliceVoiceEnabled();
     setVoiceEnabledState(next);
-    if (!next) stopEntitySpeech();
+    if (!next) {
+      stopEntitySpeech();
+      setVoiceStatus(null);
+      return next;
+    }
+    // Confirm voice works right away in this user gesture
+    speakEntityLine(
+      'Voice on. The beings will speak when you face them. You can also tap Hear them speak.',
+      undefined,
+      { force: true },
+    );
     return next;
-  }, [stopEntitySpeech]);
+  }, [stopEntitySpeech, speakEntityLine]);
 
   /** Enable VO (if needed) and speak a line now — used by “Hear them speak”. */
   const hearEntityLine = useCallback(
     (text: string, entityId?: string) => {
       if (!text.trim()) return;
+      warmAliceVoices();
       if (!isAliceVoiceEnabled()) {
         setAliceVoiceEnabled(true);
         setVoiceEnabledState(true);
       }
+      // force: ignore pref edge cases; must be called from a click handler
       speakEntityLine(text, entityId, { force: true });
     },
     [speakEntityLine],
@@ -222,6 +261,8 @@ export function useAliceAudio(level = 1) {
     audioReady,
     entitySpeaking,
     voiceEnabled,
+    voiceStatus,
+    speechSupported,
     unlockAudio,
     toggleMute,
     toggleVoice,

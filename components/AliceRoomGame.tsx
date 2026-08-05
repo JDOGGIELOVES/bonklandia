@@ -157,6 +157,8 @@ export default function AliceRoomGame() {
     audioReady,
     entitySpeaking,
     voiceEnabled,
+    voiceStatus,
+    speechSupported,
     unlockAudio,
     toggleMute,
     toggleVoice,
@@ -501,10 +503,15 @@ export default function AliceRoomGame() {
     const info = getLevelInfo(forLevel);
     const entity = getEntityForLevel(forLevel);
     setPhase('elf-attack');
-    setMessage(`Pull the lever for shield — land 3× ${entity.label}.`);
+    setMessage(
+      voiceEnabled
+        ? `Pull the lever for shield — land 3× ${entity.label}. (Voice on — they speak when you pull.)`
+        : `Pull the lever for shield — land 3× ${entity.label}.`,
+    );
     pushLog(`── ${info.name} ── Pull again to shield (3× ${entity.label}).`);
     spokeAttackForLevel.current = forLevel;
-    speakEntityLine(info.attackLine, entity.id);
+    // Note: auto-speak after a long spin often fails on mobile (no user gesture).
+    // Reliable speech is on shield pull (gesture) and “Hear them speak”.
     setBusy(false);
   };
 
@@ -512,6 +519,10 @@ export default function AliceRoomGame() {
   const doShieldSpin = async () => {
     if (busy || spinning || phase !== 'elf-attack') return;
     setBusy(true);
+    // User gesture — best moment for TTS on iOS/Chrome
+    const info = getLevelInfo(level);
+    const entity = getEntityForLevel(level);
+    speakEntityLine(info.attackLine, entity.id);
     await runDefenseSpin(level);
   };
 
@@ -688,12 +699,12 @@ export default function AliceRoomGame() {
                 aria-label={
                   voiceEnabled
                     ? 'Turn entity voices off'
-                    : 'Turn entity voices on — they speak during the trip'
+                    : 'Turn entity voices on — you should hear a short sample immediately'
                 }
                 title={
                   voiceEnabled
                     ? 'Entity voice ON — click to silence spoken lines'
-                    : 'Entity voice OFF (default) — click to hear them speak'
+                    : 'Entity voice OFF — click to turn on (plays a short test line)'
                 }
               >
                 {voiceEnabled ? '🗣 Voice On' : '🗣 Voice Off'}
@@ -708,6 +719,16 @@ export default function AliceRoomGame() {
                 </button>
               )}
             </div>
+            {voiceStatus && (
+              <p className="alice-voice-status" role="status">
+                {voiceStatus}
+              </p>
+            )}
+            {!speechSupported && (
+              <p className="alice-voice-status" role="status">
+                This browser does not support spoken entity lines.
+              </p>
+            )}
             <div className="casino-wallet-bar alice-wallet-compact">
               <div className="casino-wallet-connect">
                 <WalletMultiButton />
@@ -1163,6 +1184,11 @@ export default function AliceRoomGame() {
                           </button>
                         )}
                       </div>
+                      {voiceStatus && (
+                        <p className="alice-voice-status" role="status">
+                          {voiceStatus}
+                        </p>
+                      )}
                     </div>
                   </div>
 

@@ -7940,6 +7940,16 @@ body {
   border-color: rgba(103, 232, 249, 0.55) !important;
   color: #a5f3fc !important;
 }
+.alice-voice-status {
+  text-align: center;
+  margin: 0.35rem 0.5rem 0;
+  font-size: 0.78rem;
+  color: #fde68a;
+  line-height: 1.35;
+}
+.alice-encounter-caption .alice-voice-status {
+  margin-top: 0.45rem;
+}
 /* Voice toggle stays visible on mobile (audio bar otherwise hidden in play) */
 @media (max-width: 720px) {
   .alice-room-playing .alice-audio-bar {
