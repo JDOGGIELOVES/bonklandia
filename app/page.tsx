@@ -872,7 +872,7 @@ export default function Home() {
               />
             </div>
 
-            <section className="hall-of-champions">
+            <section id="hall-of-champions" className="hall-of-champions" tabIndex={-1}>
               <div className="hall-of-champions-arch" aria-hidden>
                 <span className="hall-arch-keystone">VI</span>
               </div>
@@ -880,7 +880,7 @@ export default function Home() {
                 <h2 className="hall-of-champions-title">Hall of Champions</h2>
                 <p className="hall-of-champions-subtitle">Choose thy bloodline — six houses of the Bonk</p>
                 <p className="hall-of-champions-subtitle opacity-50 text-sm mt-1" aria-label="Build version">
-                  Build {BRAND.buildId} · Rival mascots live in {BRAND.depths}
+                  Build {BRAND.buildId} · Also try {BRAND.aliceRoomNav} or {BRAND.depths}
                 </p>
               </div>
 
