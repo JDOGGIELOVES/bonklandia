@@ -7199,61 +7199,137 @@ body {
   display: none !important;
 }
 @media (max-width: 720px) {
+  /*
+   * Mobile lever pass: machine + arm are the hero.
+   * Music dock moves to bottom-left so it never covers the right-side lever.
+   */
   .alice-room-playing .alice-room-content {
-    padding: 0.2rem 0 1.5rem !important;
+    padding: 0.15rem 0 max(7.5rem, calc(6.5rem + env(safe-area-inset-bottom, 0px))) !important;
+  }
+  .alice-room-playing .alice-header-play {
+    padding: 0.15rem 0.4rem 0.15rem !important;
+    margin-bottom: 0 !important;
+  }
+  .alice-room-playing .alice-top-bar-compact {
+    gap: 0.25rem;
+  }
+  .alice-room-playing .alice-audio-bar {
+    display: none; /* use global Music/SFX dock */
   }
   .alice-trip-strip {
     margin: 0;
     border-radius: 0;
     border-left: none;
     border-right: none;
+    padding: 0.3rem 0.45rem;
+    gap: 0.3rem;
+  }
+  /* Collapse chrome when it's time to pull — arm owns the viewport */
+  .alice-room-pull-ready .alice-trip-strip-compact {
+    padding: 0.22rem 0.4rem;
+  }
+  .alice-room-pull-ready .alice-trip-strip-img {
+    width: 28px;
+    height: 28px;
+  }
+  .alice-room-pull-ready .alice-trip-strip-need {
+    font-size: 0.58rem;
+    color: #f0abfc;
+    font-weight: 700;
+  }
+  .alice-room-shield-ready .alice-trip-strip-need {
+    color: #67e8f9;
+  }
+  .alice-room-pull-ready .alice-trip-strip-spend {
+    display: none;
+  }
+  .alice-room-pull-ready .alice-progress {
+    margin: 0.1rem 0.25rem 0.2rem;
+  }
+  .alice-room-pull-ready .alice-progress-track {
+    height: 4px;
+  }
+  .alice-room-pull-ready .alice-progress-label {
+    font-size: 0.55rem;
   }
   .alice-room-playing .alice-cabinet.slot-cabinet,
   .alice-cabinet.alice-cabinet-3d {
     width: 100% !important;
     border-radius: 12px 12px 4px 4px !important;
-    transform: perspective(900px) rotateX(5deg) !important;
+    /* Flatter pitch so the lever reads clearly (less 3D foreshorten) */
+    transform: perspective(900px) rotateX(3deg) !important;
+  }
+  .alice-cabinet.alice-cabinet-bump {
+    animation: alice-cabinet-thump-mobile 0.4s cubic-bezier(0.2, 0.9, 0.3, 1) both;
+  }
+  @keyframes alice-cabinet-thump-mobile {
+    0% { transform: perspective(900px) rotateX(3deg) translateY(0) scale(1); }
+    40% { transform: perspective(900px) rotateX(5deg) translateY(8px) scale(0.99); }
+    100% { transform: perspective(900px) rotateX(3deg) translateY(0) scale(1); }
   }
   .alice-cabinet-side {
     display: none;
   }
   .alice-cabinet-face {
     flex-direction: row !important;
-    padding: 0.45rem 0.35rem 0.45rem 0.45rem !important;
+    padding: 0.35rem 0.2rem 0.35rem 0.35rem !important;
     align-items: stretch;
+    gap: 0;
+  }
+  /* Reels take remaining width; lever column is intentionally generous */
+  .alice-cabinet .slot-reels-panel {
+    flex: 1 1 auto;
+    min-width: 0;
   }
   .alice-lever-column {
-    width: 96px !important;
-    min-width: 96px !important;
+    width: 118px !important;
+    min-width: 118px !important;
+    max-width: 34vw;
+    flex: 0 0 118px !important;
     flex-direction: column !important;
-    padding: 0.25rem 0.2rem !important;
-    overflow: hidden;
+    padding: 0.2rem 0.15rem 0.35rem !important;
+    overflow: hidden !important;
+    z-index: 6;
   }
   .alice-lever-hit {
-    min-height: 180px;
+    /* 44px+ touch target; full column is the grab zone */
+    min-height: 210px;
+    min-width: 100%;
+    padding: 0.15rem;
+    justify-content: flex-start;
+    padding-top: 0.35rem;
   }
   .alice-lever-hit .slot-lever-housing {
-    width: 72px;
-    height: 168px;
-    perspective: 360px;
+    width: 88px;
+    height: 188px;
+    perspective: 380px;
+    margin: 0 auto;
   }
-  /* Slightly shorter arm so the ball stays on-screen when tipped toward player */
   .alice-lever-hit .slot-lever-arm {
-    height: 112px;
-    bottom: 20px;
+    height: 128px;
+    bottom: 22px;
+    width: 48px;
+    margin-left: -24px;
   }
   .alice-lever-hit .slot-lever-stick {
-    height: 78px;
+    height: 90px;
+    width: 13px;
+    margin-left: -6.5px;
   }
   .alice-lever-hit .slot-lever-ball {
-    width: 34px;
-    height: 34px;
-    margin-left: -17px;
+    width: 40px;
+    height: 40px;
+    margin-left: -20px;
+  }
+  .alice-lever-hint {
+    font-size: 0.72rem;
+    margin-top: 0.15rem;
+    letter-spacing: 0.14em;
   }
   .alice-cabinet .slot-display-bar {
     flex-wrap: nowrap;
     gap: 0.15rem;
-    padding: 0.35rem 0.4rem;
+    padding: 0.3rem 0.35rem;
   }
   .alice-cabinet .slot-led-panel {
     flex: 1 1 0;
@@ -7267,11 +7343,71 @@ body {
     font-size: 0.85rem;
   }
   .alice-cabinet .slot-marquee-title {
-    font-size: 1.25rem !important;
+    font-size: 1.2rem !important;
+  }
+  .alice-cabinet .slot-marquee-sub {
+    font-size: 0.65rem !important;
+  }
+  .alice-room-pull-ready .alice-cabinet .slot-marquee-sub {
+    display: none; /* one less line when pulling */
+  }
+  .alice-cabinet-pedestal {
+    padding: 0.4rem 0.75rem 0.55rem;
+  }
+  .alice-hopper-tray {
+    height: 16px;
   }
   .alice-machine-floor {
-    height: 22%;
-    min-height: 80px;
+    height: 18%;
+    min-height: 64px;
+  }
+  /* Extra room under machine so dock never covers the ball */
+  .alice-room-playing .alice-slot-stage {
+    padding-bottom: 0.75rem !important;
+  }
+}
+
+/* Phones: Music/SFX dock on the LEFT so the right-side lever stays clear */
+@media (max-width: 720px) {
+  .global-music-dock {
+    left: max(0.55rem, env(safe-area-inset-left, 0px));
+    right: auto;
+    bottom: max(0.75rem, calc(0.5rem + env(safe-area-inset-bottom, 0px)));
+    align-items: flex-start;
+    max-width: min(42vw, 10.5rem);
+  }
+  .global-music-btn {
+    min-height: 42px;
+    font-size: 0.7rem;
+    padding: 0.4rem 0.7rem 0.4rem 0.55rem;
+  }
+  .global-sfx-btn {
+    min-height: 38px;
+    font-size: 0.68rem;
+  }
+}
+
+/* Very small phones: still bigger lever priority */
+@media (max-width: 380px) {
+  .alice-lever-column {
+    width: 108px !important;
+    min-width: 108px !important;
+    flex-basis: 108px !important;
+  }
+  .alice-lever-hit {
+    min-height: 196px;
+  }
+  .alice-lever-hit .slot-lever-housing {
+    width: 80px;
+    height: 172px;
+  }
+  .alice-lever-hit .slot-lever-arm {
+    height: 118px;
+  }
+  .alice-lever-hit .slot-lever-ball {
+    width: 38px;
+    height: 38px;
+    margin-left: -19px;
   }
 }
 

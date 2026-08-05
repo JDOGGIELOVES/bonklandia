@@ -610,7 +610,17 @@ export default function AliceRoomGame() {
 
   return (
     <div
-      className={`alice-room alice-machine-scene ${meltClass} ${inPlay ? 'alice-room-playing' : ''}`}
+      className={[
+        'alice-room',
+        'alice-machine-scene',
+        meltClass,
+        inPlay ? 'alice-room-playing' : '',
+        canPullPlayer ? 'alice-room-pull-ready' : '',
+        canPullPrize ? 'alice-room-prize-ready' : '',
+        canPullShield ? 'alice-room-shield-ready' : '',
+      ]
+        .filter(Boolean)
+        .join(' ')}
     >
       <div className="alice-room-bg" aria-hidden />
       <div className="casino-scene-vignette alice-vignette" />
@@ -760,8 +770,11 @@ export default function AliceRoomGame() {
 
         {phase !== 'intro' && (
           <div className="alice-stage-layout alice-stage-solo">
-            {/* Compact status strip — no cramped left column on mobile */}
-            <div className="alice-trip-strip" aria-label="Trip status">
+            {/* Status strip — collapses when lever is pull-ready so the arm owns the screen */}
+            <div
+              className={`alice-trip-strip ${canPullPlayer ? 'alice-trip-strip-compact' : ''}`}
+              aria-label="Trip status"
+            >
               <div className="alice-trip-strip-entity">
                 {defenseEntity.image && (
                   <Image
@@ -778,9 +791,17 @@ export default function AliceRoomGame() {
                     L{level}/{TOTAL_LEVELS}
                     {levelInfo.isBoss ? ' · BOSS' : ''}
                     {levelInfo.loving ? ' · LOVE' : ''}
+                    {canPullPrize ? ' · PULL' : ''}
+                    {canPullShield ? ' · SHIELD' : ''}
                   </span>
                   <span className="alice-trip-strip-name">{defenseEntity.label}</span>
-                  <span className="alice-trip-strip-need">Shield: 3× this being</span>
+                  <span className="alice-trip-strip-need">
+                    {canPullShield
+                      ? `Pull lever — 3× ${defenseEntity.label}`
+                      : canPullPrize
+                        ? 'Pull lever for Alice Coins'
+                        : 'Shield: 3× this being'}
+                  </span>
                 </div>
               </div>
               <div className="alice-trip-strip-stats">
