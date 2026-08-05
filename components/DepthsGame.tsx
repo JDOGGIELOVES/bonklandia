@@ -2,7 +2,7 @@
 
 import Image from 'next/image';
 import Link from 'next/link';
-import { useCallback, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import {
   DIFFICULTY_META,
   PLAYABLE_CHARACTERS,
@@ -14,6 +14,26 @@ import { resolveEnemyAbility } from '@/lib/enemy-abilities';
 import { getEnemyAttackShout, type Enemy } from '@/lib/enemies';
 import { BRAND } from '@/lib/brand';
 import { DEPTHS_LORE } from '@/lib/rival-enemies';
+
+const DEPTHS_COACH_KEY = `${BRAND.storagePrefix}-depths-coach-v1`;
+
+function isDepthsCoachDismissed(): boolean {
+  if (typeof window === 'undefined') return true;
+  try {
+    return window.localStorage.getItem(DEPTHS_COACH_KEY) === '1';
+  } catch {
+    return false;
+  }
+}
+
+function dismissDepthsCoach(): void {
+  if (typeof window === 'undefined') return;
+  try {
+    window.localStorage.setItem(DEPTHS_COACH_KEY, '1');
+  } catch {
+    /* */
+  }
+}
 import { buildDepthsFloor, type DepthsRoom, type DepthsRoomKind } from '@/lib/depths/rooms';
 import {
   DEPTHS_CRIT_MULT,
@@ -98,6 +118,11 @@ export default function DepthsGame() {
   const [casinoSecure, setCasinoSecure] = useState<CasinoSecureSession | null>(null);
   const [banditKind, setBanditKind] = useState<BanditKind>('room');
   const [pendingAdvance, setPendingAdvance] = useState(false);
+  const [showCoach, setShowCoach] = useState(false);
+
+  useEffect(() => {
+    setShowCoach(!isDepthsCoachDismissed());
+  }, []);
 
   // Combat presentation
   const [abilityMotion, setAbilityMotion] = useState('motion-bonk');
@@ -602,6 +627,9 @@ export default function DepthsGame() {
             <Link href="/" className="art-btn px-4 py-2 text-[#f0d878]">
               ← Gallery
             </Link>
+            <Link href="/alice" className="art-btn px-4 py-2 text-[#f0abfc]">
+              {BRAND.aliceRoomNav}
+            </Link>
             <Link href="/cashier" className="art-btn px-4 py-2 text-[#f0d878]">
               {BRAND.cashier}
             </Link>
@@ -618,20 +646,62 @@ export default function DepthsGame() {
           <h1 className="depths-title">{DEPTHS_LORE.title}</h1>
           <p className="depths-sub">{DEPTHS_LORE.subtitle}</p>
           <p className="depths-intro">{DEPTHS_LORE.intro}</p>
+
+          {showCoach && (
+            <div className="depths-coach" role="region" aria-label="How Depths works">
+              <div className="depths-coach-head">
+                <h3 className="depths-coach-title">Quick start</h3>
+                <button
+                  type="button"
+                  className="depths-coach-dismiss"
+                  onClick={() => {
+                    dismissDepthsCoach();
+                    setShowCoach(false);
+                  }}
+                >
+                  Got it
+                </button>
+              </div>
+              <ol className="depths-coach-list">
+                <li>
+                  <strong>Pick a champion</strong> — easy bloodlines (Bonnie, Beng) heal more and face softer
+                  foes.
+                </li>
+                <li>
+                  <strong>Clear chambers</strong> — fight, event, or rest. Map shows your path.
+                </li>
+                <li>
+                  <strong>Win → Bandit pulls</strong> — free spins on {BRAND.slotMachine}. Floor clear =
+                  champion spins.
+                </li>
+                <li>
+                  <strong>Cash at the Cashier</strong> — only server-ledger chips (wallet connected) can
+                  cash out.
+                </li>
+              </ol>
+            </div>
+          )}
+
           <p className="depths-hint">{DEPTHS_LORE.banditHook}</p>
           <p className="depths-hint">
-            Easy champs (Bonnie, Beng) get softer enemies and full heals — use Comfort Bonk / Fam Hug on
-            the way to the boss. Win chambers for free Bandit pulls; floor clear = champion spins.
+            Want a different game? Try {BRAND.aliceRoomNav} — pull the Alice Machine lever for dream coins.
           </p>
         </header>
 
+        <h2 className="depths-section-title depths-roster-heading">Choose your bloodline</h2>
         <div className="depths-roster">
           {PLAYABLE_CHARACTERS.map(char => (
             <button
               key={char.id}
               type="button"
               className="depths-char-card"
-              onClick={() => startRun(char)}
+              onClick={() => {
+                if (showCoach) {
+                  dismissDepthsCoach();
+                  setShowCoach(false);
+                }
+                startRun(char);
+              }}
             >
               <Image
                 src={char.img}
@@ -649,12 +719,16 @@ export default function DepthsGame() {
               >
                 {DIFFICULTY_META[char.difficulty].label}
               </span>
+              <span className="depths-char-cta">Descend →</span>
             </button>
           ))}
         </div>
       </div>
     );
   }
+
+  const mapProgressPct =
+    rooms.length > 0 ? Math.round(((roomIndex + (phase === 'victory' ? 1 : 0)) / rooms.length) * 100) : 0;
 
   return (
     <div className="depths-shell">
@@ -663,6 +737,9 @@ export default function DepthsGame() {
           <button type="button" className="art-btn px-4 py-2 text-[#f0d878]" onClick={resetToHub}>
             Abort run
           </button>
+          <Link href="/alice" className="art-btn px-4 py-2 text-[#f0abfc]">
+            {BRAND.aliceRoomNav}
+          </Link>
           <Link href="/cashier" className="art-btn px-4 py-2 text-[#f0d878]">
             {BRAND.cashier}
           </Link>
@@ -676,20 +753,43 @@ export default function DepthsGame() {
           </button>
           <span className="depths-chip-pill">
             Cleared {chambersCleared} · Bank {chips.toLocaleString()}
+            {runChips > 0 ? ` · Run +${runChips}` : ''}
           </span>
         </div>
         {fighter && (
-          <p className="depths-fighter-line">
-            {fighter.name} · HP {playerHP}/{fighter.hp} · Vibe {playerVibe}
-            {blockNext ? ' · BLOCK READY' : ''}
-          </p>
+          <div className="depths-status-bar">
+            <p className="depths-fighter-line">
+              {fighter.name} · HP {playerHP}/{fighter.hp} · Vibe {playerVibe}
+              {blockNext ? ' · BLOCK READY' : ''}
+            </p>
+            {rooms.length > 0 && (
+              <div
+                className="depths-progress"
+                role="progressbar"
+                aria-valuenow={roomIndex + 1}
+                aria-valuemin={1}
+                aria-valuemax={rooms.length}
+                aria-label={`Chamber ${roomIndex + 1} of ${rooms.length}`}
+              >
+                <div className="depths-progress-track">
+                  <div
+                    className="depths-progress-fill"
+                    style={{ width: `${Math.max(6, mapProgressPct)}%` }}
+                  />
+                </div>
+                <span className="depths-progress-label">
+                  Floor {floor} · {roomIndex + 1}/{rooms.length}
+                </span>
+              </div>
+            )}
+          </div>
         )}
       </header>
 
       {phase === 'map' && currentRoom && (
         <section className="depths-map">
           <h2 className="depths-section-title">
-            Floor {floor} · Chamber {roomIndex + 1}/{rooms.length}
+            Next chamber · {roomIndex + 1}/{rooms.length}
           </h2>
           <div className="depths-path">
             {rooms.map((room, i) => (
@@ -882,14 +982,20 @@ export default function DepthsGame() {
         <section className="depths-end depths-end-win">
           <h2>Depths cleared!</h2>
           <p>
-            {fighter?.name} reclaimed the frequency. Cash chip winnings at the {BRAND.cashier}.
+            {fighter?.name} reclaimed the frequency. Run chips this dive: {runChips.toLocaleString()}.
+            Cash server-ledger chips at the {BRAND.cashier}.
           </p>
-          <button type="button" className="art-btn depths-enter-btn" onClick={resetToHub}>
-            Return to Depths hub
-          </button>
-          <Link href="/cashier" className="art-btn depths-enter-btn inline-block mt-3">
-            Cash out at {BRAND.cashier}
-          </Link>
+          <div className="depths-end-actions">
+            <button type="button" className="art-btn depths-enter-btn" onClick={resetToHub}>
+              Return to Depths hub
+            </button>
+            <Link href="/cashier" className="art-btn depths-enter-btn">
+              Cash out at {BRAND.cashier}
+            </Link>
+            <Link href="/alice" className="art-btn depths-enter-btn depths-enter-alice">
+              {BRAND.aliceRoomNav}
+            </Link>
+          </div>
         </section>
       )}
 
@@ -898,11 +1004,20 @@ export default function DepthsGame() {
           <h2>Bonked out</h2>
           <p>
             Consolation spins are done. Cleared {chambersCleared} chamber
-            {chambersCleared === 1 ? '' : 's'} this run. Try another bloodline.
+            {chambersCleared === 1 ? '' : 's'} this run. Try another bloodline — or a trip on the Alice
+            Machine.
           </p>
-          <button type="button" className="art-btn depths-enter-btn" onClick={resetToHub}>
-            Back to hub
-          </button>
+          <div className="depths-end-actions">
+            <button type="button" className="art-btn depths-enter-btn" onClick={resetToHub}>
+              Back to hub
+            </button>
+            <Link href="/alice" className="art-btn depths-enter-btn depths-enter-alice">
+              {BRAND.aliceRoomNav}
+            </Link>
+            <Link href="/" className="art-btn depths-enter-btn">
+              Gallery
+            </Link>
+          </div>
         </section>
       )}
 
