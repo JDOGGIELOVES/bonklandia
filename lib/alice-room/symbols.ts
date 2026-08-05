@@ -6,7 +6,8 @@
  * We convert with black→alpha so they behave like Bonk Fam portraits (RGBA PNG).
  */
 
-export const ALICE_ASSET_VERSION = '2026-07-28b';
+/** Bump when entity stills/videos change so clients bust cache. */
+export const ALICE_ASSET_VERSION = '2026-07-29h';
 
 export type AliceSymbolKind = 'elf' | 'entity' | 'guide' | 'wild' | 'loving';
 

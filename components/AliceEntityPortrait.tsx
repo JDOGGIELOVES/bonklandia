@@ -3,6 +3,7 @@
 import Image from 'next/image';
 import { useEffect, useRef, useState } from 'react';
 import type { AliceSymbol } from '@/lib/alice-room/symbols';
+import { shouldPreferStillOverVideo } from '@/lib/alice-media';
 
 type AliceEntityPortraitProps = {
   entity: AliceSymbol;
@@ -13,8 +14,8 @@ type AliceEntityPortraitProps = {
 };
 
 /**
- * Still PNG first (instant); video mounts after a short paint delay so the
- * choice screen is interactive before multi‑MB loops start downloading.
+ * Still PNG first (instant); compressed loop mounts after paint.
+ * Skips video on Save-Data / very slow networks.
  */
 export default function AliceEntityPortrait({
   entity,
@@ -25,44 +26,45 @@ export default function AliceEntityPortrait({
   const videoRef = useRef<HTMLVideoElement | null>(null);
   const [videoReady, setVideoReady] = useState(false);
   const [videoFailed, setVideoFailed] = useState(false);
-  /** Defer actual <video> mount so poster paints first. */
   const [videoMount, setVideoMount] = useState(false);
+  const [stillOnly, setStillOnly] = useState(false);
 
   useEffect(() => {
     setVideoReady(false);
     setVideoFailed(false);
     setVideoMount(false);
+    setStillOnly(shouldPreferStillOverVideo());
   }, [entity.id, entity.video]);
 
   useEffect(() => {
-    if (!playVideo || !entity.video) {
+    if (!playVideo || !entity.video || stillOnly) {
       setVideoMount(false);
       return;
     }
-    // Let the still PNG + doors layout paint before bandwidth fight.
     let idleId: number | undefined;
     const win = window as Window & {
       requestIdleCallback?: (cb: () => void, opts?: { timeout: number }) => number;
       cancelIdleCallback?: (id: number) => void;
     };
+    // Slightly longer defer — still shows doors first; lite MP4s load fast after.
     const t = window.setTimeout(() => {
       if (typeof win.requestIdleCallback === 'function') {
-        idleId = win.requestIdleCallback(() => setVideoMount(true), { timeout: 600 });
+        idleId = win.requestIdleCallback(() => setVideoMount(true), { timeout: 400 });
       } else {
         setVideoMount(true);
       }
-    }, 180);
+    }, 120);
     return () => {
       window.clearTimeout(t);
       if (idleId !== undefined && typeof win.cancelIdleCallback === 'function') {
         win.cancelIdleCallback(idleId);
       }
     };
-  }, [playVideo, entity.video, entity.id]);
+  }, [playVideo, entity.video, entity.id, stillOnly]);
 
   useEffect(() => {
     const el = videoRef.current;
-    if (!el || !videoMount || !playVideo || !entity.video || videoFailed) return;
+    if (!el || !videoMount || !playVideo || !entity.video || videoFailed || stillOnly) return;
 
     el.muted = true;
     el.defaultMuted = true;
@@ -100,7 +102,7 @@ export default function AliceEntityPortrait({
     return () => {
       el.pause();
     };
-  }, [videoMount, playVideo, entity.video, entity.id, videoFailed]);
+  }, [videoMount, playVideo, entity.video, entity.id, videoFailed, stillOnly]);
 
   if (!entity.image && !entity.video) {
     return (
@@ -110,7 +112,7 @@ export default function AliceEntityPortrait({
     );
   }
 
-  const showVideoEl = playVideo && videoMount && entity.video && !videoFailed;
+  const showVideoEl = playVideo && videoMount && entity.video && !videoFailed && !stillOnly;
 
   return (
     <div
@@ -139,7 +141,7 @@ export default function AliceEntityPortrait({
           playsInline
           loop
           autoPlay
-          preload="none"
+          preload="metadata"
           onLoadedData={() => setVideoReady(true)}
           onCanPlay={() => setVideoReady(true)}
           onError={() => setVideoFailed(true)}

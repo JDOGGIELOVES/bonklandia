@@ -15,4 +15,6 @@ Lazy-loaded **only** on the choice screen for the current level (not on reels).
 | `ancestors.mp4` | Ancestor |
 | `others.mp4` | The Other |
 
-Note: current files are ~5–14 MB each. Consider re-exporting at 720p / lower bitrate later if mobile data is a concern.
+**Encoding (2026-07-29i):** H.264, max width 480, 12 fps, CRF 28, no audio, `faststart`.
+Roughly ~0.3–1.3 MB each (was ~5–14 MB). Poster PNG shows first; video defers until idle.
+Save-Data / 2G clients stay on stills only.
