@@ -2,7 +2,7 @@
 
 import Image from 'next/image';
 import Link from 'next/link';
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useWallet } from '@solana/wallet-adapter-react';
 import { WalletMultiButton } from '@solana/wallet-adapter-react-ui';
 import {
@@ -146,6 +146,7 @@ export default function AliceRoomGame() {
   const {
     muted,
     audioReady,
+    entitySpeaking,
     unlockAudio,
     toggleMute,
     playLeverPull,
@@ -175,6 +176,13 @@ export default function AliceRoomGame() {
   const [melt, setMelt] = useState(0);
   const [showCoach, setShowCoach] = useState(false);
   const [coinFlash, setCoinFlash] = useState<CoinFlash | null>(null);
+  const [shieldBeat, setShieldBeat] = useState<{
+    kind: 'pass' | 'fail';
+    title: string;
+    sub: string;
+  } | null>(null);
+  /** Level id whose attack line was already spoken this shield cycle. */
+  const spokeAttackForLevel = useRef<number | null>(null);
 
   const levelInfo = getLevelInfo(level);
   const defenseEntity = getEntityForLevel(level);
@@ -322,10 +330,12 @@ export default function AliceRoomGame() {
     async (forLevel: number) => {
       const info = getLevelInfo(forLevel);
       const entity = getEntityForLevel(forLevel);
+      setShieldBeat(null);
       setPhase('block-spinning');
       setMessage(`${info.attackLine} — shielding…`);
       pushLog(`── ${info.name} ── Defense: three ${entity.label}s.`);
-      // Entity speaks over ducked music so the line is clear.
+      // One attack monologue per shield — not again on doors.
+      spokeAttackForLevel.current = forLevel;
       speakEntityLine(info.attackLine, entity.id);
 
       const result = await runReelSpin(() => {
@@ -335,16 +345,33 @@ export default function AliceRoomGame() {
       pushLog(result.message);
 
       if (result.blocked) {
+        stopEntitySpeech();
         void playWinResult('fam-any');
         setTripKill(s => resetTripKillStreak(s));
         setMessage(result.message);
         setPhase('block-result');
+        setShieldBeat({
+          kind: 'pass',
+          title: 'SHIELD HELD',
+          sub: `Three ${entity.label}s — the layer yields.`,
+        });
         await sleep(1100);
+        setShieldBeat(null);
         await goToNextLayer(forLevel);
         return;
       }
 
+      stopEntitySpeech();
       void playWinResult('none');
+      setPhase('block-result');
+      setShieldBeat({
+        kind: 'fail',
+        title: 'SHIELD BROKE',
+        sub: info.loving ? 'The presence still offers paths…' : 'Four doors open. Choose carefully.',
+      });
+      await sleep(900);
+      setShieldBeat(null);
+
       const doors = buildTrickChoices(forLevel, runSeed, doubleUsed);
       setChoices(doors);
       setPhase('trick-choices');
@@ -353,11 +380,24 @@ export default function AliceRoomGame() {
           ? 'The presence offers paths…'
           : 'Shield failed — choose a path.',
       );
-      // Full presence line again on the choice screen (Jester, Elves, etc.).
-      speakEntityLine(`${info.attackLine} ${info.failLine}`, entity.id);
+      // Short fail line only — do not re-read the full attack monologue.
+      if (spokeAttackForLevel.current === forLevel) {
+        speakEntityLine(info.failLine, entity.id);
+      } else {
+        speakEntityLine(`${info.attackLine} ${info.failLine}`, entity.id);
+      }
       setBusy(false);
     },
-    [runReelSpin, playWinResult, pushLog, runSeed, doubleUsed, goToNextLayer, speakEntityLine],
+    [
+      runReelSpin,
+      playWinResult,
+      pushLog,
+      runSeed,
+      doubleUsed,
+      goToNextLayer,
+      speakEntityLine,
+      stopEntitySpeech,
+    ],
   );
 
   const doPlayerSpin = async () => {
@@ -831,6 +871,17 @@ export default function AliceRoomGame() {
                 </div>
               </div>
 
+              {shieldBeat && (
+                <div
+                  className={`alice-shield-beat alice-shield-beat-${shieldBeat.kind}`}
+                  role="status"
+                  aria-live="polite"
+                >
+                  <p className="alice-shield-beat-title">{shieldBeat.title}</p>
+                  <p className="alice-shield-beat-sub">{shieldBeat.sub}</p>
+                </div>
+              )}
+
               {phase === 'trick-choices' && (
                 <section className="alice-encounter" aria-label={`${levelInfo.name} encounter`}>
                   <div className="alice-encounter-stage">
@@ -856,6 +907,15 @@ export default function AliceRoomGame() {
                       <p className="alice-doors-sticky-hint" role="note">
                         One door is kind. Labels mislead — read the whisper under each title.
                       </p>
+                      {entitySpeaking && (
+                        <button
+                          type="button"
+                          className="alice-speech-skip"
+                          onClick={() => stopEntitySpeech()}
+                        >
+                          Skip voice
+                        </button>
+                      )}
                     </div>
                   </div>
 

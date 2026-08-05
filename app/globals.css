@@ -6840,6 +6840,22 @@ body {
   /* Glow lives on wrapper so video can use mix-blend without filter fighting it */
   filter: drop-shadow(0 12px 40px rgba(0, 0, 0, 0.55)) drop-shadow(0 0 28px rgba(192, 132, 252, 0.35));
 }
+/* Soft purple “stage” behind keyed video — blacks dissolve into the room, not a hard box */
+.alice-entity-media-keyed {
+  isolation: isolate;
+  overflow: visible;
+}
+.alice-entity-key-stage {
+  position: absolute;
+  inset: 8% 6%;
+  border-radius: 50%;
+  background:
+    radial-gradient(ellipse 70% 65% at 50% 45%, rgba(168, 85, 247, 0.45), transparent 70%),
+    radial-gradient(ellipse 90% 80% at 50% 55%, rgba(49, 16, 80, 0.85), transparent 75%);
+  pointer-events: none;
+  z-index: 0;
+  filter: blur(2px);
+}
 .alice-encounter-media {
   width: min(100%, 480px);
 }
@@ -6878,10 +6894,14 @@ body {
 }
 /*
  * Entity loops ship with solid black backgrounds (not true alpha).
- * screen blend keys pure black out against the dark purple encounter stage.
+ * screen + soft edge mask dissolve black into the purple key-stage.
  */
 .alice-encounter-video.alice-entity-video-keyblack.alice-encounter-video-ready {
   mix-blend-mode: screen;
+  /* Crush near-black fringes without washing the entity too hard */
+  filter: contrast(1.06) brightness(1.04);
+  -webkit-mask-image: radial-gradient(ellipse 82% 84% at 50% 48%, #000 58%, transparent 86%);
+  mask-image: radial-gradient(ellipse 82% 84% at 50% 48%, #000 58%, transparent 86%);
 }
 .alice-encounter-emoji {
   position: relative;
@@ -7090,12 +7110,14 @@ body {
   position: fixed;
   z-index: 10050;
   right: max(0.75rem, env(safe-area-inset-right, 0px));
-  bottom: max(0.85rem, env(safe-area-inset-bottom, 0px));
+  bottom: max(1rem, calc(0.65rem + env(safe-area-inset-bottom, 0px)));
   pointer-events: none;
   display: flex;
   flex-direction: column;
   align-items: flex-end;
   gap: 0.4rem;
+  /* Keep dock clear of home-indicator / gesture bars */
+  max-width: min(46vw, 11.5rem);
 }
 .global-music-btn {
   pointer-events: auto;
@@ -7338,4 +7360,92 @@ body {
 .alice-bank-cashier-cta {
   display: inline-flex;
   margin: 0 auto;
+}
+
+/* Shield success / fail theater beat */
+.alice-shield-beat {
+  position: relative;
+  z-index: 45;
+  width: min(100%, 520px);
+  margin: 0.75rem auto 0.5rem;
+  padding: 1rem 1.25rem;
+  border-radius: 1rem;
+  text-align: center;
+  animation: alice-shield-beat-in 0.35s ease-out both;
+  box-sizing: border-box;
+}
+.alice-shield-beat-pass {
+  border: 1px solid rgba(110, 231, 183, 0.55);
+  background: linear-gradient(165deg, rgba(6, 78, 59, 0.75), rgba(6, 30, 24, 0.92));
+  box-shadow: 0 0 32px rgba(52, 211, 153, 0.25);
+}
+.alice-shield-beat-fail {
+  border: 1px solid rgba(251, 113, 133, 0.5);
+  background: linear-gradient(165deg, rgba(80, 20, 40, 0.8), rgba(30, 8, 18, 0.95));
+  box-shadow: 0 0 32px rgba(244, 63, 94, 0.22);
+}
+.alice-shield-beat-title {
+  margin: 0;
+  font-family: var(--font-display), Georgia, serif;
+  font-size: clamp(1.35rem, 5vw, 1.85rem);
+  letter-spacing: 0.12em;
+  font-weight: 800;
+}
+.alice-shield-beat-pass .alice-shield-beat-title {
+  color: #a7f3d0;
+  text-shadow: 0 0 20px rgba(110, 231, 183, 0.5);
+}
+.alice-shield-beat-fail .alice-shield-beat-title {
+  color: #fecdd3;
+  text-shadow: 0 0 20px rgba(251, 113, 133, 0.45);
+}
+.alice-shield-beat-sub {
+  margin: 0.35rem 0 0;
+  font-size: 0.9rem;
+  color: rgba(233, 213, 255, 0.88);
+  line-height: 1.35;
+}
+@keyframes alice-shield-beat-in {
+  from {
+    opacity: 0;
+    transform: scale(0.92) translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1) translateY(0);
+  }
+}
+.alice-speech-skip {
+  margin-top: 0.65rem;
+  border: 1px solid rgba(192, 132, 252, 0.45);
+  border-radius: 999px;
+  background: rgba(40, 16, 70, 0.75);
+  color: #e9d5ff;
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  padding: 0.4rem 0.9rem;
+  cursor: pointer;
+  min-height: 40px;
+}
+.alice-speech-skip:hover {
+  border-color: #f0abfc;
+  background: rgba(76, 29, 149, 0.55);
+}
+.alice-encounter .alice-trick-card {
+  min-height: 3.25rem;
+}
+/* Room for dual Music/SFX dock on phones */
+.alice-room-playing .alice-room-content {
+  padding-bottom: max(6.5rem, calc(5.5rem + env(safe-area-inset-bottom, 0px))) !important;
+}
+.alice-room-playing .alice-slot-stage {
+  padding-bottom: 1rem !important;
+}
+.cashier-notice-body-2 {
+  margin-top: 0.55rem;
+}
+.cashier-content {
+  padding-bottom: max(6rem, calc(5rem + env(safe-area-inset-bottom, 0px)));
 }

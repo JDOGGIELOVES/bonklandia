@@ -75,20 +75,26 @@ export default function AliceEntityPortrait({
     );
   }
 
+  const showVideo = playVideo && entity.video && !videoFailed;
+
   return (
-    <div className={`alice-entity-media ${className}`}>
+    <div
+      className={`alice-entity-media ${showVideo ? 'alice-entity-media-keyed' : ''} ${className}`}
+    >
+      {/* Soft stage under keyed video so screen-blend blacks dissolve into purple, not a hard box */}
+      {showVideo && <div className="alice-entity-key-stage" aria-hidden />}
       {entity.image && (
         <Image
           src={entity.image}
           alt={entity.label}
           width={720}
           height={720}
-          className={`alice-encounter-portrait alice-entity-poster ${videoReady && playVideo && !videoFailed ? 'alice-entity-poster-hidden' : ''}`}
+          className={`alice-encounter-portrait alice-entity-poster ${videoReady && showVideo ? 'alice-entity-poster-hidden' : ''}`}
           priority={priority}
           unoptimized
         />
       )}
-      {playVideo && entity.video && !videoFailed && (
+      {showVideo && entity.video && (
         <video
           key={entity.video}
           ref={videoRef}
@@ -99,7 +105,7 @@ export default function AliceEntityPortrait({
           playsInline
           loop
           autoPlay
-          preload="auto"
+          preload="metadata"
           onLoadedData={() => setVideoReady(true)}
           onCanPlay={() => setVideoReady(true)}
           onError={() => setVideoFailed(true)}

@@ -289,10 +289,14 @@ export default function CashierPanel({ showBackLink = true }: CashierPanelProps)
         <div className="cashier-notice mb-8" role="note">
           <h2 className="cashier-notice-title">How exchange works</h2>
           <p className="cashier-notice-body">
-            <strong>Spendable Bonk Chips</strong> are earned in Depths / Bandit with your wallet connected — the server
-            tracks them. Editing browser storage does <strong>not</strong> create cashable chips.{' '}
+            <strong>Only server-ledger chips can cash out.</strong> Earn them in Depths, Bandit, or by banking Alice’s
+            final tally with this wallet connected. Editing browser storage or “local” displays does{' '}
+            <strong>not</strong> create cashable chips.
+          </p>
+          <p className="cashier-notice-body cashier-notice-body-2">
             <strong>BONGA in Solflare</strong> is separate (you need some so we can send more). Cashouts are{' '}
-            <strong>micro-prizes only</strong> (~<strong>$1 max</strong> per cashout).
+            <strong>micro-prizes only</strong> (~<strong>$1 max</strong> per cashout, daily caps apply) — fun rewards,
+            not a bank.
           </p>
         </div>
 
@@ -316,8 +320,8 @@ export default function CashierPanel({ showBackLink = true }: CashierPanelProps)
                     {!connected
                       ? 'Connect wallet to load spendable balance'
                       : chips > 0
-                        ? 'Ready to exchange'
-                        : 'Play Depths/Bandit with wallet connected to earn'}
+                        ? 'Server-verified · ready to exchange'
+                        : 'Play Depths / Bandit / bank Alice with this wallet'}
                   </span>
                 </div>
                 {localDisplayChips > chips && (

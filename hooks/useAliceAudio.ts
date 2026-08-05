@@ -29,6 +29,7 @@ export function useAliceAudio(level = 1) {
   const [musicMuted, setMusicMutedState] = useState(false);
   const [sfxMuted, setSfxMutedState] = useState(false);
   const [audioReady, setAudioReady] = useState(false);
+  const [entitySpeaking, setEntitySpeaking] = useState(false);
 
   useEffect(() => {
     const initial = getAppAudioPrefs();
@@ -87,6 +88,7 @@ export function useAliceAudio(level = 1) {
   const stopEntitySpeech = useCallback(() => {
     stopAliceSpeech();
     musicRef.current.setMusicDucked(false);
+    setEntitySpeaking(false);
   }, []);
 
   const speakEntityLine = useCallback(
@@ -95,12 +97,15 @@ export function useAliceAudio(level = 1) {
       if (musicMuted || isMusicMuted() || !text.trim()) return;
       const music = musicRef.current;
       stopAliceSpeech();
+      setEntitySpeaking(true);
       music.setMusicDucked(true);
       speakAliceLine(text, {
         entityId,
         volume: 1,
+        onStart: () => setEntitySpeaking(true),
         onEnd: () => {
           music.setMusicDucked(false);
+          setEntitySpeaking(false);
         },
       });
     },
@@ -159,6 +164,7 @@ export function useAliceAudio(level = 1) {
     musicMuted,
     sfxMuted,
     audioReady,
+    entitySpeaking,
     unlockAudio,
     toggleMute,
     playLeverPull,
