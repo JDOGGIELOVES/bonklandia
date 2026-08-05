@@ -7085,13 +7085,17 @@ body {
   }
 }
 
-/* ── Global music dock (every page, same corner) ───────────────── */
+/* ── Global music / SFX dock (every page, same corner) ─────────── */
 .global-music-dock {
   position: fixed;
   z-index: 10050;
   right: max(0.75rem, env(safe-area-inset-right, 0px));
   bottom: max(0.85rem, env(safe-area-inset-bottom, 0px));
   pointer-events: none;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 0.4rem;
 }
 .global-music-btn {
   pointer-events: auto;
@@ -7153,10 +7157,185 @@ body {
 .global-music-label {
   white-space: nowrap;
 }
+.global-sfx-btn {
+  font-size: 0.78rem;
+  min-height: 42px;
+}
 @media (max-width: 420px) {
   .global-music-btn {
-    min-height: 46px;
-    padding: 0.5rem 0.85rem 0.5rem 0.65rem;
-    font-size: 0.78rem;
+    min-height: 44px;
+    padding: 0.45rem 0.8rem 0.45rem 0.6rem;
+    font-size: 0.72rem;
   }
+}
+
+/* ── Alice session clarity ─────────────────────────────────────── */
+.alice-coach {
+  margin: 0 0 1rem;
+  padding: 0.85rem 1rem;
+  border-radius: 0.85rem;
+  border: 1px solid rgba(103, 232, 249, 0.4);
+  background: linear-gradient(165deg, rgba(30, 20, 60, 0.95), rgba(12, 6, 28, 0.98));
+  box-shadow: 0 0 24px rgba(103, 232, 249, 0.12);
+}
+.alice-coach-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  margin-bottom: 0.65rem;
+}
+.alice-coach-title {
+  margin: 0;
+  font-size: 0.95rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: #67e8f9;
+}
+.alice-coach-dismiss {
+  flex-shrink: 0;
+  border: 1px solid rgba(240, 171, 252, 0.45);
+  border-radius: 999px;
+  background: rgba(76, 29, 149, 0.45);
+  color: #fce7f3;
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  padding: 0.35rem 0.75rem;
+  cursor: pointer;
+}
+.alice-coach-dismiss:hover {
+  border-color: #f0abfc;
+  background: rgba(124, 58, 237, 0.45);
+}
+.alice-coach-list {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: 0.55rem;
+}
+.alice-coach-tip {
+  display: flex;
+  gap: 0.55rem;
+  align-items: flex-start;
+  font-size: 0.88rem;
+  line-height: 1.35;
+  color: rgba(233, 213, 255, 0.9);
+}
+.alice-coach-num {
+  flex-shrink: 0;
+  width: 1.35rem;
+  height: 1.35rem;
+  border-radius: 50%;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.7rem;
+  font-weight: 800;
+  background: rgba(232, 121, 249, 0.25);
+  border: 1px solid rgba(240, 171, 252, 0.45);
+  color: #f5d0fe;
+}
+.alice-coach-tip strong {
+  display: block;
+  color: #fce7f3;
+  margin-bottom: 0.1rem;
+}
+.alice-coach-body {
+  display: block;
+  font-size: 0.82rem;
+  color: rgba(196, 181, 253, 0.85);
+}
+.alice-progress {
+  display: flex;
+  align-items: center;
+  gap: 0.55rem;
+  margin: 0 0.35rem 0.35rem;
+  padding: 0 0.15rem;
+}
+.alice-progress-track {
+  flex: 1;
+  height: 6px;
+  border-radius: 999px;
+  background: rgba(40, 16, 60, 0.9);
+  border: 1px solid rgba(167, 139, 250, 0.25);
+  overflow: hidden;
+}
+.alice-progress-fill {
+  height: 100%;
+  border-radius: 999px;
+  background: linear-gradient(90deg, #a78bfa, #f0abfc, #67e8f9);
+  box-shadow: 0 0 10px rgba(240, 171, 252, 0.45);
+  transition: width 0.4s ease;
+}
+.alice-progress-label {
+  flex-shrink: 0;
+  font-size: 0.65rem;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: rgba(196, 181, 253, 0.8);
+}
+.alice-trip-strip-coins {
+  position: relative;
+}
+.alice-coin-flash {
+  position: absolute;
+  right: 0;
+  top: 100%;
+  margin-top: 0.15rem;
+  white-space: nowrap;
+  font-size: 0.72rem;
+  font-weight: 800;
+  letter-spacing: 0.04em;
+  animation: alice-coin-pop 1.55s ease-out both;
+  pointer-events: none;
+  z-index: 5;
+}
+.alice-coin-flash-gain { color: #6ee7b7; text-shadow: 0 0 10px rgba(110, 231, 183, 0.5); }
+.alice-coin-flash-loss { color: #fda4af; text-shadow: 0 0 10px rgba(251, 113, 133, 0.45); }
+.alice-coin-flash-safe { color: #67e8f9; text-shadow: 0 0 10px rgba(103, 232, 249, 0.4); }
+.alice-coin-flash-double { color: #fde68a; text-shadow: 0 0 12px rgba(251, 191, 36, 0.55); }
+@keyframes alice-coin-pop {
+  0% { opacity: 0; transform: translateY(6px) scale(0.9); }
+  15% { opacity: 1; transform: translateY(0) scale(1.05); }
+  70% { opacity: 1; }
+  100% { opacity: 0; transform: translateY(-10px); }
+}
+.alice-doors-sticky-hint {
+  margin: 0.55rem 0 0;
+  padding: 0.45rem 0.65rem;
+  border-radius: 0.5rem;
+  border: 1px dashed rgba(251, 191, 36, 0.45);
+  background: rgba(69, 26, 3, 0.35);
+  color: #fde68a;
+  font-size: 0.78rem;
+  font-weight: 600;
+  line-height: 1.35;
+}
+.alice-bank-trust {
+  margin: 0.35rem auto 0.75rem;
+  max-width: 28rem;
+  font-size: 0.82rem;
+  line-height: 1.4;
+  color: rgba(196, 181, 253, 0.8);
+}
+.alice-bank-receipt {
+  margin-top: 1rem;
+  padding: 1rem 1.1rem;
+  border-radius: 0.85rem;
+  border: 1px solid rgba(110, 231, 183, 0.4);
+  background: rgba(6, 40, 28, 0.45);
+  text-align: center;
+}
+.alice-bank-receipt-hint {
+  margin: 0.35rem 0 0.85rem;
+  font-size: 0.8rem;
+  color: rgba(167, 243, 208, 0.75);
+}
+.alice-bank-cashier-cta {
+  display: inline-flex;
+  margin: 0 auto;
 }

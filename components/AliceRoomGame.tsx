@@ -2,12 +2,10 @@
 
 import Image from 'next/image';
 import Link from 'next/link';
-import { useCallback, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useWallet } from '@solana/wallet-adapter-react';
 import { WalletMultiButton } from '@solana/wallet-adapter-react-ui';
 import {
-  ALICE_COINS_PER_SPENDABLE_CHIP,
-  BOSS_LEVEL,
   TOTAL_LEVELS,
   aliceCoinsToSpendable,
   applyChoice,
@@ -28,10 +26,21 @@ import { getEntityForLevel } from '@/lib/alice-room/symbols';
 import { ALL_ALICE_SYMBOLS, type AliceSymbol } from '@/lib/alice-room/symbols';
 import AliceEntityPortrait from '@/components/AliceEntityPortrait';
 import { BRAND } from '@/lib/brand';
+import {
+  ALICE_COACH_TIPS,
+  dismissAliceCoach,
+  isAliceCoachDismissed,
+} from '@/lib/alice-coach';
 import { loadChipLedgerToken, saveChipLedgerToken } from '@/lib/chip-ledger-client';
 import { CASINO_SPIN_DURATION_MS, CASINO_SPIN_START_DELAY_MS } from '@/lib/casino-audio';
 import { useAliceAudio } from '@/hooks/useAliceAudio';
 import type { WinTier } from '@/lib/slot-machine';
+
+type CoinFlash = {
+  id: number;
+  text: string;
+  kind: 'gain' | 'loss' | 'safe' | 'double';
+};
 
 /**
  * MUST match CSS `.alice-cabinet .slot-reels { --slot-reel-height: 160px }`
@@ -164,11 +173,19 @@ export default function AliceRoomGame() {
   const [doubleUsed, setDoubleUsed] = useState(false);
   const [tripKill, setTripKill] = useState<TripKillState>(emptyTripKillState());
   const [melt, setMelt] = useState(0);
+  const [showCoach, setShowCoach] = useState(false);
+  const [coinFlash, setCoinFlash] = useState<CoinFlash | null>(null);
 
   const levelInfo = getLevelInfo(level);
   const defenseEntity = getEntityForLevel(level);
   const projectedSpendable = aliceCoinsToSpendable(aliceCoins);
   const displayReels = results ?? [IDLE_REEL, IDLE_REEL, IDLE_REEL];
+  const progressFill =
+    phase === 'victory' ? 100 : Math.max(4, Math.round(((level - 1) / TOTAL_LEVELS) * 100));
+
+  useEffect(() => {
+    setShowCoach(!isAliceCoachDismissed());
+  }, []);
 
   const pushLog = useCallback((text: string) => {
     setLogId(n => {
@@ -178,7 +195,20 @@ export default function AliceRoomGame() {
     });
   }, []);
 
+  const flashCoins = useCallback((text: string, kind: CoinFlash['kind']) => {
+    const id = Date.now();
+    setCoinFlash({ id, text, kind });
+    window.setTimeout(() => {
+      setCoinFlash(cur => (cur?.id === id ? null : cur));
+    }, 1600);
+  }, []);
+
   const sleep = (ms: number) => new Promise(r => setTimeout(r, ms));
+
+  const onDismissCoach = () => {
+    dismissAliceCoach();
+    setShowCoach(false);
+  };
 
   const startDive = async () => {
     setBusy(true);
@@ -341,6 +371,7 @@ export default function AliceRoomGame() {
     });
     if (result.aliceCoins) {
       setAliceCoins(c => c + result.aliceCoins!);
+      flashCoins(`+${result.aliceCoins.toLocaleString()} AC`, 'gain');
       pushLog(`+${result.aliceCoins.toLocaleString()} Alice Coins — ${result.message}`);
       void playWinResult(aliceWinTier(result.aliceCoins));
     } else {
@@ -378,12 +409,15 @@ export default function AliceRoomGame() {
     setAliceCoins(applied.nextCoins);
     if (choice.tier === 'double') {
       setDoubleUsed(true);
+      flashCoins(`×2 +${applied.gained.toLocaleString()} AC`, 'double');
       pushLog(`DOUBLE — +${applied.gained.toLocaleString()} Alice Coins. (${choice.label})`);
       void playWinResult('jackpot');
     } else if (applied.lost > 0) {
+      flashCoins(`−${applied.lost.toLocaleString()} AC`, 'loss');
       pushLog(`“${choice.label}” — lost ${applied.lost.toLocaleString()} (${choice.tier}).`);
       void playWinResult('none');
     } else {
+      flashCoins('SAFE · coins held', 'safe');
       pushLog(`“${choice.label}” — safe. Coins untouched.`);
       void playWinResult('bonk-single');
     }
@@ -486,9 +520,9 @@ export default function AliceRoomGame() {
                 className="casino-audio-btn"
                 onClick={() => void toggleMute()}
                 aria-label={muted ? 'Unmute all music and sound' : 'Mute all music and sound'}
-                title={`${ambienceCredit} · Same as MUSIC button (bottom-right)`}
+                title={`${ambienceCredit} · Music only — use bottom-right for Music / SFX`}
               >
-                {muted ? '🔇 Music Off' : '🔊 Music On'}
+                {muted ? '🎵 Music Off' : '🎵 Music On'}
               </button>
               {!audioReady && (
                 <button
@@ -523,6 +557,29 @@ export default function AliceRoomGame() {
         {phase === 'intro' && (
           <section className="alice-panel alice-intro">
             <h2>The voyage</h2>
+            {showCoach && (
+              <div className="alice-coach" role="region" aria-label="How to play">
+                <div className="alice-coach-head">
+                  <h3 className="alice-coach-title">Quick start</h3>
+                  <button type="button" className="alice-coach-dismiss" onClick={onDismissCoach}>
+                    Got it
+                  </button>
+                </div>
+                <ol className="alice-coach-list">
+                  {ALICE_COACH_TIPS.map((tip, i) => (
+                    <li key={tip.id} className="alice-coach-tip">
+                      <span className="alice-coach-num" aria-hidden>
+                        {i + 1}
+                      </span>
+                      <span>
+                        <strong>{tip.title}</strong>
+                        <span className="alice-coach-body">{tip.body}</span>
+                      </span>
+                    </li>
+                  ))}
+                </ol>
+              </div>
+            )}
             <ol className="alice-rules">
               <li>
                 <strong>10 layers</strong> — Machine Elves → Jesters → Mantis → Greys → Light → Goddess →
@@ -544,14 +601,17 @@ export default function AliceRoomGame() {
                 many times in a row (safe/double paths never kill).
               </li>
               <li>
-                After the boss, bank the final tally (capped spendable chips).
+                After the boss, bank the final tally (capped spendable chips). Only the server ledger can cash out.
               </li>
             </ol>
             <button
               type="button"
               className="alice-btn alice-btn-primary"
               disabled={busy}
-              onClick={() => void startDive()}
+              onClick={() => {
+                if (showCoach) onDismissCoach();
+                void startDive();
+              }}
             >
               {busy ? 'Opening…' : `${BRAND.aliceRoomNav} — Begin`}
             </button>
@@ -586,11 +646,36 @@ export default function AliceRoomGame() {
               <div className="alice-trip-strip-stats">
                 <span className="alice-trip-strip-coins">
                   {aliceCoins.toLocaleString()} <small>AC</small>
+                  {coinFlash && (
+                    <span
+                      key={coinFlash.id}
+                      className={`alice-coin-flash alice-coin-flash-${coinFlash.kind}`}
+                      aria-live="polite"
+                    >
+                      {coinFlash.text}
+                    </span>
+                  )}
                 </span>
                 <span className="alice-trip-strip-spend">
                   ~{projectedSpendable} chips
                 </span>
               </div>
+            </div>
+            <div
+              className="alice-progress"
+              role="progressbar"
+              aria-valuenow={phase === 'victory' ? TOTAL_LEVELS : level}
+              aria-valuemin={1}
+              aria-valuemax={TOTAL_LEVELS}
+              aria-label={`Layer ${level} of ${TOTAL_LEVELS}`}
+            >
+              <div className="alice-progress-track">
+                <div className="alice-progress-fill" style={{ width: `${progressFill}%` }} />
+              </div>
+              <span className="alice-progress-label">
+                Layer {phase === 'victory' ? TOTAL_LEVELS : level}/{TOTAL_LEVELS}
+                {levelInfo.isBoss && phase !== 'victory' ? ' · Boss' : ''}
+              </span>
             </div>
 
             <div
@@ -768,6 +853,9 @@ export default function AliceRoomGame() {
                           ? 'Choose a path. Losses capped at 50% — a golden door may double your Alice Coins.'
                           : 'Shield failed. Choose carefully — one path is safe. Labels mislead.'}
                       </p>
+                      <p className="alice-doors-sticky-hint" role="note">
+                        One door is kind. Labels mislead — read the whisper under each title.
+                      </p>
                     </div>
                   </div>
 
@@ -799,6 +887,10 @@ export default function AliceRoomGame() {
                     Spendable estimate:{' '}
                     <strong>{aliceCoinsToSpendable(aliceCoins).toLocaleString()} Bonk Chips</strong>
                   </p>
+                  <p className="alice-bank-trust">
+                    Only chips the server records after you bank can cash out at the Cashier. Alice Coins
+                    alone are dream-wealth.
+                  </p>
                   {!connected && (
                     <p className="alice-warn">Connect wallet to bank spendable chips.</p>
                   )}
@@ -806,10 +898,14 @@ export default function AliceRoomGame() {
                     <button
                       type="button"
                       className="alice-btn alice-btn-primary"
-                      disabled={busy || !sessionToken}
+                      disabled={busy || !sessionToken || spendableEarned != null}
                       onClick={() => void bankFinalTally()}
                     >
-                      {busy ? 'Banking…' : 'Bank Final Tally'}
+                      {busy
+                        ? 'Banking…'
+                        : spendableEarned != null
+                          ? 'Banked'
+                          : 'Bank Final Tally'}
                     </button>
                     <Link href="/cashier" className="alice-btn alice-btn-ghost">
                       {BRAND.cashier}
@@ -819,8 +915,20 @@ export default function AliceRoomGame() {
                     </button>
                   </div>
                   {claimMsg && <p className="alice-claim-msg">{claimMsg}</p>}
-                  {spendableEarned != null && spendableEarned > 0 && (
-                    <p className="alice-claim-ok">+{spendableEarned} spendable Bonk Chips.</p>
+                  {spendableEarned != null && (
+                    <div className="alice-bank-receipt" role="status">
+                      <p className="alice-claim-ok">
+                        {spendableEarned > 0
+                          ? `+${spendableEarned.toLocaleString()} spendable Bonk Chips added to your ledger.`
+                          : 'Banked — no spendable chips this run (tally too low or already claimed).'}
+                      </p>
+                      <p className="alice-bank-receipt-hint">
+                        Open the Cashier to view balance and exchange. Server-ledger chips only.
+                      </p>
+                      <Link href="/cashier" className="alice-btn alice-btn-primary alice-bank-cashier-cta">
+                        Go to {BRAND.cashier} →
+                      </Link>
+                    </div>
                   )}
                 </section>
               )}

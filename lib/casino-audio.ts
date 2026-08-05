@@ -16,7 +16,10 @@ export class CasinoAudioEngine {
   private master: GainNode | null = null;
   private musicBus: GainNode | null = null;
   private sfxBus: GainNode | null = null;
+  /** Full mute (both channels) — prefer musicMuted / sfxMuted. */
   private muted = false;
+  private musicMuted = false;
+  private sfxMuted = false;
   private musicGain = 0.42;
   /** Louder than music so lever/reels cut through lobby / Alice beds. */
   private sfxGain = 1.05;
@@ -66,34 +69,56 @@ export class CasinoAudioEngine {
   }
 
   get isMuted() {
-    return this.muted;
+    return this.musicMuted && this.sfxMuted;
+  }
+
+  get isMusicMuted() {
+    return this.musicMuted;
+  }
+
+  get isSfxMuted() {
+    return this.sfxMuted;
+  }
+
+  setMusicMuted(muted: boolean) {
+    this.musicMuted = muted;
+    this.muted = this.musicMuted && this.sfxMuted;
+    this.applyGain();
+    if (muted) this.stopMusicOnly();
+  }
+
+  setSfxMuted(muted: boolean) {
+    this.sfxMuted = muted;
+    this.muted = this.musicMuted && this.sfxMuted;
+    this.applyGain();
   }
 
   setMuted(muted: boolean) {
+    this.musicMuted = muted;
+    this.sfxMuted = muted;
     this.muted = muted;
     this.applyGain();
-    // Mute only silences / stops music. Never auto-restart on unmute (that stacked beds).
+    // Never auto-restart on unmute (that stacked beds).
     if (muted) this.stopMusicOnly();
   }
 
   toggleMute() {
-    this.setMuted(!this.muted);
-    return this.muted;
+    this.setMuted(!this.isMuted);
+    return this.isMuted;
   }
 
   private applyGain() {
     if (!this.master || !this.musicBus || !this.sfxBus || !this.ctx) return;
     const t = this.ctx.currentTime;
-    const m = this.muted ? 0 : 1;
-    // Keep SFX audible under music: master always open when unmuted; music/sfx buses scale separately.
-    this.master.gain.setTargetAtTime(m, t, 0.04);
-    this.musicBus.gain.setTargetAtTime(this.musicGain * m, t, 0.04);
-    this.sfxBus.gain.setTargetAtTime(this.sfxGain * m, t, 0.04);
+    // Master stays open so either channel can play independently.
+    this.master.gain.setTargetAtTime(1, t, 0.04);
+    this.musicBus.gain.setTargetAtTime(this.musicMuted ? 0 : this.musicGain, t, 0.04);
+    this.sfxBus.gain.setTargetAtTime(this.sfxMuted ? 0 : this.sfxGain, t, 0.04);
   }
 
   async startAmbience() {
     const ctx = await this.ensureContext();
-    if (!ctx || this.muted) return;
+    if (!ctx || this.musicMuted) return;
     // Exclusive bed: never layer over Alice Folk Round (or any other trip music).
     const { setActiveMusicBed, getActiveMusicBed } = await import('@/lib/music-bed');
     setActiveMusicBed('casino');
@@ -112,7 +137,7 @@ export class CasinoAudioEngine {
       this.stopMusicOnly();
       return;
     }
-    if (this.musicRunning && !this.muted) this.playCasinoDoorChime();
+    if (this.musicRunning && !this.musicMuted && !this.sfxMuted) this.playCasinoDoorChime();
   }
 
   /** Stop lobby music only — keeps lever/reel SFX usable (Alice needs this). */
@@ -149,8 +174,7 @@ export class CasinoAudioEngine {
    */
   async playLeverPull() {
     const ctx = await this.ensureContext();
-    if (!ctx || !this.sfxBus || this.muted) return;
-    // Re-assert SFX bus gain (Alice can leave music stopped while SFX must stay loud).
+    if (!ctx || !this.sfxBus || this.sfxMuted) return;
     this.applyGain();
     const t = ctx.currentTime;
     const bus = this.sfxBus;
@@ -207,7 +231,7 @@ export class CasinoAudioEngine {
 
   async playSpinSequence(spinDurationMs: number, spinStartDelayMs: number) {
     const ctx = await this.ensureContext();
-    if (!ctx || this.muted) return;
+    if (!ctx || this.sfxMuted) return;
     this.applyGain();
 
     this.stopSpinTicks();
@@ -240,7 +264,7 @@ export class CasinoAudioEngine {
 
   async playWinResult(winTier: WinTier) {
     const ctx = await this.ensureContext();
-    if (!ctx || !this.sfxBus || this.muted) return;
+    if (!ctx || !this.sfxBus || this.sfxMuted) return;
     this.applyGain();
     const t = ctx.currentTime;
 
@@ -293,7 +317,7 @@ export class CasinoAudioEngine {
   }
 
   private async startMusicLoop() {
-    if (!this.ctx || !this.musicBus || this.muted || !this.musicRunning) return;
+    if (!this.ctx || !this.musicBus || this.musicMuted || !this.musicRunning) return;
 
     const gen = ++this.musicGeneration;
     // Tear down any prior loop (including orphaned concurrent starts).
@@ -305,7 +329,7 @@ export class CasinoAudioEngine {
       !buffer ||
       !this.ctx ||
       !this.musicBus ||
-      this.muted ||
+      this.musicMuted ||
       !this.musicRunning
     ) {
       return;

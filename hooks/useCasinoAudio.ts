@@ -8,22 +8,29 @@ import {
   getCasinoAudioEngine,
 } from '@/lib/casino-audio';
 import {
-  applyMuteToAllEngines,
-  isAppAudioMuted,
-  setAppAudioMuted,
-  subscribeAppAudioMuted,
+  applyAudioChannels,
+  getAppAudioPrefs,
+  isMusicMuted,
+  isSfxMuted,
+  setAppMusicMuted,
+  subscribeAppAudioPrefs,
 } from '@/lib/global-audio';
 
 export function useCasinoAudio() {
   const engineRef = useRef(getCasinoAudioEngine());
-  const [muted, setMuted] = useState(false);
+  const [musicMuted, setMusicMutedState] = useState(false);
+  const [sfxMuted, setSfxMutedState] = useState(false);
   const [audioReady, setAudioReady] = useState(false);
 
   useEffect(() => {
-    const initial = isAppAudioMuted();
-    setMuted(initial);
-    applyMuteToAllEngines(initial);
-    return subscribeAppAudioMuted(setMuted);
+    const initial = getAppAudioPrefs();
+    setMusicMutedState(initial.musicMuted);
+    setSfxMutedState(initial.sfxMuted);
+    applyAudioChannels(initial);
+    return subscribeAppAudioPrefs(p => {
+      setMusicMutedState(p.musicMuted);
+      setSfxMutedState(p.sfxMuted);
+    });
   }, []);
 
   useEffect(() => {
@@ -34,51 +41,51 @@ export function useCasinoAudio() {
   }, []);
 
   const unlockAudio = useCallback(async () => {
-    if (isAppAudioMuted()) {
-      applyMuteToAllEngines(true);
-      return false;
-    }
     const engine = engineRef.current;
+    applyAudioChannels(getAppAudioPrefs());
     await engine.ensureContext();
-    if (!isAppAudioMuted()) engine.setMuted(false);
     if (!engine.isUnlocked) return false;
     setAudioReady(true);
-    if (!isAppAudioMuted()) await engine.startAmbience();
+    if (!isMusicMuted()) await engine.startAmbience();
     return true;
   }, []);
 
   const toggleMute = useCallback(async () => {
     const engine = engineRef.current;
-    const nowMuted = setAppAudioMuted(!isAppAudioMuted());
-    setMuted(nowMuted);
-    if (!nowMuted) {
+    const nextMusic = !isMusicMuted();
+    setAppMusicMuted(nextMusic);
+    setMusicMutedState(nextMusic);
+    if (!nextMusic) {
       await engine.ensureContext();
-      engine.setMuted(false);
       setAudioReady(engine.isUnlocked);
-      // Explicit start only — setMuted never auto-restarts music.
       if (engine.isUnlocked) await engine.startAmbience();
     }
-    return nowMuted;
+    return nextMusic;
   }, []);
 
   const playLeverPull = useCallback(async () => {
+    if (isSfxMuted()) return;
     const engine = engineRef.current;
     await unlockAudio();
     await engine.playLeverPull();
   }, [unlockAudio]);
 
   const playSpinSequence = useCallback(async () => {
+    if (isSfxMuted()) return;
     const engine = engineRef.current;
     await engine.playSpinSequence(CASINO_SPIN_DURATION_MS, CASINO_SPIN_START_DELAY_MS);
   }, []);
 
   const playWinResult = useCallback(async (winTier: WinTier) => {
+    if (isSfxMuted()) return;
     const engine = engineRef.current;
     await engine.playWinResult(winTier);
   }, []);
 
   return {
-    muted,
+    muted: musicMuted,
+    musicMuted,
+    sfxMuted,
     audioReady,
     unlockAudio,
     toggleMute,
