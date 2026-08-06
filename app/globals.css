@@ -7466,14 +7466,14 @@ html {
   min-width: 0;
 }
 .alice-cabinet .slot-reel-window {
-  height: 176px !important;
+  height: 204px !important; /* match REEL_ITEM_HEIGHT / --slot-reel-height */
   /* Lighter window so transparent PNGs read clearly */
   background:
     linear-gradient(180deg, #1a1028 0%, #2a1840 8%, #1a1028 15%, #120a1c 50%, #1a1028 85%, #2a1840 92%, #1a1028 100%) !important;
 }
 .alice-cabinet .slot-symbol,
 .alice-slot-symbol {
-  height: 176px !important;
+  height: 204px !important;
   width: 100%;
   justify-content: center;
   gap: 0;
@@ -7485,14 +7485,14 @@ html {
 }
 .alice-cabinet .alice-symbol-frame,
 .alice-cabinet .slot-symbol-frame {
-  width: min(148px, 96%);
-  height: min(148px, 96%);
+  width: min(172px, 96%);
+  height: min(172px, 96%);
   max-width: 100%;
 }
 .alice-cabinet .alice-symbol-img,
 .alice-cabinet .slot-symbol-img {
-  width: min(140px, 94%) !important;
-  height: min(140px, 94%) !important;
+  width: min(164px, 94%) !important;
+  height: min(164px, 94%) !important;
   max-width: 100%;
   object-fit: contain;
 }
