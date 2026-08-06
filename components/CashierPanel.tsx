@@ -26,6 +26,33 @@ type CashierPanelProps = {
   showBackLink?: boolean;
 };
 
+/** Map API/server errors into short, actionable cashier language. */
+function humanizeCashierError(raw: string): string {
+  const s = raw.toLowerCase();
+  if (s.includes('daily') && (s.includes('limit') || s.includes('reached') || s.includes('left'))) {
+    return `${raw} Daily caps reset at midnight UTC. Try a smaller amount or come back tomorrow.`;
+  }
+  if (s.includes('minimum') || s.includes('min ')) {
+    return raw;
+  }
+  if (s.includes('insufficient') || s.includes('not enough') || s.includes('need ')) {
+    return `${raw} Earn more with your wallet connected in Depths, Bandit, or Alice, then refresh.`;
+  }
+  if (s.includes('offline') || s.includes('emergency') || s.includes('treasury')) {
+    return `${raw} Payouts are paused for safety — try again later.`;
+  }
+  if (s.includes('wallet') || s.includes('connect')) {
+    return raw;
+  }
+  if (s.includes('rate') || s.includes('too many')) {
+    return `${raw} Wait a minute and try once more.`;
+  }
+  if (s.includes('session') || s.includes('expired')) {
+    return `${raw} Refresh the page and reconnect your wallet.`;
+  }
+  return raw;
+}
+
 export default function CashierPanel({ showBackLink = true }: CashierPanelProps) {
   const { publicKey, connected } = useWallet();
   const walletAddress = publicKey?.toBase58() ?? null;
@@ -142,11 +169,24 @@ export default function CashierPanel({ showBackLink = true }: CashierPanelProps)
   }, [walletAddress]);
 
   const showExchangeMessage = useCallback((msg: { text: string; ok: boolean; txUrl?: string }) => {
-    setMessage(msg);
+    setMessage({
+      ...msg,
+      text: msg.ok ? msg.text : humanizeCashierError(msg.text),
+    });
     requestAnimationFrame(() => {
       document.getElementById('cashier-toast')?.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
     });
   }, []);
+
+  const readinessLabel = !connected
+    ? 'Connect wallet to see cashable balance'
+    : spendableLoading
+      ? 'Loading ledger…'
+      : treasuryReady === false
+        ? 'Cashier offline — cannot pay out right now'
+        : chips > 0
+          ? 'Ready to exchange micro-prizes'
+          : 'No spendable chips yet — go earn with this wallet';
 
   const setAmount = (id: FamCoinId, value: string) => {
     setAmounts(prev => ({ ...prev, [id]: value }));
@@ -251,9 +291,33 @@ export default function CashierPanel({ showBackLink = true }: CashierPanelProps)
         }
 
         if (!res.ok) {
-          showExchangeMessage({ ok: false, text: data.error ?? `Exchange failed (${res.status}).` });
+          showExchangeMessage({
+            ok: false,
+            text: data.error ?? `Exchange failed (${res.status}). Refresh and try a smaller amount.`,
+          });
           void refreshBalances();
           void refreshSpendable();
+          // Refresh quota after a blocked attempt (daily cap messages)
+          if (walletAddress) {
+            fetch(`/api/exchange?wallet=${encodeURIComponent(walletAddress)}`)
+              .then(r => r.json())
+              .then(d => {
+                if (d?.walletQuota) {
+                  setWalletQuota({
+                    remainingUsd: Number(d.walletQuota.remainingUsd) || 0,
+                    usdMax: Number(d.walletQuota.usdMax) || 0,
+                    remainingChips: Number(d.walletQuota.remainingChips) || 0,
+                    chipsMax: Number(d.walletQuota.chipsMax) || 0,
+                    exchangesUsed: Number(d.walletQuota.exchangesUsed) || 0,
+                    exchangesMax: Number(d.walletQuota.exchangesMax) || 0,
+                    maxUsdPerExchange: Number(d.walletQuota.maxUsdPerExchange) || 1,
+                  });
+                }
+              })
+              .catch(() => {
+                /* */
+              });
+          }
           return;
         }
 
@@ -295,25 +359,67 @@ export default function CashierPanel({ showBackLink = true }: CashierPanelProps)
     <div className="cashier-scene">
       <div className="game-scene-vignette" />
       <div className="cashier-content max-w-6xl mx-auto px-4 py-8">
-        <header className="cashier-header mb-8">
+        <header className="cashier-header mb-6">
           <p className="cashier-eyebrow">
             {BRAND.name} · Solana Mainnet · Build {BRAND.buildId}
           </p>
           <h1 className="art-title text-center">{BRAND.cashier}</h1>
           <p className="art-subtitle text-center">
-            Trade Bonk Chips for real Fam SPL tokens — Solflare &amp; Phantom supported
+            Micro-prize cashouts only — server-ledger chips → Fam tokens (Solflare &amp; Phantom)
           </p>
           {showBackLink && (
-            <div className="cashier-nav mt-5 flex flex-wrap justify-center gap-4">
-              <Link href="/depths" className="art-btn px-6 py-2 text-[#f0d878] inline-block">
-                {BRAND.depths}
+            <div className="cashier-nav mt-5 flex flex-wrap justify-center gap-3">
+              <Link href="/" className="art-btn px-5 py-2 text-[#f0d878] inline-block">
+                ← Home
               </Link>
-              <Link href="/" className="art-btn px-6 py-2 text-[#f0d878] inline-block">
-                ← Back to {BRAND.name}
+              <Link href="/alice" className="art-btn px-5 py-2 text-[#f0abfc] inline-block">
+                {BRAND.aliceRoomNav}
+              </Link>
+              <Link href="/depths" className="art-btn px-5 py-2 text-[#f0d878] inline-block">
+                {BRAND.depths}
               </Link>
             </div>
           )}
         </header>
+
+        {/* One-screen story: Earn → Ledger → Exchange → Wallet */}
+        <ol className="cashier-journey" aria-label="How cashing out works">
+          <li className="cashier-journey-step">
+            <span className="cashier-journey-num">1</span>
+            <strong>Earn</strong>
+            <span>Depths, Bandit, or bank Alice with wallet connected</span>
+          </li>
+          <li className="cashier-journey-step">
+            <span className="cashier-journey-num">2</span>
+            <strong>Ledger</strong>
+            <span>Server records spendable chips (not browser storage)</span>
+          </li>
+          <li className="cashier-journey-step">
+            <span className="cashier-journey-num">3</span>
+            <strong>Exchange</strong>
+            <span>Micro-prizes only — small caps per cashout &amp; per day</span>
+          </li>
+          <li className="cashier-journey-step">
+            <span className="cashier-journey-num">4</span>
+            <strong>Wallet</strong>
+            <span>Tokens land on the same Solflare / Phantom address</span>
+          </li>
+        </ol>
+
+        {!connected && (
+          <div className="cashier-wallet-callout" role="region" aria-label="Connect wallet">
+            <div>
+              <h2 className="cashier-wallet-callout-title">Connect your wallet to continue</h2>
+              <p className="cashier-wallet-callout-body">
+                Without a wallet we cannot show your <strong>real spendable balance</strong> or pay out. Use the same
+                Solflare or Phantom address you play with.
+              </p>
+            </div>
+            <div className="cashier-wallet-callout-connect">
+              <WalletMultiButton />
+            </div>
+          </div>
+        )}
 
         {message && (
           <div
@@ -335,42 +441,19 @@ export default function CashierPanel({ showBackLink = true }: CashierPanelProps)
           </div>
         )}
 
-        <div className="cashier-notice mb-8" role="note">
-          <h2 className="cashier-notice-title">How exchange works</h2>
+        <div className="cashier-notice mb-6" role="note">
+          <h2 className="cashier-notice-title">Fair cashier rules</h2>
           <p className="cashier-notice-body">
-            <strong>Only server-ledger chips can cash out.</strong> Earn them in Depths, Bandit, or by banking Alice’s
-            final tally with this wallet connected. Editing browser storage or “local” displays does{' '}
-            <strong>not</strong> create cashable chips.
+            <strong>Only server-ledger chips cash out.</strong> Local / browser numbers cannot be exchanged. Hold the
+            Fam token you want (e.g. BONGA) on this wallet so we can send more of it.
           </p>
           <p className="cashier-notice-body cashier-notice-body-2">
-            <strong>BONGA in Solflare</strong> is separate (you need some so we can send more). Cashouts are{' '}
-            <strong>micro-prizes only</strong>
+            Cashouts are <strong>micro-prizes</strong>
             {fairness
-              ? ` (~$${fairness.maxUsdPerExchange} max per cashout, ~$${fairness.maxUsdPerWalletPerDay}/day wallet cap)`
-              : ' (~$1 max per cashout, daily caps apply)'}{' '}
-            — fun rewards, not a bank.
+              ? ` — about $${fairness.maxUsdPerExchange} max per cashout and ~$${fairness.maxUsdPerWalletPerDay}/day per wallet`
+              : ' — about $1 max per cashout with daily caps'}
+            . This is not a bank.
           </p>
-          {walletQuota && connected && (
-            <div className="cashier-quota" aria-label="Daily cash-out headroom">
-              <p className="cashier-quota-title">Your remaining headroom today (UTC)</p>
-              <ul className="cashier-quota-list">
-                <li>
-                  ~${walletQuota.remainingUsd.toFixed(2)} of ~${walletQuota.usdMax.toFixed(2)} USD left
-                </li>
-                <li>
-                  {walletQuota.remainingChips.toLocaleString()} of {walletQuota.chipsMax.toLocaleString()} chips left
-                </li>
-                <li>
-                  {Math.max(0, walletQuota.exchangesMax - walletQuota.exchangesUsed)} of{' '}
-                  {walletQuota.exchangesMax} exchanges left
-                </li>
-                <li className="cashier-quota-note">
-                  Per cashout still capped at ~${walletQuota.maxUsdPerExchange}. Resets daily (UTC). Best-effort on
-                  this region.
-                </li>
-              </ul>
-            </div>
-          )}
         </div>
 
         <div className="cashier-top-grid mb-8">
@@ -379,9 +462,70 @@ export default function CashierPanel({ showBackLink = true }: CashierPanelProps)
             <span className="art-frame-corners-bl" aria-hidden />
             <div className="p-5 md:p-6">
               <h2 className="art-panel-title">🏦 {BRAND.bank}</h2>
-              <p className="text-[#f5e6c8]/55 text-base mb-4">
-                Only server-verified chips from in-game play can be exchanged. Connect the same wallet you play with.
+              <p className={`cashier-readiness ${connected && chips > 0 && treasuryReady ? 'cashier-readiness-ok' : ''}`}>
+                {readinessLabel}
               </p>
+
+              {connected && walletQuota && (
+                <div className="cashier-quota cashier-quota-prominent" aria-label="Daily cash-out headroom">
+                  <p className="cashier-quota-title">Your remaining headroom today (UTC)</p>
+                  <div className="cashier-quota-meters">
+                    <div className="cashier-quota-meter">
+                      <div className="cashier-quota-meter-head">
+                        <span>USD left</span>
+                        <strong>
+                          ~${walletQuota.remainingUsd.toFixed(2)} / ${walletQuota.usdMax.toFixed(2)}
+                        </strong>
+                      </div>
+                      <div className="cashier-quota-meter-track">
+                        <div
+                          className="cashier-quota-meter-fill"
+                          style={{
+                            width: `${walletQuota.usdMax > 0 ? Math.min(100, (walletQuota.remainingUsd / walletQuota.usdMax) * 100) : 0}%`,
+                          }}
+                        />
+                      </div>
+                    </div>
+                    <div className="cashier-quota-meter">
+                      <div className="cashier-quota-meter-head">
+                        <span>Chips left</span>
+                        <strong>
+                          {walletQuota.remainingChips.toLocaleString()} / {walletQuota.chipsMax.toLocaleString()}
+                        </strong>
+                      </div>
+                      <div className="cashier-quota-meter-track">
+                        <div
+                          className="cashier-quota-meter-fill cashier-quota-meter-fill-chips"
+                          style={{
+                            width: `${walletQuota.chipsMax > 0 ? Math.min(100, (walletQuota.remainingChips / walletQuota.chipsMax) * 100) : 0}%`,
+                          }}
+                        />
+                      </div>
+                    </div>
+                    <div className="cashier-quota-meter">
+                      <div className="cashier-quota-meter-head">
+                        <span>Exchanges left</span>
+                        <strong>
+                          {Math.max(0, walletQuota.exchangesMax - walletQuota.exchangesUsed)} /{' '}
+                          {walletQuota.exchangesMax}
+                        </strong>
+                      </div>
+                      <div className="cashier-quota-meter-track">
+                        <div
+                          className="cashier-quota-meter-fill cashier-quota-meter-fill-tx"
+                          style={{
+                            width: `${walletQuota.exchangesMax > 0 ? Math.min(100, (Math.max(0, walletQuota.exchangesMax - walletQuota.exchangesUsed) / walletQuota.exchangesMax) * 100) : 0}%`,
+                          }}
+                        />
+                      </div>
+                    </div>
+                  </div>
+                  <p className="cashier-quota-note">
+                    Each cashout still capped at ~${walletQuota.maxUsdPerExchange}. Resets daily (UTC). Best-effort
+                    for this region.
+                  </p>
+                </div>
+              )}
 
               <div className="cashier-stat-row">
                 <div className="cashier-stat">
@@ -396,6 +540,13 @@ export default function CashierPanel({ showBackLink = true }: CashierPanelProps)
                         ? 'Server-verified · ready to exchange'
                         : 'Play Depths / Bandit / bank Alice with this wallet'}
                   </span>
+                  {connected && chips === 0 && !spendableLoading && (
+                    <div className="cashier-earn-links">
+                      <Link href="/depths">{BRAND.depths}</Link>
+                      <Link href="/alice">{BRAND.aliceRoomNav}</Link>
+                      <Link href="/">Combat + Bandit</Link>
+                    </div>
+                  )}
                 </div>
                 {localDisplayChips > chips && (
                   <div className="cashier-stat">

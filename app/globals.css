@@ -4944,6 +4944,165 @@ html {
   color: rgba(245, 230, 200, 0.55);
 }
 
+/* Cashier journey funnel */
+.cashier-journey {
+  list-style: none;
+  margin: 0 0 1.25rem;
+  padding: 0;
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 0.55rem;
+}
+@media (min-width: 700px) {
+  .cashier-journey {
+    grid-template-columns: repeat(4, 1fr);
+    gap: 0.65rem;
+  }
+}
+.cashier-journey-step {
+  display: flex;
+  flex-direction: column;
+  gap: 0.2rem;
+  padding: 0.75rem 0.85rem;
+  border-radius: 0.75rem;
+  border: 1px solid rgba(212, 175, 55, 0.3);
+  background: rgba(20, 12, 8, 0.65);
+  text-align: left;
+}
+.cashier-journey-num {
+  width: 1.5rem;
+  height: 1.5rem;
+  border-radius: 50%;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.75rem;
+  font-weight: 800;
+  background: rgba(212, 175, 55, 0.2);
+  border: 1px solid rgba(240, 216, 120, 0.45);
+  color: #f0d878;
+  margin-bottom: 0.15rem;
+}
+.cashier-journey-step strong {
+  font-size: 0.9rem;
+  color: #f5e6c8;
+  letter-spacing: 0.04em;
+}
+.cashier-journey-step span:last-child {
+  font-size: 0.78rem;
+  line-height: 1.35;
+  color: rgba(245, 230, 200, 0.65);
+}
+
+.cashier-wallet-callout {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  margin-bottom: 1.25rem;
+  padding: 1rem 1.15rem;
+  border-radius: 0.85rem;
+  border: 1px solid rgba(251, 191, 36, 0.5);
+  background: linear-gradient(135deg, rgba(120, 53, 15, 0.45), rgba(30, 12, 10, 0.9));
+  box-shadow: 0 0 28px rgba(251, 191, 36, 0.12);
+}
+.cashier-wallet-callout-title {
+  margin: 0 0 0.35rem;
+  font-family: var(--font-display), Georgia, serif;
+  font-size: 1.15rem;
+  color: #fde68a;
+}
+.cashier-wallet-callout-body {
+  margin: 0;
+  max-width: 36rem;
+  font-size: 0.92rem;
+  line-height: 1.45;
+  color: rgba(245, 230, 200, 0.85);
+}
+.cashier-wallet-callout-connect {
+  flex-shrink: 0;
+}
+
+.cashier-readiness {
+  margin: 0 0 0.85rem;
+  font-size: 0.9rem;
+  font-weight: 600;
+  color: #fcd34d;
+  line-height: 1.35;
+}
+.cashier-readiness-ok {
+  color: #86efac;
+}
+
+.cashier-quota-prominent {
+  margin: 0 0 1rem;
+  padding: 0.85rem 0.95rem;
+  border-radius: 0.75rem;
+  border: 1px solid rgba(103, 232, 249, 0.35);
+  background: rgba(8, 30, 40, 0.55);
+}
+.cashier-quota-meters {
+  display: flex;
+  flex-direction: column;
+  gap: 0.55rem;
+  margin-bottom: 0.5rem;
+}
+.cashier-quota-meter-head {
+  display: flex;
+  justify-content: space-between;
+  gap: 0.5rem;
+  font-size: 0.78rem;
+  color: rgba(245, 230, 200, 0.75);
+  margin-bottom: 0.2rem;
+}
+.cashier-quota-meter-head strong {
+  color: #a5f3fc;
+  font-size: 0.8rem;
+}
+.cashier-quota-meter-track {
+  height: 7px;
+  border-radius: 999px;
+  background: rgba(0, 0, 0, 0.45);
+  border: 1px solid rgba(103, 232, 249, 0.25);
+  overflow: hidden;
+}
+.cashier-quota-meter-fill {
+  height: 100%;
+  border-radius: 999px;
+  background: linear-gradient(90deg, #22d3ee, #67e8f9);
+  transition: width 0.35s ease;
+}
+.cashier-quota-meter-fill-chips {
+  background: linear-gradient(90deg, #a78bfa, #f0abfc);
+}
+.cashier-quota-meter-fill-tx {
+  background: linear-gradient(90deg, #f0d878, #fbbf24);
+}
+
+.cashier-earn-links {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.45rem;
+  margin-top: 0.45rem;
+}
+.cashier-earn-links a {
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: #f0abfc;
+  text-decoration: none;
+  border: 1px solid rgba(232, 121, 249, 0.4);
+  border-radius: 999px;
+  padding: 0.25rem 0.55rem;
+  background: rgba(40, 16, 55, 0.55);
+}
+.cashier-earn-links a:hover {
+  border-color: #f0abfc;
+  color: #fce7f3;
+}
+
 .cashier-notice {
   padding: 1.25rem 1.5rem;
   background: linear-gradient(135deg, rgba(120, 53, 15, 0.35) 0%, rgba(26, 10, 20, 0.85) 100%);
