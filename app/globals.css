@@ -323,6 +323,15 @@ body {
   border-color: #f0abfc;
   box-shadow: 0 0 24px rgba(232, 121, 249, 0.28), inset 0 2px 0 rgba(255, 220, 140, 0.12);
 }
+.tavern-nav-plaque-home {
+  border-color: rgba(110, 231, 183, 0.6);
+  color: #a7f3d0;
+  background: linear-gradient(180deg, #143528 0%, #0a1a14 100%);
+}
+.tavern-nav-plaque-home:hover {
+  border-color: #6ee7b7;
+  box-shadow: 0 0 20px rgba(52, 211, 153, 0.28), inset 0 2px 0 rgba(255, 220, 140, 0.1);
+}
 .tavern-nav-plaque-valley {
   border-color: rgba(240, 216, 120, 0.7);
   color: #f0d878;
@@ -412,6 +421,271 @@ body {
   overflow: visible;
   padding-top: 0.5rem;
   padding-bottom: 1.25rem;
+}
+.carnival-stage-row {
+  width: 100%;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  justify-content: center;
+  gap: 0.25rem 0.5rem;
+}
+.carnival-wheel-with-clown {
+  flex: 1 1 min(520px, 100%);
+  min-width: min(280px, 100%);
+  display: flex;
+  justify-content: center;
+}
+
+/* ── Boardwalk clown (Chuckles) ── */
+.carnival-clown {
+  flex: 0 0 auto;
+  width: 118px;
+  text-align: center;
+  z-index: 3;
+  margin-bottom: 1.5rem;
+  user-select: none;
+}
+.carnival-clown-figure {
+  position: relative;
+  width: 100px;
+  height: 168px;
+  margin: 0 auto;
+  filter: drop-shadow(0 8px 12px rgba(0, 0, 0, 0.45));
+}
+.carnival-clown-hat {
+  position: absolute;
+  top: 0;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 42px;
+  height: 28px;
+  background: linear-gradient(180deg, #ef4444, #b91c1c);
+  border-radius: 8px 8px 2px 2px;
+  border: 2px solid #7f1d1d;
+  z-index: 2;
+}
+.carnival-clown-hat-pom {
+  position: absolute;
+  top: -8px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  background: #f8fafc;
+  box-shadow: 0 0 0 2px #94a3b8;
+}
+.carnival-clown-head {
+  position: absolute;
+  top: 18px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 52px;
+  height: 48px;
+  border-radius: 50%;
+  background: linear-gradient(165deg, #ffe4c4, #f0c9a0);
+  border: 2px solid #c4a484;
+  z-index: 1;
+}
+.carnival-clown-eye {
+  position: absolute;
+  top: 16px;
+  width: 7px;
+  height: 9px;
+  border-radius: 50%;
+  background: #1e1b4b;
+}
+.carnival-clown-eye-l { left: 12px; }
+.carnival-clown-eye-r { right: 12px; }
+.carnival-clown-nose {
+  position: absolute;
+  top: 22px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  background: radial-gradient(circle at 35% 30%, #fca5a5, #dc2626);
+  border: 1px solid #991b1b;
+}
+.carnival-clown-smile {
+  position: absolute;
+  bottom: 8px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 22px;
+  height: 10px;
+  border: 2px solid #b91c1c;
+  border-top: none;
+  border-radius: 0 0 14px 14px;
+}
+.carnival-clown-ruff {
+  position: absolute;
+  top: 58px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 64px;
+  height: 18px;
+  background:
+    radial-gradient(circle at 10% 50%, #fef08a 0 6px, transparent 7px),
+    radial-gradient(circle at 30% 50%, #f472b6 0 6px, transparent 7px),
+    radial-gradient(circle at 50% 50%, #67e8f9 0 6px, transparent 7px),
+    radial-gradient(circle at 70% 50%, #a78bfa 0 6px, transparent 7px),
+    radial-gradient(circle at 90% 50%, #fbbf24 0 6px, transparent 7px);
+  z-index: 2;
+}
+.carnival-clown-torso {
+  position: absolute;
+  top: 70px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 48px;
+  height: 52px;
+  background: linear-gradient(180deg, #f97316 0%, #ea580c 40%, #c2410c 100%);
+  border-radius: 10px 10px 6px 6px;
+  border: 2px solid #9a3412;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 5px;
+  z-index: 1;
+}
+.carnival-clown-button {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: #fde047;
+  box-shadow: 0 0 0 1px #a16207;
+}
+.carnival-clown-arm {
+  position: absolute;
+  top: 76px;
+  width: 12px;
+  height: 40px;
+  background: linear-gradient(180deg, #ffe4c4, #e8b88a);
+  border-radius: 6px;
+  border: 1px solid #c4a484;
+  z-index: 0;
+  transform-origin: top center;
+}
+.carnival-clown-arm-left {
+  left: 14px;
+  transform: rotate(18deg);
+}
+.carnival-clown-arm-right {
+  right: 8px;
+  transform: rotate(-28deg);
+  z-index: 3;
+}
+.carnival-clown-crank {
+  position: absolute;
+  bottom: -6px;
+  right: -18px;
+  width: 28px;
+  height: 6px;
+  background: linear-gradient(90deg, #a8a29e, #e7e5e4);
+  border-radius: 3px;
+  border: 1px solid #57534e;
+  transform-origin: left center;
+}
+.carnival-clown-crank-knob {
+  position: absolute;
+  right: -6px;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  background: radial-gradient(circle at 35% 30%, #fef08a, #ca8a04);
+  border: 1px solid #854d0e;
+}
+.carnival-clown-legs {
+  position: absolute;
+  top: 118px;
+  left: 50%;
+  transform: translateX(-50%);
+  display: flex;
+  gap: 10px;
+}
+.carnival-clown-leg {
+  width: 12px;
+  height: 28px;
+  background: #1d4ed8;
+  border-radius: 3px;
+  border: 1px solid #1e3a8a;
+}
+.carnival-clown-shoes {
+  position: absolute;
+  top: 142px;
+  left: 50%;
+  transform: translateX(-50%);
+  display: flex;
+  gap: 4px;
+}
+.carnival-clown-shoe {
+  width: 26px;
+  height: 14px;
+  background: #ef4444;
+  border-radius: 40% 40% 30% 30%;
+  border: 2px solid #7f1d1d;
+}
+.carnival-clown-name {
+  margin: 0.35rem 0 0;
+  font-family: Georgia, serif;
+  font-weight: 800;
+  font-size: 0.85rem;
+  color: #f0d878;
+}
+.carnival-clown-line {
+  margin: 0.15rem 0 0;
+  font-size: 0.68rem;
+  color: rgba(245, 230, 200, 0.65);
+  line-height: 1.25;
+  max-width: 7.5rem;
+  margin-left: auto;
+  margin-right: auto;
+}
+.carnival-clown-spinning .carnival-clown-arm-right {
+  animation: carnival-clown-crank 0.28s linear infinite;
+}
+.carnival-clown-spinning .carnival-clown-figure {
+  animation: carnival-clown-bounce 0.35s ease-in-out infinite alternate;
+}
+.carnival-clown-spinning .carnival-clown-crank {
+  animation: carnival-clown-crank-handle 0.28s linear infinite;
+}
+@keyframes carnival-clown-crank {
+  0% { transform: rotate(-40deg); }
+  50% { transform: rotate(25deg); }
+  100% { transform: rotate(-40deg); }
+}
+@keyframes carnival-clown-crank-handle {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}
+@keyframes carnival-clown-bounce {
+  from { transform: translateY(0); }
+  to { transform: translateY(-4px); }
+}
+@media (max-width: 700px) {
+  .carnival-clown {
+    width: 96px;
+    margin-bottom: 0.5rem;
+    order: 2;
+  }
+  .carnival-clown-figure {
+    transform: scale(0.88);
+    transform-origin: bottom center;
+  }
+  .carnival-stage-row {
+    flex-direction: column;
+    align-items: center;
+  }
+  .carnival-wheel-with-clown {
+    order: 1;
+  }
 }
 
 /* ── Boardwalk wooden prize wheel ── */
@@ -8853,20 +9127,23 @@ html {
 /* Phones: Music/SFX dock on the LEFT so the right-side lever stays clear */
 @media (max-width: 720px) {
   .global-music-dock {
-    left: max(0.55rem, env(safe-area-inset-left, 0px));
+    left: max(0.3rem, env(safe-area-inset-left, 0px));
     right: auto;
-    bottom: max(0.75rem, calc(0.5rem + env(safe-area-inset-bottom, 0px)));
+    bottom: max(0.4rem, calc(0.3rem + env(safe-area-inset-bottom, 0px)));
     align-items: flex-start;
-    max-width: min(42vw, 10.5rem);
+    max-width: none;
   }
+  /* Keep compact sizes — do not re-inflate the dock on mobile */
   .global-music-btn {
-    min-height: 42px;
-    font-size: 0.7rem;
-    padding: 0.4rem 0.7rem 0.4rem 0.55rem;
+    height: 1.75rem;
+    min-height: 0;
+    font-size: 0.55rem;
+    padding: 0.12rem 0.38rem 0.12rem 0.28rem;
   }
   .global-sfx-btn {
-    min-height: 38px;
-    font-size: 0.68rem;
+    height: 1.65rem;
+    min-height: 0;
+    font-size: 0.52rem;
   }
 }
 
@@ -8909,52 +9186,52 @@ html {
   }
 }
 
-/* ── Global music / SFX dock (every page, same corner) ─────────── */
+/* ── Global music / SFX dock — compact so play area stays clear ── */
 .global-music-dock {
   position: fixed;
   z-index: 10050;
-  right: max(0.75rem, env(safe-area-inset-right, 0px));
-  bottom: max(1rem, calc(0.65rem + env(safe-area-inset-bottom, 0px)));
+  right: max(0.45rem, env(safe-area-inset-right, 0px));
+  bottom: max(0.55rem, calc(0.4rem + env(safe-area-inset-bottom, 0px)));
   pointer-events: none;
   display: flex;
   flex-direction: column;
   align-items: flex-end;
-  gap: 0.4rem;
-  /* Keep dock clear of home-indicator / gesture bars */
-  max-width: min(46vw, 11.5rem);
+  gap: 0.28rem;
+  max-width: none;
+  opacity: 0.92;
 }
 .global-music-btn {
   pointer-events: auto;
   display: inline-flex;
   align-items: center;
-  gap: 0.45rem;
-  min-height: 48px;
-  padding: 0.55rem 1rem 0.55rem 0.75rem;
+  justify-content: center;
+  gap: 0.22rem;
+  min-height: 0;
+  min-width: 0;
+  width: auto;
+  height: 2rem;
+  padding: 0.2rem 0.45rem 0.2rem 0.35rem;
   border-radius: 999px;
-  border: 2px solid rgba(240, 216, 120, 0.75);
-  background: linear-gradient(165deg, rgba(40, 20, 12, 0.96), rgba(12, 6, 10, 0.98));
+  border: 1.5px solid rgba(240, 216, 120, 0.55);
+  background: linear-gradient(165deg, rgba(28, 14, 10, 0.88), rgba(10, 5, 8, 0.94));
   color: #f5e6c8;
   font-family: var(--font-display), Georgia, serif;
-  font-size: 0.85rem;
+  font-size: 0.62rem;
   font-weight: 700;
-  letter-spacing: 0.08em;
+  letter-spacing: 0.04em;
   text-transform: uppercase;
   cursor: pointer;
   box-shadow:
-    0 0 0 1px rgba(0, 0, 0, 0.6),
-    0 8px 28px rgba(0, 0, 0, 0.55),
-    0 0 24px rgba(212, 175, 55, 0.25);
-  transition: border-color 0.15s, background 0.15s, transform 0.12s, box-shadow 0.15s;
+    0 0 0 1px rgba(0, 0, 0, 0.45),
+    0 3px 10px rgba(0, 0, 0, 0.4);
+  transition: border-color 0.15s, background 0.15s, transform 0.12s, opacity 0.15s;
   -webkit-tap-highlight-color: transparent;
   touch-action: manipulation;
 }
 .global-music-btn:hover,
 .global-music-btn:focus-visible {
   border-color: #f0d878;
-  box-shadow:
-    0 0 0 1px rgba(0, 0, 0, 0.6),
-    0 10px 32px rgba(0, 0, 0, 0.6),
-    0 0 32px rgba(240, 216, 120, 0.4);
+  opacity: 1;
   outline: none;
   transform: translateY(-1px);
 }
@@ -8962,36 +9239,44 @@ html {
   transform: translateY(1px);
 }
 .global-music-btn-on {
-  border-color: rgba(110, 231, 183, 0.7);
-  box-shadow:
-    0 0 0 1px rgba(0, 0, 0, 0.55),
-    0 8px 28px rgba(0, 0, 0, 0.55),
-    0 0 22px rgba(52, 211, 153, 0.28);
+  border-color: rgba(110, 231, 183, 0.55);
 }
 .global-music-btn-off {
-  border-color: rgba(251, 113, 133, 0.75);
-  color: rgba(254, 205, 211, 0.95);
-  box-shadow:
-    0 0 0 1px rgba(0, 0, 0, 0.55),
-    0 8px 28px rgba(0, 0, 0, 0.55),
-    0 0 20px rgba(244, 63, 94, 0.25);
+  border-color: rgba(251, 113, 133, 0.6);
+  color: rgba(254, 205, 211, 0.92);
+  opacity: 0.78;
 }
 .global-music-icon {
-  font-size: 1.25rem;
+  font-size: 0.85rem;
   line-height: 1;
 }
 .global-music-label {
   white-space: nowrap;
+  max-width: 2.4rem;
+  overflow: hidden;
 }
 .global-sfx-btn {
-  font-size: 0.78rem;
-  min-height: 42px;
+  font-size: 0.58rem;
+  height: 1.85rem;
+  padding: 0.15rem 0.4rem 0.15rem 0.3rem;
 }
-@media (max-width: 420px) {
+@media (max-width: 480px) {
+  .global-music-dock {
+    /* Tighter on phones — still tappable, less screen steal */
+    right: max(0.3rem, env(safe-area-inset-right, 0px));
+    bottom: max(0.4rem, calc(0.3rem + env(safe-area-inset-bottom, 0px)));
+    gap: 0.2rem;
+  }
   .global-music-btn {
-    min-height: 44px;
-    padding: 0.45rem 0.8rem 0.45rem 0.6rem;
-    font-size: 0.72rem;
+    height: 1.75rem;
+    padding: 0.12rem 0.38rem 0.12rem 0.28rem;
+    font-size: 0.55rem;
+  }
+  .global-music-icon {
+    font-size: 0.78rem;
+  }
+  .global-sfx-btn {
+    height: 1.65rem;
   }
 }
 
@@ -9317,9 +9602,9 @@ html {
 .alice-encounter .alice-trick-card {
   min-height: 3.25rem;
 }
-/* Room for dual Music/SFX dock on phones — tighter so reels win height */
+/* Room for compact Music/SFX dock on phones — reels keep the height */
 .alice-room-playing .alice-room-content {
-  padding-bottom: max(5.5rem, calc(4.5rem + env(safe-area-inset-bottom, 0px))) !important;
+  padding-bottom: max(3.25rem, calc(2.5rem + env(safe-area-inset-bottom, 0px))) !important;
 }
 .alice-room-playing .alice-slot-stage {
   padding-bottom: 0.45rem !important;

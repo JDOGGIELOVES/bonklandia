@@ -369,8 +369,11 @@ export default function CashierPanel({ showBackLink = true }: CashierPanelProps)
           </p>
           {showBackLink && (
             <div className="cashier-nav mt-5 flex flex-wrap justify-center gap-3">
-              <Link href="/" className="art-btn px-5 py-2 text-[#f0d878] inline-block">
-                ← Home
+              <Link
+                href={`${BRAND.homePath}${BRAND.homeAnchor}`}
+                className="art-btn px-5 py-2 text-[#f0d878] inline-block"
+              >
+                ← {BRAND.home}
               </Link>
               <Link href="/alice" className="art-btn px-5 py-2 text-[#f0abfc] inline-block">
                 {BRAND.aliceRoomNav}
@@ -544,7 +547,7 @@ export default function CashierPanel({ showBackLink = true }: CashierPanelProps)
                     <div className="cashier-earn-links">
                       <Link href="/depths">{BRAND.depths}</Link>
                       <Link href="/alice">{BRAND.aliceRoomNav}</Link>
-                      <Link href="/#hall-of-champions">{BRAND.degenValley}</Link>
+                      <Link href={`${BRAND.homePath}${BRAND.homeAnchor}`}>{BRAND.home}</Link>
                     </div>
                   )}
                 </div>

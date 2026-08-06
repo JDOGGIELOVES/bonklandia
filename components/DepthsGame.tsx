@@ -99,8 +99,6 @@ export default function DepthsGame() {
   const { publicKey, connected } = useWallet();
   const { chips, addChips } = useBonkBank();
   const {
-    muted,
-    toggleMute,
     playAttackWindup,
     playPlayerHit,
     playEnemyWindup,
@@ -759,8 +757,8 @@ export default function DepthsGame() {
       <div className="depths-shell">
         <header className="depths-header">
           <div className="depths-nav">
-            <Link href="/#hall-of-champions" className="art-btn px-4 py-2 text-[#f0d878]">
-              ← {BRAND.degenValley}
+            <Link href={`${BRAND.homePath}${BRAND.homeAnchor}`} className="art-btn px-4 py-2 text-[#f0d878]">
+              ← {BRAND.home}
             </Link>
             <Link href="/alice" className="art-btn px-4 py-2 text-[#f0abfc]">
               {BRAND.aliceRoomNav}
@@ -768,14 +766,6 @@ export default function DepthsGame() {
             <Link href="/cashier" className="art-btn px-4 py-2 text-[#f0d878]">
               {BRAND.cashier}
             </Link>
-            <button
-              type="button"
-              className="art-btn px-4 py-2 text-[#f0d878]"
-              onClick={() => toggleMute()}
-              aria-pressed={muted}
-            >
-              {muted ? '🔇 Music Off' : '🔊 Music On'}
-            </button>
             <span className="depths-chip-pill">{chips.toLocaleString()} chips</span>
           </div>
           <h1 className="depths-title">{DEPTHS_LORE.title}</h1>
@@ -887,6 +877,9 @@ export default function DepthsGame() {
           <button type="button" className="art-btn px-3 py-1.5 text-[#f0d878]" onClick={resetToHub}>
             {phase === 'fight' ? 'Abort' : 'Abort run'}
           </button>
+          <Link href={`${BRAND.homePath}${BRAND.homeAnchor}`} className="art-btn px-3 py-1.5 text-[#a7f3d0]">
+            ← {BRAND.home}
+          </Link>
           {phase !== 'fight' && (
             <>
               <Link href="/alice" className="art-btn px-3 py-1.5 text-[#f0abfc]">
@@ -897,15 +890,6 @@ export default function DepthsGame() {
               </Link>
             </>
           )}
-          <button
-            type="button"
-            className="art-btn px-3 py-1.5 text-[#f0d878]"
-            onClick={() => toggleMute()}
-            aria-pressed={muted}
-            title={DEPTHS_AMBIENCE_CREDIT}
-          >
-            {muted ? '🔇 Off' : '🔊 On'}
-          </button>
           <span className="depths-chip-pill">
             {phase === 'fight'
               ? `${playerHP}/${fighter?.hp ?? 0}`

@@ -215,7 +215,6 @@ export default function Home() {
     variant: 'bonk',
   });
   const {
-    muted: combatMuted,
     playAttackWindup,
     playPlayerHit,
     playEnemyWindup,
@@ -227,7 +226,6 @@ export default function Home() {
     playWaveEnter,
     playRunEscalation,
     playDefeat,
-    toggleMute: toggleCombatMute,
   } = useCombatAudio();
   const [damagePopup, setDamagePopup] = useState<{
     show: boolean;
@@ -872,18 +870,18 @@ export default function Home() {
               />
             </div>
 
-            <section id="hall-of-champions" className="hall-of-champions" tabIndex={-1}>
+            <section id="home" className="hall-of-champions" tabIndex={-1}>
+              {/* Legacy anchor so old /#hall-of-champions links still land here */}
+              <span id="hall-of-champions" style={{ position: 'absolute', width: 1, height: 1, overflow: 'hidden', clip: 'rect(0,0,0,0)' }} aria-hidden />
               <div className="hall-of-champions-arch" aria-hidden>
                 <span className="hall-arch-keystone">VI</span>
               </div>
               <div className="hall-of-champions-header">
-                <p className="hall-of-champions-kicker">{BRAND.degenValley}</p>
-                <h2 className="hall-of-champions-title">Hall of Champions</h2>
-                <p className="hall-of-champions-subtitle">
-                  Choose thy bloodline — then enter {BRAND.degenValley} (main wave combat)
-                </p>
+                <p className="hall-of-champions-kicker">{BRAND.home}</p>
+                <h2 className="hall-of-champions-title">{BRAND.championSelect}</h2>
+                <p className="hall-of-champions-subtitle">{BRAND.championSelectSub}</p>
                 <p className="hall-of-champions-subtitle opacity-50 text-sm mt-1" aria-label="Build version">
-                  Build {BRAND.buildId} · Also try {BRAND.aliceRoomNav} or {BRAND.depths}
+                  Build {BRAND.buildId} · Also try {BRAND.aliceRoomNav}, {BRAND.depths}, or Carnival
                 </p>
               </div>
 
@@ -1033,7 +1031,9 @@ export default function Home() {
         <span className="art-frame-corners-bl" aria-hidden />
         <div className="art-header">
           <h1 className="art-title">{BRAND.name}</h1>
-          <p className="art-subtitle">The Degen Gallery — Wave {wave}</p>
+          <p className="art-subtitle">
+            {BRAND.degenValley} — Wave {wave}
+          </p>
         </div>
         <div className="art-meta-bar">
           <span>
@@ -1053,7 +1053,7 @@ export default function Home() {
             <DifficultyBadge difficulty={fighter.difficulty} />
           </span>
           <button onClick={backToSelect} className="text-base underline text-[#d4af37]/60 hover:text-[#d4af37]">
-            Switch Fighter
+            ← {BRAND.home}
           </button>
           <button
             onClick={() => setShowTutorial(true)}
@@ -1066,12 +1066,6 @@ export default function Home() {
             className="text-base underline text-[#d4af37]/60 hover:text-[#d4af37]"
           >
             Chronicle
-          </button>
-          <button
-            onClick={() => toggleCombatMute()}
-            className="text-base underline text-[#d4af37]/60 hover:text-[#d4af37]"
-          >
-            {combatMuted ? 'Music Off' : 'Music On'}
           </button>
         </div>
 

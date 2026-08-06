@@ -21,6 +21,7 @@ import { CARNIVAL_ENTRY_USD, type PrizeTierId } from '@/lib/carnival/wheel';
 import { findWalletTokenAccount } from '@/lib/token-accounts';
 import { sendSolTransferWithWallet } from '@/lib/wallet/send-sol-transfer';
 import BoardwalkWheel, { TIER_COLORS, type BoardwalkSpace } from '@/components/BoardwalkWheel';
+import CarnivalClown from '@/components/CarnivalClown';
 import {
   unlockBoardwalkAudio,
   playWheelStop,
@@ -385,8 +386,8 @@ export default function CarnivalWheelGame() {
     <div className="carnival-shell">
       <header className="carnival-header">
         <div className="carnival-nav">
-          <Link href="/#hall-of-champions" className="art-btn px-3 py-1.5 text-[#f0d878]">
-            ← {BRAND.degenValley}
+          <Link href={`${BRAND.homePath}${BRAND.homeAnchor}`} className="art-btn px-3 py-1.5 text-[#f0d878]">
+            ← {BRAND.home}
           </Link>
           <Link href="/depths" className="art-btn px-3 py-1.5 text-[#f0d878]">
             {BRAND.depths}
@@ -408,7 +409,12 @@ export default function CarnivalWheelGame() {
 
       <div className="carnival-grid">
         <section className="carnival-panel carnival-wheel-panel">
-          <BoardwalkWheel spaces={displaySpaces} rotationDeg={wheelRot} spinning={spinning} />
+          <div className="carnival-stage-row">
+            <CarnivalClown spinning={spinning} active={busy && !!sessionToken && !outcome} />
+            <div className="carnival-wheel-with-clown">
+              <BoardwalkWheel spaces={displaySpaces} rotationDeg={wheelRot} spinning={spinning} />
+            </div>
+          </div>
 
           <div className={`carnival-dice ${spinning ? 'carnival-dice-rolling' : ''}`} aria-label={`Dice ${diceFace}`}>
             <span className="carnival-dice-face">{diceFace}</span>
@@ -458,7 +464,7 @@ export default function CarnivalWheelGame() {
                 disabled={busy || spinning}
                 onClick={() => void spin()}
               >
-                {spinning ? 'Spinning…' : 'Spin the boardwalk wheel'}
+                {spinning ? 'Chuckles is spinning…' : 'Let Chuckles spin the wheel'}
               </button>
             </>
           )}

@@ -11,7 +11,10 @@ export default function LandingHero() {
     <header className="tavern-entrance">
       <div className="tavern-entrance-nav">
         <BonkBankBadge />
-        <a href="#hall-of-champions" className="tavern-nav-plaque tavern-nav-plaque-valley">
+        <a href={BRAND.homeAnchor} className="tavern-nav-plaque tavern-nav-plaque-home" title="Champion select & hub">
+          {BRAND.home}
+        </a>
+        <a href="#degen-valley-path" className="tavern-nav-plaque tavern-nav-plaque-valley">
           {BRAND.degenValleyNav}
         </a>
         <Link href="/depths" className="tavern-nav-plaque">
@@ -58,12 +61,13 @@ export default function LandingHero() {
       <section className="realm-paths" aria-label="Paths through Bonklandia">
         <h2 className="realm-paths-title">Where will you go?</h2>
         <p className="realm-paths-sub">
-          Four doors. One realm. <strong className="text-[#f0d878]">{BRAND.degenValley}</strong> is the
-          classic wave fight — pick a champion below.
+          You&apos;re on <strong className="text-[#f0d878]">{BRAND.home}</strong> — pick a path, or
+          choose a champion below for <strong className="text-[#f0d878]">{BRAND.degenValley}</strong>{' '}
+          (classic wave fight).
         </p>
         <div className="realm-paths-grid">
           <a
-            href="#hall-of-champions"
+            href={BRAND.homeAnchor}
             className="realm-path-card realm-path-combat realm-path-valley"
             id="degen-valley-path"
           >

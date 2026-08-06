@@ -783,8 +783,8 @@ export default function AliceRoomGame() {
         <header className={`casino-header alice-machine-header ${inPlay ? 'alice-header-play' : ''}`}>
           <div className="casino-top-bar alice-top-bar-compact">
             <div className="alice-room-nav">
-              <Link href="/#hall-of-champions" className="alice-nav-link">
-                ← {BRAND.degenValley}
+              <Link href={`${BRAND.homePath}${BRAND.homeAnchor}`} className="alice-nav-link">
+                ← {BRAND.home}
               </Link>
               <Link href="/cashier" className="alice-nav-link">
                 Cashier

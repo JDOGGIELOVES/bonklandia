@@ -3,8 +3,8 @@
 import { useAppAudioMute } from '@/hooks/useAppAudioMute';
 
 /**
- * Fixed Music / SFX controls — same corner on every page.
- * Channels are independent: mute beds without killing lever/reel clicks.
+ * Compact fixed Music / SFX dock — icon-first so it steals less play area.
+ * Channels stay independent (beds vs lever/reel/combat clicks).
  */
 export default function GlobalMusicToggle() {
   const { musicMuted, sfxMuted, toggleMusic, toggleSfx } = useAppAudioMute();
@@ -19,14 +19,14 @@ export default function GlobalMusicToggle() {
         aria-label={musicMuted ? 'Turn music on' : 'Turn music off'}
         title={
           musicMuted
-            ? 'Music is OFF — click to enable trip / lobby beds'
-            : 'Music is ON — click to silence background tracks (SFX stay on)'
+            ? 'Music OFF — click to enable background tracks'
+            : 'Music ON — click to silence beds (SFX stay on)'
         }
       >
         <span className="global-music-icon" aria-hidden>
           {musicMuted ? '🎵' : '🎵'}
         </span>
-        <span className="global-music-label">{musicMuted ? 'Music Off' : 'Music On'}</span>
+        <span className="global-music-label">{musicMuted ? 'Off' : 'On'}</span>
       </button>
       <button
         type="button"
@@ -36,14 +36,14 @@ export default function GlobalMusicToggle() {
         aria-label={sfxMuted ? 'Turn sound effects on' : 'Turn sound effects off'}
         title={
           sfxMuted
-            ? 'SFX is OFF — lever, reels, combat clicks muted'
-            : 'SFX is ON — lever, reels, combat (music separate)'
+            ? 'SFX OFF — lever, reels, combat muted'
+            : 'SFX ON — clicks & combat (music separate)'
         }
       >
         <span className="global-music-icon" aria-hidden>
           {sfxMuted ? '🔇' : '🔊'}
         </span>
-        <span className="global-music-label">{sfxMuted ? 'SFX Off' : 'SFX On'}</span>
+        <span className="global-music-label">{sfxMuted ? 'Off' : 'On'}</span>
       </button>
     </div>
   );
