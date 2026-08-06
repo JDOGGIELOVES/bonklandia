@@ -680,17 +680,15 @@ export default function CashierPanel({ showBackLink = true }: CashierPanelProps)
                 return (
                   <div key={token.id} className="cashier-coin-card">
                     <div className="cashier-coin-header">
-                      <div className="art-portrait shrink-0">
-                        <div className="art-portrait-inner">
-                          <Image
-                            src={token.img}
-                            alt={token.name}
-                            width={72}
-                            height={96}
-                            className="character-img w-[68px] h-[90px] object-contain"
-                            unoptimized
-                          />
-                        </div>
+                      <div className="cashier-token-logo shrink-0" aria-hidden>
+                        <Image
+                          src={token.img}
+                          alt={`${token.symbol} logo`}
+                          width={72}
+                          height={72}
+                          className="cashier-token-logo-img"
+                          unoptimized
+                        />
                       </div>
                       <div className="min-w-0">
                         <h3 className="font-display text-xl font-bold text-[#f0d878]">{token.name}</h3>
@@ -799,9 +797,9 @@ export default function CashierPanel({ showBackLink = true }: CashierPanelProps)
                       <Image
                         src={token.img}
                         alt=""
-                        width={32}
-                        height={42}
-                        className="character-img object-contain"
+                        width={36}
+                        height={36}
+                        className="cashier-token-logo-img cashier-holding-logo"
                         unoptimized
                       />
                       <div>

@@ -47,7 +47,8 @@ export const FAM_TOKENS: FamTokenConfig[] = PLAYABLE_CHARACTERS.map(c => {
     symbol: c.name.toUpperCase(),
     name: c.name,
     role: c.role,
-    img: c.img,
+    /** Official mint logo for Cashier / token UI — not the full-body champion art. */
+    img: c.logo,
     tokensPerChip: rate.tokensPerChip,
     rateLabel: rate.rateLabel,
     minTokens: rate.minTokens,

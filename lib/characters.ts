@@ -8,7 +8,7 @@ export function characterImage(file: string): string {
   return `/assets/characters/${file}?v=${CHARACTER_ASSET_VERSION}`;
 }
 
-/** Coin logo (from on-chain / Jupiter token metadata). Used for Degen Valley heroes. */
+/** Coin logo from token metadata — Cashier / SPL token UI only (not champion gallery or Depths). */
 export function logoImage(file: string): string {
   return `/assets/logos/${file}?v=${LOGO_ASSET_VERSION}`;
 }
@@ -59,10 +59,10 @@ export type PlayableCharacter = {
   name: string;
   role: string;
   tagline: string;
-  /** Primary UI art — token logo for Degen Valley heroes. */
+  /** Full-body champion art — Hall of Champions, Degen Valley combat, Depths. */
   img: string;
-  /** Optional full-body portrait (legacy / combat alternate). */
-  portrait?: string;
+  /** Official token logo (metadata) — Cashier cash-out and coin/token surfaces only. */
+  logo: string;
   hp: number;
   power: number;
   defense: number;
@@ -80,8 +80,8 @@ export const PLAYABLE_CHARACTERS: PlayableCharacter[] = [
     name: 'Bonk',
     role: 'Head of the Fam',
     tagline: 'The original. Leads from the front — heavy hits, pure conviction.',
-    img: logoImage('bonk.png'),
-    portrait: characterImage('bonk.png'),
+    img: characterImage('bonk.png'),
+    logo: logoImage('bonk.png'),
     hp: 180,
     power: 9,
     defense: 7,
@@ -121,8 +121,8 @@ export const PLAYABLE_CHARACTERS: PlayableCharacter[] = [
     name: 'Bonga',
     role: "Bonk's Sister",
     tagline: "Bonk's sister — she keeps the rhythm. Vibe specialist.",
-    img: logoImage('bonga.png'),
-    portrait: characterImage('bonga.png'),
+    img: characterImage('bonga.png'),
+    logo: logoImage('bonga.png'),
     hp: 150,
     power: 6,
     defense: 6,
@@ -161,8 +161,8 @@ export const PLAYABLE_CHARACTERS: PlayableCharacter[] = [
     name: 'Bong',
     role: "Bonk's Brother",
     tagline: "Bonk's brother — unpredictable, fast, absolutely unhinged.",
-    img: logoImage('bong.png'),
-    portrait: characterImage('bong.png'),
+    img: characterImage('bong.png'),
+    logo: logoImage('bong.png'),
     hp: 140,
     power: 7,
     defense: 5,
@@ -200,8 +200,8 @@ export const PLAYABLE_CHARACTERS: PlayableCharacter[] = [
     name: 'Bink',
     role: "Bonk's Sister",
     tagline: "Bonk's sister — she bonks with patience, calculated and diamond-handed.",
-    img: logoImage('bink.png'),
-    portrait: characterImage('bink.png'),
+    img: characterImage('bink.png'),
+    logo: logoImage('bink.png'),
     hp: 200,
     power: 6,
     defense: 10,
@@ -240,8 +240,8 @@ export const PLAYABLE_CHARACTERS: PlayableCharacter[] = [
     name: 'Bonnie',
     role: "Bonk's Sister",
     tagline: "Bonk's sister — she heals the squad and keeps everyone in the fight.",
-    img: logoImage('bonnie.png'),
-    portrait: characterImage('bonnie.png'),
+    img: characterImage('bonnie.png'),
+    logo: logoImage('bonnie.png'),
     hp: 160,
     power: 5,
     defense: 7,
@@ -283,8 +283,8 @@ export const PLAYABLE_CHARACTERS: PlayableCharacter[] = [
     name: 'Beng',
     role: "Bonk's Sister",
     tagline: "Bonk's sister — the tank. She absorbs hits and crushes degens.",
-    img: logoImage('beng.png'),
-    portrait: characterImage('beng.png'),
+    img: characterImage('beng.png'),
+    logo: logoImage('beng.png'),
     hp: 220,
     power: 8,
     defense: 9,
