@@ -832,8 +832,8 @@ export default function DepthsGame() {
               <Image
                 src={char.img}
                 alt={char.name}
-                width={120}
-                height={120}
+                width={140}
+                height={180}
                 className="depths-char-img"
                 unoptimized
               />

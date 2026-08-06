@@ -1,14 +1,27 @@
-/** Bump when character portraits in public/assets/characters/ are replaced */
-export const CHARACTER_ASSET_VERSION = '20260806medieval1';
+/**
+ * Bump when hero portraits change.
+ * Home + Depths + Valley combat ONLY use /assets/heroes/ (medieval D&D full-body art).
+ * Never point those screens at /assets/logos or mascot cartoons.
+ */
+export const HERO_ASSET_VERSION = '20260806hero2';
+
+/** @deprecated Prefer heroImage — kept for Bonga Chill and misc character files. */
+export const CHARACTER_ASSET_VERSION = HERO_ASSET_VERSION;
 
 /** Bump when token logos in public/assets/logos/ are replaced */
 export const LOGO_ASSET_VERSION = '20260806logo1';
 
+/** Medieval D&D hero portraits — Home gallery, Depths roster/combat, Valley waves. */
+export function heroImage(file: string): string {
+  return `/assets/heroes/${file}?v=${HERO_ASSET_VERSION}`;
+}
+
+/** Misc character files still under /assets/characters/ (e.g. Bonga Chill). */
 export function characterImage(file: string): string {
   return `/assets/characters/${file}?v=${CHARACTER_ASSET_VERSION}`;
 }
 
-/** Coin logo from token metadata — Cashier / SPL token UI only (not champion gallery or Depths). */
+/** Coin logo from token metadata — Cashier / SPL token UI only. */
 export function logoImage(file: string): string {
   return `/assets/logos/${file}?v=${LOGO_ASSET_VERSION}`;
 }
@@ -59,9 +72,9 @@ export type PlayableCharacter = {
   name: string;
   role: string;
   tagline: string;
-  /** Full-body champion art — Hall of Champions, Degen Valley combat, Depths. */
+  /** Medieval full-body hero — Home, Depths, Valley combat only (never logos/mascots). */
   img: string;
-  /** Official token logo (metadata) — Cashier cash-out and coin/token surfaces only. */
+  /** Official token logo (metadata) — Cashier cash-out only. */
   logo: string;
   hp: number;
   power: number;
@@ -80,7 +93,7 @@ export const PLAYABLE_CHARACTERS: PlayableCharacter[] = [
     name: 'Bonk',
     role: 'Head of the Fam',
     tagline: 'The original. Leads from the front — heavy hits, pure conviction.',
-    img: characterImage('bonk.png'),
+    img: heroImage('bonk.png'),
     logo: logoImage('bonk.png'),
     hp: 180,
     power: 9,
@@ -121,7 +134,7 @@ export const PLAYABLE_CHARACTERS: PlayableCharacter[] = [
     name: 'Bonga',
     role: "Bonk's Sister",
     tagline: "Bonk's sister — she keeps the rhythm. Vibe specialist.",
-    img: characterImage('bonga.png'),
+    img: heroImage('bonga.png'),
     logo: logoImage('bonga.png'),
     hp: 150,
     power: 6,
@@ -161,7 +174,7 @@ export const PLAYABLE_CHARACTERS: PlayableCharacter[] = [
     name: 'Bong',
     role: "Bonk's Brother",
     tagline: "Bonk's brother — unpredictable, fast, absolutely unhinged.",
-    img: characterImage('bong.png'),
+    img: heroImage('bong.png'),
     logo: logoImage('bong.png'),
     hp: 140,
     power: 7,
@@ -200,7 +213,7 @@ export const PLAYABLE_CHARACTERS: PlayableCharacter[] = [
     name: 'Bink',
     role: "Bonk's Sister",
     tagline: "Bonk's sister — she bonks with patience, calculated and diamond-handed.",
-    img: characterImage('bink.png'),
+    img: heroImage('bink.png'),
     logo: logoImage('bink.png'),
     hp: 200,
     power: 6,
@@ -240,7 +253,7 @@ export const PLAYABLE_CHARACTERS: PlayableCharacter[] = [
     name: 'Bonnie',
     role: "Bonk's Sister",
     tagline: "Bonk's sister — she heals the squad and keeps everyone in the fight.",
-    img: characterImage('bonnie.png'),
+    img: heroImage('bonnie.png'),
     logo: logoImage('bonnie.png'),
     hp: 160,
     power: 5,
@@ -283,7 +296,7 @@ export const PLAYABLE_CHARACTERS: PlayableCharacter[] = [
     name: 'Beng',
     role: "Bonk's Sister",
     tagline: "Bonk's sister — the tank. She absorbs hits and crushes degens.",
-    img: characterImage('beng.png'),
+    img: heroImage('beng.png'),
     logo: logoImage('beng.png'),
     hp: 220,
     power: 8,

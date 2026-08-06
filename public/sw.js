@@ -10,7 +10,7 @@
  * - Large media (audio, alice videos) — avoid filling device storage
  */
 
-const CACHE_VERSION = 'bonklandia-static-v1';
+const CACHE_VERSION = 'bonklandia-static-v3-heroes';
 const STATIC_CACHE = CACHE_VERSION;
 
 /** Paths we never put in the Cache API. */
@@ -32,7 +32,9 @@ function isStaticAsset(url) {
   if (p.startsWith('/icons/')) return true;
   if (p === '/favicon.ico' || p.startsWith('/favicon')) return true;
   if (p === '/manifest.webmanifest' || p === '/manifest.webmanifest/') return true;
-  // Still PNG entity/character art is ok (not anim videos)
+  // Hero portraits + logos must always revalidate (avoid stale cartoon/mascot cache)
+  if (p.startsWith('/assets/heroes/') || p.startsWith('/assets/logos/')) return false;
+  // Other PNG entity/character art is ok (not anim videos)
   if (p.startsWith('/assets/') && /\.(png|jpg|jpeg|webp|svg|ico)$/i.test(p)) return true;
   return false;
 }

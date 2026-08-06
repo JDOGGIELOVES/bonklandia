@@ -6404,9 +6404,11 @@ html {
 }
 
 .depths-char-img {
-  width: 100px;
-  height: 100px;
+  width: 120px;
+  height: 160px;
   object-fit: contain;
+  object-position: center bottom;
+  filter: drop-shadow(0 6px 12px rgba(0, 0, 0, 0.45));
 }
 
 .depths-char-role {
