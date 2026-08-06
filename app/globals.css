@@ -8617,338 +8617,345 @@ html {
 
 /* ==========================================================================
    Alice Trip FX — entity personality psychedelia (screen transitions)
+   MUST sit above .alice-room-content or flashes are invisible behind the cabinet.
    ========================================================================== */
 .alice-trip-fx {
   position: fixed;
   inset: 0;
-  z-index: 2;
+  z-index: 80;
   pointer-events: none;
   overflow: hidden;
-}
-.alice-room-content {
-  z-index: 3;
-}
-.alice-vignette {
-  z-index: 2;
+  isolation: isolate;
 }
 
-/* Soft ambient wash behind content */
 .alice-trip-ambient {
   position: absolute;
   inset: 0;
-  opacity: 0.55;
+  opacity: 0.72;
   transition: opacity 0.6s ease;
+  z-index: 1;
 }
 .alice-trip-ambient-wash,
 .alice-trip-ambient-grain,
 .alice-trip-ambient-pulse {
   position: absolute;
-  inset: -8%;
+  inset: -10%;
 }
 .alice-trip-ambient-wash {
   background:
-    radial-gradient(ellipse 70% 55% at 50% 20%, var(--alice-fx-a, rgba(168, 85, 247, 0.28)), transparent 70%),
-    radial-gradient(ellipse 55% 50% at 80% 80%, var(--alice-fx-b, rgba(34, 211, 238, 0.16)), transparent 65%),
-    radial-gradient(ellipse 45% 40% at 15% 70%, var(--alice-fx-c, rgba(244, 114, 182, 0.12)), transparent 60%);
-  animation: alice-ambient-drift 14s ease-in-out infinite alternate;
+    radial-gradient(ellipse 80% 60% at 50% 15%, var(--alice-fx-a, rgba(168, 85, 247, 0.55)), transparent 72%),
+    radial-gradient(ellipse 60% 55% at 90% 85%, var(--alice-fx-b, rgba(34, 211, 238, 0.35)), transparent 68%),
+    radial-gradient(ellipse 50% 45% at 10% 75%, var(--alice-fx-c, rgba(244, 114, 182, 0.3)), transparent 65%);
+  animation: alice-ambient-drift 12s ease-in-out infinite alternate;
 }
 .alice-trip-ambient-grain {
-  opacity: 0.12;
+  opacity: 0.22;
   mix-blend-mode: soft-light;
   background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.55'/%3E%3C/svg%3E");
-  background-size: 180px 180px;
-  animation: alice-grain-shift 0.35s steps(2) infinite;
+  background-size: 160px 160px;
+  animation: alice-grain-shift 0.28s steps(2) infinite;
 }
 .alice-trip-ambient-pulse {
-  background: radial-gradient(circle at 50% 45%, var(--alice-fx-a, transparent) 0%, transparent 55%);
-  opacity: 0.2;
-  animation: alice-ambient-breathe 5.5s ease-in-out infinite;
+  background: radial-gradient(circle at 50% 42%, var(--alice-fx-a, transparent) 0%, transparent 58%);
+  opacity: 0.35;
+  animation: alice-ambient-breathe 4.5s ease-in-out infinite;
 }
 
-/* One-shot burst overlay */
 .alice-trip-burst {
   position: absolute;
   inset: 0;
-  animation: alice-burst-lifecycle 1.2s ease-out forwards;
+  z-index: 2;
+  animation: alice-burst-lifecycle 2s ease-out forwards;
 }
-.alice-trip-burst-enter { --alice-burst-dur: 1.1s; animation-duration: 1.1s; }
-.alice-trip-burst-encounter { --alice-burst-dur: 1.15s; animation-duration: 1.15s; }
-.alice-trip-burst-clear { --alice-burst-dur: 1.2s; animation-duration: 1.2s; }
-.alice-trip-burst-eject { --alice-burst-dur: 1.35s; animation-duration: 1.35s; }
-.alice-trip-burst-ascend { --alice-burst-dur: 1.6s; animation-duration: 1.6s; }
+.alice-trip-burst-enter { animation-duration: 2s; }
+.alice-trip-burst-encounter { animation-duration: 2s; }
+.alice-trip-burst-clear { animation-duration: 2s; }
+.alice-trip-burst-eject { animation-duration: 2.1s; }
+.alice-trip-burst-ascend { animation-duration: 2.4s; }
 
+.alice-trip-burst-scrim,
 .alice-trip-burst-veil,
 .alice-trip-burst-pattern,
 .alice-trip-burst-rings,
 .alice-trip-burst-core,
-.alice-trip-burst-shards {
+.alice-trip-burst-shards,
+.alice-trip-burst-label {
   position: absolute;
   inset: 0;
 }
+.alice-trip-burst-scrim {
+  background: rgba(8, 2, 18, 0.55);
+  animation: alice-scrim-pulse 2s ease-out forwards;
+}
 .alice-trip-burst-veil {
-  background: radial-gradient(circle at 50% 45%, var(--alice-fx-a, #a855f7) 0%, transparent 62%);
+  background: radial-gradient(circle at 50% 45%, var(--alice-fx-a, #a855f7) 0%, transparent 68%);
   opacity: 0;
-  animation: alice-veil-flash 1.15s ease-out forwards;
+  animation: alice-veil-flash 2s ease-out forwards;
   mix-blend-mode: screen;
 }
 .alice-trip-burst-pattern {
   opacity: 0;
-  mix-blend-mode: color-dodge;
-  animation: alice-pattern-spin 1.2s cubic-bezier(0.2, 0.8, 0.2, 1) forwards;
+  mix-blend-mode: screen;
+  animation: alice-pattern-spin 2s cubic-bezier(0.2, 0.8, 0.2, 1) forwards;
   background:
     repeating-conic-gradient(
       from 0deg at 50% 50%,
-      var(--alice-fx-a, #a855f7) 0deg 12deg,
-      transparent 12deg 24deg
+      var(--alice-fx-a, #a855f7) 0deg 14deg,
+      transparent 14deg 28deg
     );
-  mask-image: radial-gradient(circle at 50% 50%, black 10%, transparent 68%);
-  -webkit-mask-image: radial-gradient(circle at 50% 50%, black 10%, transparent 68%);
+  mask-image: radial-gradient(circle at 50% 50%, black 8%, transparent 72%);
+  -webkit-mask-image: radial-gradient(circle at 50% 50%, black 8%, transparent 72%);
 }
 .alice-trip-burst-rings {
   background:
-    radial-gradient(circle, transparent 28%, var(--alice-fx-b, #22d3ee) 29%, transparent 31%),
-    radial-gradient(circle, transparent 42%, var(--alice-fx-c, #f0abfc) 43%, transparent 45%),
-    radial-gradient(circle, transparent 56%, var(--alice-fx-a, #a855f7) 57%, transparent 59%);
+    radial-gradient(circle, transparent 22%, var(--alice-fx-b, #22d3ee) 24%, transparent 27%),
+    radial-gradient(circle, transparent 38%, var(--alice-fx-c, #f0abfc) 40%, transparent 43%),
+    radial-gradient(circle, transparent 54%, var(--alice-fx-a, #a855f7) 56%, transparent 59%);
   opacity: 0;
-  transform: scale(0.4);
-  animation: alice-rings-expand 1.2s ease-out forwards;
+  transform: scale(0.35);
+  animation: alice-rings-expand 2s ease-out forwards;
   mix-blend-mode: screen;
 }
 .alice-trip-burst-core {
-  background: radial-gradient(circle at 50% 48%, #fff 0%, var(--alice-fx-a, #e9d5ff) 18%, transparent 52%);
+  background: radial-gradient(circle at 50% 48%, #fff 0%, var(--alice-fx-a, #e9d5ff) 22%, transparent 55%);
   opacity: 0;
-  animation: alice-core-bloom 1.1s ease-out forwards;
+  animation: alice-core-bloom 1.9s ease-out forwards;
   mix-blend-mode: screen;
 }
 .alice-trip-burst-shards {
   opacity: 0;
   background:
-    linear-gradient(115deg, transparent 40%, var(--alice-fx-b, #67e8f9) 50%, transparent 60%),
-    linear-gradient(65deg, transparent 42%, var(--alice-fx-c, #f9a8d4) 50%, transparent 58%),
-    linear-gradient(200deg, transparent 45%, var(--alice-fx-a, #c084fc) 50%, transparent 55%);
-  animation: alice-shards-slash 1.15s ease-out forwards;
+    linear-gradient(115deg, transparent 38%, var(--alice-fx-b, #67e8f9) 50%, transparent 62%),
+    linear-gradient(65deg, transparent 40%, var(--alice-fx-c, #f9a8d4) 50%, transparent 60%),
+    linear-gradient(200deg, transparent 42%, var(--alice-fx-a, #c084fc) 50%, transparent 58%);
+  animation: alice-shards-slash 2s ease-out forwards;
   mix-blend-mode: screen;
 }
+.alice-trip-burst-label {
+  inset: auto 0 18% 0;
+  height: auto;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-family: Georgia, "Times New Roman", serif;
+  font-size: clamp(1.35rem, 4.5vw, 2.1rem);
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: #fdf4ff;
+  text-shadow:
+    0 0 20px var(--alice-fx-a, #a855f7),
+    0 0 40px var(--alice-fx-b, #22d3ee),
+    0 2px 8px rgba(0, 0, 0, 0.85);
+  opacity: 0;
+  animation: alice-label-flash 2s ease-out forwards;
+  pointer-events: none;
+}
 
-/* Content warps slightly during a burst */
 .alice-room-tripping .alice-room-content {
-  animation: alice-content-trip 1.15s ease-out;
+  animation: alice-content-trip 2s ease-out;
+  filter: saturate(1.15);
 }
 .alice-room-tripping .alice-room-bg {
-  animation: alice-bg-trip 1.15s ease-out;
+  animation: alice-bg-trip 2s ease-out;
 }
 
-/* --- Entity palettes + personality motion --- */
+.alice-intro-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.65rem;
+  justify-content: center;
+  margin-top: 0.25rem;
+}
+.alice-intro-fx-hint {
+  margin: 0.75rem auto 0;
+  max-width: 26rem;
+  font-size: 0.8rem;
+  line-height: 1.4;
+  color: rgba(196, 181, 253, 0.75);
+  text-align: center;
+}
+
 .alice-vibe-machine-elf {
-  --alice-fx-a: rgba(34, 211, 238, 0.85);
-  --alice-fx-b: rgba(163, 230, 53, 0.75);
-  --alice-fx-c: rgba(240, 171, 252, 0.7);
+  --alice-fx-a: rgba(34, 211, 238, 0.95);
+  --alice-fx-b: rgba(163, 230, 53, 0.9);
+  --alice-fx-c: rgba(240, 171, 252, 0.85);
 }
 .alice-vibe-machine-elf .alice-trip-burst-pattern {
   background:
-    repeating-linear-gradient(0deg, rgba(34, 211, 238, 0.35) 0 4px, transparent 4px 10px),
-    repeating-linear-gradient(90deg, rgba(163, 230, 53, 0.3) 0 4px, transparent 4px 10px);
+    repeating-linear-gradient(0deg, rgba(34, 211, 238, 0.55) 0 5px, transparent 5px 12px),
+    repeating-linear-gradient(90deg, rgba(163, 230, 53, 0.45) 0 5px, transparent 5px 12px);
   animation-name: alice-pattern-kaleido;
   mix-blend-mode: screen;
 }
-.alice-vibe-machine-elf .alice-trip-ambient-wash {
-  animation-duration: 8s;
-}
 
 .alice-vibe-jester {
-  --alice-fx-a: rgba(244, 114, 182, 0.9);
-  --alice-fx-b: rgba(250, 204, 21, 0.85);
-  --alice-fx-c: rgba(167, 139, 250, 0.8);
+  --alice-fx-a: rgba(244, 114, 182, 0.95);
+  --alice-fx-b: rgba(250, 204, 21, 0.95);
+  --alice-fx-c: rgba(167, 139, 250, 0.9);
 }
 .alice-vibe-jester .alice-trip-burst-pattern {
   background:
     repeating-conic-gradient(
       from 0deg at 50% 50%,
-      rgba(244, 114, 182, 0.7) 0deg 20deg,
-      rgba(250, 204, 21, 0.65) 20deg 40deg,
-      rgba(167, 139, 250, 0.6) 40deg 60deg
+      rgba(244, 114, 182, 0.85) 0deg 20deg,
+      rgba(250, 204, 21, 0.8) 20deg 40deg,
+      rgba(167, 139, 250, 0.75) 40deg 60deg
     );
   animation-name: alice-pattern-jester;
 }
-.alice-vibe-jester.alice-room-tripping .alice-room-content,
 .alice-room.alice-vibe-jester.alice-room-tripping .alice-room-content {
   animation-name: alice-content-jester;
 }
 
 .alice-vibe-mantis {
-  --alice-fx-a: rgba(74, 222, 128, 0.9);
-  --alice-fx-b: rgba(21, 128, 61, 0.75);
-  --alice-fx-c: rgba(190, 242, 100, 0.7);
+  --alice-fx-a: rgba(74, 222, 128, 0.95);
+  --alice-fx-b: rgba(21, 128, 61, 0.85);
+  --alice-fx-c: rgba(190, 242, 100, 0.85);
 }
 .alice-vibe-mantis .alice-trip-burst-pattern {
   background:
-    radial-gradient(circle at 50% 50%, transparent 18%, rgba(74, 222, 128, 0.35) 19%, transparent 22%),
-    repeating-radial-gradient(circle at 50% 50%, transparent 0 14px, rgba(74, 222, 128, 0.25) 14px 16px);
+    radial-gradient(circle at 50% 50%, transparent 16%, rgba(74, 222, 128, 0.55) 18%, transparent 22%),
+    repeating-radial-gradient(circle at 50% 50%, transparent 0 12px, rgba(74, 222, 128, 0.4) 12px 15px);
   animation-name: alice-pattern-mantis;
 }
 
 .alice-vibe-grey {
-  --alice-fx-a: rgba(148, 163, 184, 0.9);
-  --alice-fx-b: rgba(56, 189, 248, 0.7);
-  --alice-fx-c: rgba(226, 232, 240, 0.65);
+  --alice-fx-a: rgba(203, 213, 225, 0.95);
+  --alice-fx-b: rgba(56, 189, 248, 0.9);
+  --alice-fx-c: rgba(226, 232, 240, 0.85);
 }
 .alice-vibe-grey .alice-trip-burst-pattern {
   background:
-    repeating-linear-gradient(180deg, rgba(148, 163, 184, 0.35) 0 2px, transparent 2px 6px),
-    linear-gradient(180deg, rgba(56, 189, 248, 0.25), transparent 60%);
+    repeating-linear-gradient(180deg, rgba(148, 163, 184, 0.55) 0 3px, transparent 3px 8px),
+    linear-gradient(180deg, rgba(56, 189, 248, 0.45), transparent 60%);
   animation-name: alice-pattern-grey;
-  mix-blend-mode: screen;
 }
 .alice-vibe-grey .alice-trip-burst-core {
-  background: radial-gradient(ellipse 30% 80% at 50% 0%, #e2e8f0 0%, rgba(56, 189, 248, 0.5) 35%, transparent 70%);
+  background: radial-gradient(ellipse 35% 90% at 50% 0%, #f8fafc 0%, rgba(56, 189, 248, 0.65) 40%, transparent 72%);
   animation-name: alice-core-beam;
 }
 
 .alice-vibe-light-being {
-  --alice-fx-a: rgba(254, 240, 138, 0.95);
-  --alice-fx-b: rgba(255, 255, 255, 0.85);
-  --alice-fx-c: rgba(253, 224, 71, 0.7);
+  --alice-fx-a: rgba(254, 240, 138, 0.98);
+  --alice-fx-b: rgba(255, 255, 255, 0.95);
+  --alice-fx-c: rgba(253, 224, 71, 0.9);
 }
 .alice-vibe-light-being .alice-trip-burst-pattern {
   background:
-    conic-gradient(from 0deg at 50% 50%, transparent 0 8%, rgba(254, 240, 138, 0.55) 10%, transparent 14%);
+    conic-gradient(from 0deg at 50% 50%, transparent 0 6%, rgba(254, 240, 138, 0.75) 8%, transparent 12%);
   animation-name: alice-pattern-rays;
-  mix-blend-mode: screen;
 }
 .alice-vibe-light-being .alice-trip-burst-core {
   animation-name: alice-core-soft-nova;
 }
 
 .alice-vibe-goddess {
-  --alice-fx-a: rgba(244, 114, 182, 0.9);
-  --alice-fx-b: rgba(192, 132, 252, 0.85);
-  --alice-fx-c: rgba(253, 224, 71, 0.65);
+  --alice-fx-a: rgba(244, 114, 182, 0.95);
+  --alice-fx-b: rgba(192, 132, 252, 0.95);
+  --alice-fx-c: rgba(253, 224, 71, 0.85);
 }
 .alice-vibe-goddess .alice-trip-burst-pattern {
   background:
-    repeating-radial-gradient(circle at 50% 50%, transparent 0 18px, rgba(244, 114, 182, 0.28) 18px 20px, transparent 20px 36px),
-    conic-gradient(from 0deg, rgba(192, 132, 252, 0.35), transparent 40%, rgba(253, 224, 71, 0.3), transparent 80%);
+    repeating-radial-gradient(circle at 50% 50%, transparent 0 16px, rgba(244, 114, 182, 0.45) 16px 19px, transparent 19px 34px),
+    conic-gradient(from 0deg, rgba(192, 132, 252, 0.55), transparent 35%, rgba(253, 224, 71, 0.45), transparent 75%);
   animation-name: alice-pattern-mandala;
 }
 
 .alice-vibe-fractal-being {
-  --alice-fx-a: rgba(34, 211, 238, 0.9);
-  --alice-fx-b: rgba(232, 121, 249, 0.85);
-  --alice-fx-c: rgba(129, 140, 248, 0.75);
+  --alice-fx-a: rgba(34, 211, 238, 0.95);
+  --alice-fx-b: rgba(232, 121, 249, 0.95);
+  --alice-fx-c: rgba(129, 140, 248, 0.9);
 }
 .alice-vibe-fractal-being .alice-trip-burst-pattern {
   background:
-    repeating-conic-gradient(from 0deg at 50% 50%, rgba(34, 211, 238, 0.5) 0deg 8deg, transparent 8deg 16deg),
-    repeating-radial-gradient(circle at 50% 50%, transparent 0 10px, rgba(232, 121, 249, 0.35) 10px 12px);
+    repeating-conic-gradient(from 0deg at 50% 50%, rgba(34, 211, 238, 0.7) 0deg 8deg, transparent 8deg 16deg),
+    repeating-radial-gradient(circle at 50% 50%, transparent 0 9px, rgba(232, 121, 249, 0.5) 9px 12px);
   animation-name: alice-pattern-fractal;
 }
 
 .alice-vibe-serpent {
-  --alice-fx-a: rgba(16, 185, 129, 0.9);
-  --alice-fx-b: rgba(250, 204, 21, 0.75);
-  --alice-fx-c: rgba(52, 211, 153, 0.7);
+  --alice-fx-a: rgba(16, 185, 129, 0.95);
+  --alice-fx-b: rgba(250, 204, 21, 0.9);
+  --alice-fx-c: rgba(52, 211, 153, 0.85);
 }
 .alice-vibe-serpent .alice-trip-burst-pattern {
   background:
     repeating-linear-gradient(
       105deg,
-      transparent 0 18px,
-      rgba(16, 185, 129, 0.4) 18px 28px,
-      transparent 28px 46px,
-      rgba(250, 204, 21, 0.3) 46px 54px
+      transparent 0 16px,
+      rgba(16, 185, 129, 0.6) 16px 28px,
+      transparent 28px 44px,
+      rgba(250, 204, 21, 0.45) 44px 54px
     );
   animation-name: alice-pattern-serpent;
-  mask-image: radial-gradient(ellipse 80% 55% at 50% 50%, black 20%, transparent 70%);
-  -webkit-mask-image: radial-gradient(ellipse 80% 55% at 50% 50%, black 20%, transparent 70%);
+  mask-image: radial-gradient(ellipse 85% 58% at 50% 50%, black 18%, transparent 72%);
+  -webkit-mask-image: radial-gradient(ellipse 85% 58% at 50% 50%, black 18%, transparent 72%);
 }
 
 .alice-vibe-ancestor {
-  --alice-fx-a: rgba(251, 191, 36, 0.85);
-  --alice-fx-b: rgba(180, 83, 9, 0.7);
-  --alice-fx-c: rgba(254, 215, 170, 0.65);
+  --alice-fx-a: rgba(251, 191, 36, 0.95);
+  --alice-fx-b: rgba(180, 83, 9, 0.85);
+  --alice-fx-c: rgba(254, 215, 170, 0.85);
 }
 .alice-vibe-ancestor .alice-trip-burst-pattern {
   background:
-    radial-gradient(circle at 50% 70%, rgba(251, 191, 36, 0.45), transparent 55%),
-    radial-gradient(circle at 30% 40%, rgba(254, 215, 170, 0.2), transparent 40%),
-    radial-gradient(circle at 70% 35%, rgba(180, 83, 9, 0.25), transparent 40%);
+    radial-gradient(circle at 50% 70%, rgba(251, 191, 36, 0.65), transparent 58%),
+    radial-gradient(circle at 30% 40%, rgba(254, 215, 170, 0.4), transparent 42%),
+    radial-gradient(circle at 70% 35%, rgba(180, 83, 9, 0.4), transparent 42%);
   animation-name: alice-pattern-smoke;
-  mix-blend-mode: screen;
 }
 
 .alice-vibe-the-other {
-  --alice-fx-a: rgba(15, 23, 42, 0.95);
-  --alice-fx-b: rgba(168, 85, 247, 0.9);
-  --alice-fx-c: rgba(244, 63, 94, 0.75);
+  --alice-fx-a: rgba(88, 28, 135, 0.95);
+  --alice-fx-b: rgba(168, 85, 247, 0.95);
+  --alice-fx-c: rgba(244, 63, 94, 0.9);
+}
+.alice-vibe-the-other .alice-trip-burst-scrim {
+  background: rgba(2, 0, 8, 0.72);
 }
 .alice-vibe-the-other .alice-trip-burst-veil {
-  background: radial-gradient(circle at 50% 50%, rgba(15, 23, 42, 0.85) 0%, rgba(168, 85, 247, 0.5) 40%, transparent 70%);
+  background: radial-gradient(circle at 50% 50%, rgba(15, 23, 42, 0.9) 0%, rgba(168, 85, 247, 0.7) 42%, transparent 72%);
   mix-blend-mode: normal;
 }
 .alice-vibe-the-other .alice-trip-burst-pattern {
   background:
-    repeating-conic-gradient(from 0deg at 50% 50%, rgba(168, 85, 247, 0.55) 0deg 6deg, transparent 6deg 12deg);
+    repeating-conic-gradient(from 0deg at 50% 50%, rgba(168, 85, 247, 0.75) 0deg 6deg, transparent 6deg 12deg);
   animation-name: alice-pattern-void;
-  mix-blend-mode: screen;
 }
 .alice-vibe-the-other .alice-trip-burst-core {
-  background: radial-gradient(circle, #000 0%, rgba(168, 85, 247, 0.6) 25%, transparent 55%);
+  background: radial-gradient(circle, #000 0%, rgba(168, 85, 247, 0.75) 28%, transparent 58%);
   animation-name: alice-core-void;
 }
 
-/* Room bg picks up vibe tint while playing */
-.alice-room.alice-vibe-machine-elf .alice-room-bg {
-  filter: hue-rotate(-8deg) saturate(1.2) brightness(1.05);
-}
-.alice-room.alice-vibe-jester .alice-room-bg {
-  filter: hue-rotate(25deg) saturate(1.35) contrast(1.06);
-}
-.alice-room.alice-vibe-mantis .alice-room-bg {
-  filter: hue-rotate(70deg) saturate(1.25);
-}
-.alice-room.alice-vibe-grey .alice-room-bg {
-  filter: saturate(0.75) brightness(1.08) contrast(1.05);
-}
-.alice-room.alice-vibe-light-being .alice-room-bg {
-  filter: brightness(1.12) saturate(1.15) hue-rotate(-5deg);
-}
-.alice-room.alice-vibe-goddess .alice-room-bg {
-  filter: hue-rotate(-15deg) saturate(1.3) brightness(1.06);
-}
-.alice-room.alice-vibe-fractal-being .alice-room-bg {
-  filter: hue-rotate(180deg) saturate(1.4) contrast(1.08);
-}
-.alice-room.alice-vibe-serpent .alice-room-bg {
-  filter: hue-rotate(95deg) saturate(1.3);
-}
-.alice-room.alice-vibe-ancestor .alice-room-bg {
-  filter: sepia(0.35) saturate(1.2) brightness(1.05);
-}
-.alice-room.alice-vibe-the-other .alice-room-bg {
-  filter: hue-rotate(260deg) saturate(1.5) contrast(1.12) brightness(0.92);
-}
+.alice-room.alice-vibe-machine-elf .alice-room-bg { filter: hue-rotate(-8deg) saturate(1.35) brightness(1.08); }
+.alice-room.alice-vibe-jester .alice-room-bg { filter: hue-rotate(25deg) saturate(1.45) contrast(1.08); }
+.alice-room.alice-vibe-mantis .alice-room-bg { filter: hue-rotate(70deg) saturate(1.4); }
+.alice-room.alice-vibe-grey .alice-room-bg { filter: saturate(0.7) brightness(1.12) contrast(1.08); }
+.alice-room.alice-vibe-light-being .alice-room-bg { filter: brightness(1.18) saturate(1.2) hue-rotate(-5deg); }
+.alice-room.alice-vibe-goddess .alice-room-bg { filter: hue-rotate(-15deg) saturate(1.4) brightness(1.1); }
+.alice-room.alice-vibe-fractal-being .alice-room-bg { filter: hue-rotate(180deg) saturate(1.5) contrast(1.1); }
+.alice-room.alice-vibe-serpent .alice-room-bg { filter: hue-rotate(95deg) saturate(1.4); }
+.alice-room.alice-vibe-ancestor .alice-room-bg { filter: sepia(0.4) saturate(1.3) brightness(1.08); }
+.alice-room.alice-vibe-the-other .alice-room-bg { filter: hue-rotate(260deg) saturate(1.55) contrast(1.15) brightness(0.9); }
 
-/* Transition modes tweak intensity */
-.alice-trip-burst-clear .alice-trip-burst-veil {
-  filter: brightness(1.25);
-}
+.alice-trip-burst-clear .alice-trip-burst-veil { filter: brightness(1.35); }
 .alice-trip-burst-eject .alice-trip-burst-veil {
   animation-name: alice-veil-eject;
-  background: radial-gradient(circle, rgba(244, 63, 94, 0.55), transparent 65%);
+  background: radial-gradient(circle, rgba(244, 63, 94, 0.75), transparent 68%);
 }
 .alice-trip-burst-ascend .alice-trip-burst-core {
-  animation-duration: 1.55s;
+  animation-duration: 2.3s;
   animation-name: alice-core-ascend;
 }
 
-/* Keyframes */
 @keyframes alice-ambient-drift {
   0% { transform: translate3d(-2%, -1%, 0) scale(1); }
-  100% { transform: translate3d(2%, 1.5%, 0) scale(1.06); }
+  100% { transform: translate3d(2%, 1.5%, 0) scale(1.08); }
 }
 @keyframes alice-ambient-breathe {
-  0%, 100% { opacity: 0.12; transform: scale(1); }
-  50% { opacity: 0.28; transform: scale(1.08); }
+  0%, 100% { opacity: 0.2; transform: scale(1); }
+  50% { opacity: 0.45; transform: scale(1.1); }
 }
 @keyframes alice-grain-shift {
   0% { transform: translate(0, 0); }
@@ -8956,153 +8963,172 @@ html {
 }
 @keyframes alice-burst-lifecycle {
   0% { opacity: 1; }
-  70% { opacity: 1; }
+  75% { opacity: 1; }
+  100% { opacity: 0; }
+}
+@keyframes alice-scrim-pulse {
+  0% { opacity: 0; }
+  15% { opacity: 1; }
+  70% { opacity: 0.85; }
   100% { opacity: 0; }
 }
 @keyframes alice-veil-flash {
-  0% { opacity: 0; transform: scale(0.6); }
-  25% { opacity: 0.85; transform: scale(1.05); }
-  100% { opacity: 0; transform: scale(1.35); }
+  0% { opacity: 0; transform: scale(0.5); }
+  20% { opacity: 1; transform: scale(1.08); }
+  100% { opacity: 0; transform: scale(1.45); }
 }
 @keyframes alice-veil-eject {
-  0% { opacity: 0; transform: scale(1.2); }
-  30% { opacity: 0.9; transform: scale(1); }
-  100% { opacity: 0; transform: scale(0.7); filter: hue-rotate(40deg); }
+  0% { opacity: 0; transform: scale(1.25); }
+  25% { opacity: 1; transform: scale(1); }
+  100% { opacity: 0; transform: scale(0.65); filter: hue-rotate(50deg); }
 }
 @keyframes alice-pattern-spin {
-  0% { opacity: 0; transform: rotate(0deg) scale(0.5); }
-  30% { opacity: 0.75; }
-  100% { opacity: 0; transform: rotate(140deg) scale(1.6); }
+  0% { opacity: 0; transform: rotate(0deg) scale(0.45); }
+  25% { opacity: 1; }
+  100% { opacity: 0; transform: rotate(160deg) scale(1.75); }
 }
 @keyframes alice-pattern-kaleido {
-  0% { opacity: 0; transform: scale(0.4) rotate(0deg); filter: hue-rotate(0deg); }
-  35% { opacity: 0.9; }
-  100% { opacity: 0; transform: scale(1.8) rotate(90deg); filter: hue-rotate(80deg); }
+  0% { opacity: 0; transform: scale(0.35) rotate(0deg); filter: hue-rotate(0deg); }
+  30% { opacity: 1; }
+  100% { opacity: 0; transform: scale(2) rotate(100deg); filter: hue-rotate(90deg); }
 }
 @keyframes alice-pattern-jester {
-  0% { opacity: 0; transform: rotate(-20deg) scale(0.6); }
-  40% { opacity: 0.95; transform: rotate(25deg) scale(1.15); }
-  100% { opacity: 0; transform: rotate(180deg) scale(1.7); }
+  0% { opacity: 0; transform: rotate(-25deg) scale(0.55); }
+  35% { opacity: 1; transform: rotate(30deg) scale(1.2); }
+  100% { opacity: 0; transform: rotate(200deg) scale(1.85); }
 }
 @keyframes alice-pattern-mantis {
-  0% { opacity: 0; transform: scale(1.4); }
-  40% { opacity: 0.85; transform: scale(1); }
-  100% { opacity: 0; transform: scale(0.55); }
+  0% { opacity: 0; transform: scale(1.55); }
+  35% { opacity: 1; transform: scale(1); }
+  100% { opacity: 0; transform: scale(0.45); }
 }
 @keyframes alice-pattern-grey {
-  0% { opacity: 0; transform: translateY(-30%); }
-  40% { opacity: 0.8; transform: translateY(0); }
-  100% { opacity: 0; transform: translateY(40%); }
+  0% { opacity: 0; transform: translateY(-35%); }
+  35% { opacity: 1; transform: translateY(0); }
+  100% { opacity: 0; transform: translateY(45%); }
 }
 @keyframes alice-pattern-rays {
-  0% { opacity: 0; transform: rotate(0deg) scale(0.3); }
-  40% { opacity: 0.9; }
-  100% { opacity: 0; transform: rotate(50deg) scale(1.8); }
+  0% { opacity: 0; transform: rotate(0deg) scale(0.25); }
+  35% { opacity: 1; }
+  100% { opacity: 0; transform: rotate(55deg) scale(1.9); }
 }
 @keyframes alice-pattern-mandala {
-  0% { opacity: 0; transform: scale(0.2) rotate(0deg); }
-  45% { opacity: 0.85; transform: scale(1) rotate(40deg); }
-  100% { opacity: 0; transform: scale(1.5) rotate(90deg); }
+  0% { opacity: 0; transform: scale(0.15) rotate(0deg); }
+  40% { opacity: 1; transform: scale(1.05) rotate(45deg); }
+  100% { opacity: 0; transform: scale(1.65) rotate(100deg); }
 }
 @keyframes alice-pattern-fractal {
-  0% { opacity: 0; transform: scale(0.15) rotate(0deg); }
-  50% { opacity: 0.9; transform: scale(1.1) rotate(180deg); }
-  100% { opacity: 0; transform: scale(2.2) rotate(360deg); }
+  0% { opacity: 0; transform: scale(0.12) rotate(0deg); }
+  45% { opacity: 1; transform: scale(1.15) rotate(200deg); }
+  100% { opacity: 0; transform: scale(2.4) rotate(400deg); }
 }
 @keyframes alice-pattern-serpent {
-  0% { opacity: 0; transform: translateX(-20%) skewX(-8deg); }
-  40% { opacity: 0.85; transform: translateX(0) skewX(4deg); }
-  100% { opacity: 0; transform: translateX(25%) skewX(-6deg); }
+  0% { opacity: 0; transform: translateX(-25%) skewX(-10deg); }
+  35% { opacity: 1; transform: translateX(0) skewX(5deg); }
+  100% { opacity: 0; transform: translateX(30%) skewX(-8deg); }
 }
 @keyframes alice-pattern-smoke {
-  0% { opacity: 0; transform: translateY(15%) scale(0.9); filter: blur(0); }
-  40% { opacity: 0.75; transform: translateY(0) scale(1.05); filter: blur(1px); }
-  100% { opacity: 0; transform: translateY(-20%) scale(1.2); filter: blur(4px); }
+  0% { opacity: 0; transform: translateY(18%) scale(0.85); filter: blur(0); }
+  40% { opacity: 0.95; transform: translateY(0) scale(1.08); filter: blur(1px); }
+  100% { opacity: 0; transform: translateY(-25%) scale(1.25); filter: blur(5px); }
 }
 @keyframes alice-pattern-void {
-  0% { opacity: 0; transform: scale(2) rotate(0deg); }
-  35% { opacity: 0.95; transform: scale(1) rotate(-90deg); }
-  100% { opacity: 0; transform: scale(0.2) rotate(-220deg); }
+  0% { opacity: 0; transform: scale(2.2) rotate(0deg); }
+  30% { opacity: 1; transform: scale(1) rotate(-100deg); }
+  100% { opacity: 0; transform: scale(0.15) rotate(-240deg); }
 }
 @keyframes alice-rings-expand {
-  0% { opacity: 0; transform: scale(0.3); }
-  35% { opacity: 0.7; }
-  100% { opacity: 0; transform: scale(1.7); }
+  0% { opacity: 0; transform: scale(0.25); }
+  30% { opacity: 0.95; }
+  100% { opacity: 0; transform: scale(1.85); }
 }
 @keyframes alice-core-bloom {
-  0% { opacity: 0; transform: scale(0.2); }
-  25% { opacity: 0.9; transform: scale(1); }
-  100% { opacity: 0; transform: scale(1.5); }
+  0% { opacity: 0; transform: scale(0.15); }
+  22% { opacity: 1; transform: scale(1.05); }
+  100% { opacity: 0; transform: scale(1.65); }
 }
 @keyframes alice-core-soft-nova {
-  0% { opacity: 0; transform: scale(0.1); filter: brightness(2); }
-  30% { opacity: 1; transform: scale(1.1); filter: brightness(1.4); }
-  100% { opacity: 0; transform: scale(2); filter: brightness(1); }
+  0% { opacity: 0; transform: scale(0.08); filter: brightness(2.2); }
+  28% { opacity: 1; transform: scale(1.15); filter: brightness(1.5); }
+  100% { opacity: 0; transform: scale(2.2); filter: brightness(1); }
 }
 @keyframes alice-core-beam {
-  0% { opacity: 0; transform: scaleY(0.1); }
-  40% { opacity: 0.9; transform: scaleY(1); }
-  100% { opacity: 0; transform: scaleY(1.2) translateY(10%); }
+  0% { opacity: 0; transform: scaleY(0.08); }
+  35% { opacity: 1; transform: scaleY(1); }
+  100% { opacity: 0; transform: scaleY(1.25) translateY(12%); }
 }
 @keyframes alice-core-void {
-  0% { opacity: 0; transform: scale(1.5); }
-  40% { opacity: 1; transform: scale(0.6); }
-  100% { opacity: 0; transform: scale(0.1); }
+  0% { opacity: 0; transform: scale(1.6); }
+  35% { opacity: 1; transform: scale(0.55); }
+  100% { opacity: 0; transform: scale(0.08); }
 }
 @keyframes alice-core-ascend {
-  0% { opacity: 0; transform: scale(0.3) translateY(10%); }
-  40% { opacity: 1; transform: scale(1.2) translateY(0); }
-  100% { opacity: 0; transform: scale(2.2) translateY(-15%); filter: hue-rotate(60deg); }
+  0% { opacity: 0; transform: scale(0.25) translateY(12%); }
+  35% { opacity: 1; transform: scale(1.25) translateY(0); }
+  100% { opacity: 0; transform: scale(2.4) translateY(-18%); filter: hue-rotate(70deg); }
 }
 @keyframes alice-shards-slash {
-  0% { opacity: 0; transform: scale(0.8) rotate(0deg); }
-  30% { opacity: 0.55; }
-  100% { opacity: 0; transform: scale(1.4) rotate(12deg); }
+  0% { opacity: 0; transform: scale(0.75) rotate(0deg); }
+  25% { opacity: 0.75; }
+  100% { opacity: 0; transform: scale(1.5) rotate(14deg); }
+}
+@keyframes alice-label-flash {
+  0% { opacity: 0; transform: translateY(12px) scale(0.92); letter-spacing: 0.2em; }
+  18% { opacity: 1; transform: translateY(0) scale(1); letter-spacing: 0.12em; }
+  70% { opacity: 1; }
+  100% { opacity: 0; transform: translateY(-8px) scale(1.05); }
 }
 @keyframes alice-content-trip {
-  0% { filter: none; transform: scale(1); }
-  30% { filter: hue-rotate(25deg) saturate(1.25) contrast(1.05); transform: scale(1.015); }
-  100% { filter: none; transform: scale(1); }
+  0% { transform: scale(1); }
+  30% { transform: scale(1.02); filter: hue-rotate(30deg) saturate(1.35) contrast(1.06); }
+  100% { transform: scale(1); filter: none; }
 }
 @keyframes alice-content-jester {
   0% { transform: rotate(0deg) scale(1); filter: none; }
-  25% { transform: rotate(-1.2deg) scale(1.02); filter: hue-rotate(40deg) saturate(1.4); }
-  55% { transform: rotate(1deg) scale(0.99); filter: hue-rotate(-20deg); }
+  25% { transform: rotate(-1.4deg) scale(1.025); filter: hue-rotate(45deg) saturate(1.5); }
+  55% { transform: rotate(1.2deg) scale(0.99); filter: hue-rotate(-25deg); }
   100% { transform: rotate(0deg) scale(1); filter: none; }
 }
 @keyframes alice-bg-trip {
   0% { filter: inherit; }
-  40% { filter: hue-rotate(40deg) saturate(1.5) brightness(1.1); }
+  40% { filter: hue-rotate(50deg) saturate(1.6) brightness(1.15); }
   100% { filter: inherit; }
 }
 
 @media (prefers-reduced-motion: reduce) {
   .alice-trip-ambient-wash,
   .alice-trip-ambient-grain,
-  .alice-trip-ambient-pulse,
-  .alice-trip-burst,
+  .alice-trip-ambient-pulse {
+    animation: none !important;
+  }
   .alice-trip-burst-veil,
   .alice-trip-burst-pattern,
   .alice-trip-burst-rings,
   .alice-trip-burst-core,
   .alice-trip-burst-shards,
+  .alice-trip-burst-scrim,
+  .alice-trip-burst-label,
+  .alice-trip-burst {
+    animation: none !important;
+  }
+  .alice-trip-burst {
+    opacity: 1;
+    background: radial-gradient(circle at 50% 45%, var(--alice-fx-a, #a855f7), rgba(8, 2, 18, 0.75) 70%);
+  }
+  .alice-trip-burst-label {
+    opacity: 1;
+    inset: auto 0 40% 0;
+  }
+  .alice-trip-ambient {
+    opacity: 0.4;
+  }
   .alice-room-tripping .alice-room-content,
   .alice-room-tripping .alice-room-bg {
     animation: none !important;
   }
-  .alice-trip-burst {
-    opacity: 0 !important;
-  }
-  .alice-trip-ambient {
-    opacity: 0.25;
-  }
 }
 
 @media (max-width: 640px) {
-  .alice-trip-ambient {
-    opacity: 0.42;
-  }
-  .alice-trip-burst-shards {
-    opacity: 0.7;
-  }
+  .alice-trip-ambient { opacity: 0.65; }
+  .alice-trip-burst-label { font-size: 1.2rem; bottom: 14%; }
 }

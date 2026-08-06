@@ -28,6 +28,7 @@ import AliceEntityPortrait from '@/components/AliceEntityPortrait';
 import AliceTripFx from '@/components/AliceTripFx';
 import { BRAND } from '@/lib/brand';
 import {
+  ENTITY_FX_PREVIEW_ORDER,
   makeTripBurst,
   type AliceTripBurst,
 } from '@/lib/alice-room/entity-fx';
@@ -227,6 +228,7 @@ export default function AliceRoomGame() {
   const [endLayersCleared, setEndLayersCleared] = useState(0);
   /** Personality-matched psychedelic screen burst. */
   const [tripBurst, setTripBurst] = useState<AliceTripBurst | null>(null);
+  const previewFxIndex = useRef(0);
 
   const fireTripFx = useCallback(
     (entityId: string, mode: AliceTripBurst['mode']) => {
@@ -234,6 +236,13 @@ export default function AliceRoomGame() {
     },
     [],
   );
+
+  /** Intro / debug: flash each entity vibe so FX is easy to verify. */
+  const previewNextTripFx = useCallback(() => {
+    const id = ENTITY_FX_PREVIEW_ORDER[previewFxIndex.current % ENTITY_FX_PREVIEW_ORDER.length]!;
+    previewFxIndex.current += 1;
+    fireTripFx(id, 'enter');
+  }, [fireTripFx]);
 
   const levelInfo = getLevelInfo(level);
   const defenseEntity = getEntityForLevel(level);
@@ -968,17 +977,32 @@ export default function AliceRoomGame() {
                 After the boss, bank the final tally (capped spendable chips). Only the server ledger can cash out.
               </li>
             </ol>
-            <button
-              type="button"
-              className="alice-btn alice-btn-primary"
-              disabled={busy}
-              onClick={() => {
-                if (showCoach) onDismissCoach();
-                void startDive();
-              }}
-            >
-              {busy ? 'Opening…' : `${BRAND.aliceRoomNav} — Begin`}
-            </button>
+            <div className="alice-intro-actions">
+              <button
+                type="button"
+                className="alice-btn alice-btn-primary"
+                disabled={busy}
+                onClick={() => {
+                  if (showCoach) onDismissCoach();
+                  void startDive();
+                }}
+              >
+                {busy ? 'Opening…' : `${BRAND.aliceRoomNav} — Begin`}
+              </button>
+              <button
+                type="button"
+                className="alice-btn alice-btn-share"
+                disabled={!!tripBurst}
+                onClick={() => previewNextTripFx()}
+                title="Full-screen entity psychedelia — cycles through all 10 vibes"
+              >
+                {tripBurst ? 'Tripping…' : 'Preview trip FX'}
+              </button>
+            </div>
+            <p className="alice-intro-fx-hint">
+              Preview should flash the whole screen (not just a soft glow). If you only see a faint aura, hard
+              refresh — old builds hid FX under the cabinet.
+            </p>
           </section>
         )}
 

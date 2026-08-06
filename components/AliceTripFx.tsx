@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import {
   getEntityFx,
   type AliceTripBurst,
@@ -18,7 +18,7 @@ type AliceTripFxProps = {
 
 /**
  * Full-viewport psychedelic field + personality-matched transition bursts.
- * Pure CSS (GPU-friendly). Honors prefers-reduced-motion.
+ * Renders ABOVE game UI (pointer-events: none) so flashes are actually visible.
  */
 export default function AliceTripFx({
   ambientEntityId,
@@ -27,6 +27,8 @@ export default function AliceTripFx({
   active = true,
 }: AliceTripFxProps) {
   const [liveBurst, setLiveBurst] = useState<AliceTripBurst | null>(null);
+  const onEndRef = useRef(onBurstEnd);
+  onEndRef.current = onBurstEnd;
   const ambient = ambientEntityId ? getEntityFx(ambientEntityId) : null;
 
   useEffect(() => {
@@ -35,16 +37,16 @@ export default function AliceTripFx({
     const profile = getEntityFx(burst.entityId);
     const t = window.setTimeout(() => {
       setLiveBurst(cur => (cur?.key === burst.key ? null : cur));
-      onBurstEnd?.();
+      onEndRef.current?.();
     }, profile.durationMs);
     return () => window.clearTimeout(t);
-  }, [burst, onBurstEnd]);
+  }, [burst]);
 
   const burstFx = liveBurst ? getEntityFx(liveBurst.entityId) : null;
 
   return (
     <div className="alice-trip-fx" aria-hidden>
-      {/* Soft ambient personality wash */}
+      {/* Soft ambient personality wash — sits over bg, under opaque panels slightly */}
       {active && ambient ? (
         <div
           className={`alice-trip-ambient alice-vibe-${ambient.cssId}`}
@@ -56,7 +58,7 @@ export default function AliceTripFx({
         </div>
       ) : null}
 
-      {/* One-shot screen transition */}
+      {/* One-shot screen transition — highest layer, hard to miss */}
       {liveBurst && burstFx ? (
         <div
           key={liveBurst.key}
@@ -68,11 +70,13 @@ export default function AliceTripFx({
           data-entity={burstFx.entityId}
           data-mode={liveBurst.mode}
         >
+          <div className="alice-trip-burst-scrim" />
           <div className="alice-trip-burst-veil" />
           <div className="alice-trip-burst-pattern" />
           <div className="alice-trip-burst-rings" />
           <div className="alice-trip-burst-core" />
           <div className="alice-trip-burst-shards" />
+          <div className="alice-trip-burst-label">{burstFx.label}</div>
         </div>
       ) : null}
     </div>
