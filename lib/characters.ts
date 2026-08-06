@@ -1,5 +1,5 @@
 /** Bump when character portraits in public/assets/characters/ are replaced */
-export const CHARACTER_ASSET_VERSION = '20260806k';
+export const CHARACTER_ASSET_VERSION = '20260806medieval1';
 
 /** Bump when token logos in public/assets/logos/ are replaced */
 export const LOGO_ASSET_VERSION = '20260806logo1';

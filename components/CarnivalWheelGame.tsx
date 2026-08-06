@@ -464,7 +464,7 @@ export default function CarnivalWheelGame() {
                 disabled={busy || spinning}
                 onClick={() => void spin()}
               >
-                {spinning ? 'Chuckles is spinning…' : 'Let Chuckles spin the wheel'}
+                {spinning ? 'The Jester is spinning…' : 'Let the Jester spin the wheel'}
               </button>
             </>
           )}
