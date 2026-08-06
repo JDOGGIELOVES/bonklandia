@@ -49,6 +49,8 @@ export function roomKindMeta(kind: DepthsRoomKind): {
       return { icon: '◈', label: 'Event', className: 'depths-kind-event' };
     case 'rest':
       return { icon: '⛺', label: 'Rest', className: 'depths-kind-rest' };
+    case 'degen':
+      return { icon: '📱', label: 'Valley', className: 'depths-kind-degen' };
     case 'boss':
       return { icon: '👑', label: 'Boss', className: 'depths-kind-boss' };
     default:
@@ -64,6 +66,8 @@ export function roomThreatLine(kind: DepthsRoomKind): string {
       return 'Elite · harder counter · bigger free Bandit pull';
     case 'boss':
       return 'Boss · heavy · floor clear victory spins after';
+    case 'degen':
+      return 'Valley degen · chips + vibe on win · 2 free Bandit pulls';
     case 'event':
       return 'Choice chamber · risk & reward';
     case 'rest':

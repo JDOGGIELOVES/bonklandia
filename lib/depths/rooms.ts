@@ -1,12 +1,9 @@
-import {
-  pickDepthsBoss,
-  pickRivalByIndex,
-  pickRandomRival,
-} from '@/lib/rival-enemies';
+import { pickDepthsBoss, pickRivalByIndex } from '@/lib/rival-enemies';
+import { pickDegenByIndex } from '@/lib/enemies';
 import type { Enemy } from '@/lib/enemies';
 import { pickDepthsEventPack } from '@/lib/depths/events';
 
-export type DepthsRoomKind = 'fight' | 'elite' | 'event' | 'rest' | 'boss';
+export type DepthsRoomKind = 'fight' | 'elite' | 'event' | 'rest' | 'boss' | 'degen';
 
 export type DepthsRoom = {
   id: string;
@@ -35,10 +32,50 @@ export type DepthsRoom = {
   };
 };
 
-/** One floor: branching-lite path of 6 nodes ending in a boss. */
+/** Rotating “Valley Leak” chamber skins — same degen fight rules. */
+const DEGEN_ROOM_SKINS = [
+  {
+    label: 'Valley Leak',
+    blurb:
+      'A crack in the ceiling pours Degen Valley air. A psychology-type degen tumbled through — still mid-cope.',
+  },
+  {
+    label: 'Telegram Trench',
+    blurb:
+      'Pinned messages and pure cope. A classic valley degen holds the trench with bad takes and worse timing.',
+  },
+  {
+    label: 'Cope Vent',
+    blurb:
+      'Sweet pink fog and worse opinions. Someone from the main valley is lost down here — and armed with vibes.',
+  },
+] as const;
+
+/**
+ * Instant rewards for clearing a degen (Valley Leak) chamber — before Bandit opens.
+ * Rivals lean Bandit-only; degens pay chips + vibe too (comedy tax refund).
+ */
+export function depthsDegenClearReward(difficulty: 'easy' | 'medium' | 'hard'): {
+  chips: number;
+  vibe: number;
+} {
+  switch (difficulty) {
+    case 'easy':
+      return { chips: 28, vibe: 16 };
+    case 'hard':
+      return { chips: 18, vibe: 10 };
+    default:
+      return { chips: 22, vibe: 12 };
+  }
+}
+
+/** One floor: path of 6 nodes ending in a boss. Includes a degen “Valley Leak” chamber. */
 export function buildDepthsFloor(floor: number, run = 1): DepthsRoom[] {
   const f = Math.max(1, floor);
   const eventPack = pickDepthsEventPack(f * 17 + run * 31);
+  const degenSkin = DEGEN_ROOM_SKINS[Math.abs(f * 5 + run * 3) % DEGEN_ROOM_SKINS.length]!;
+  const degenEnemy = pickDegenByIndex(f * 7 + run * 11, run);
+
   return [
     {
       id: `${f}-1`,
@@ -86,10 +123,10 @@ export function buildDepthsFloor(floor: number, run = 1): DepthsRoom[] {
     },
     {
       id: `${f}-5`,
-      kind: 'fight',
-      label: 'Meme Crossroads',
-      blurb: pickRandomRival(run).name + ' was here. Still is.',
-      enemy: pickRandomRival(run),
+      kind: 'degen',
+      label: degenSkin.label,
+      blurb: `${degenSkin.blurb} (${degenEnemy.name} is here.)`,
+      enemy: degenEnemy,
     },
     {
       id: `${f}-6`,
@@ -105,8 +142,8 @@ export function buildDepthsFloor(floor: number, run = 1): DepthsRoom[] {
 }
 
 /**
- * Flat chip drips are intentionally tiny — real rewards route through the
- * Bonklandia Bandit (free victory pulls on floor clear, quarter slots on room wins).
+ * Flat chip drips — degen chambers pay via depthsDegenClearReward + Bandit.
+ * Rival clears are mostly Bandit-only.
  */
 export const DEPTHS_CHIP_REWARDS = {
   fight: 0,
@@ -114,5 +151,6 @@ export const DEPTHS_CHIP_REWARDS = {
   boss: 0,
   rest: 0,
   event: 0,
+  degen: 22,
   clearBonus: 0,
 } as const;

@@ -257,6 +257,16 @@ export function pickEnemyByWave(wave: number, run = 1): Enemy {
   return scaleEnemyForRun(template, run);
 }
 
+/** Depths “Valley Leak” chambers — classic Degen Valley psychology cast. */
+export function pickDegenByIndex(index: number, run = 1): Enemy {
+  const template = DEGEN_ENEMIES[Math.abs(Math.floor(index)) % DEGEN_ENEMIES.length]!;
+  return scaleEnemyForRun(template, run);
+}
+
+export function pickRandomDegen(run = 1): Enemy {
+  return pickDegenByIndex(Math.floor(Math.random() * DEGEN_ENEMIES.length), run);
+}
+
 const ENEMY_ATTACK_SHOUTS: Record<string, string> = {
   fudder: 'FUD!',
   jeeter: 'JEET!',

@@ -6435,6 +6435,12 @@ html {
 .depths-kind-event .depths-node-kind { color: #67e8f9; }
 .depths-kind-rest .depths-node-kind { color: #86efac; }
 .depths-kind-boss .depths-node-kind { color: #e9d5ff; }
+.depths-kind-degen .depths-node-kind { color: #fbbf24; }
+.depths-kind-degen.depths-node-active {
+  border-color: rgba(251, 191, 36, 0.75);
+  box-shadow: 0 0 18px rgba(251, 191, 36, 0.28);
+  background: rgba(60, 40, 10, 0.65);
+}
 
 .depths-room-kicker {
   margin: 0 0 0.25rem;

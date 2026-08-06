@@ -17,6 +17,8 @@ const ROOM_HP_MULT: Record<DepthsRoomKind, number> = {
   fight: 1.05,
   elite: 1.18,
   boss: 1.28,
+  /** Valley degens — a bit softer than rival elites; comedy over wall. */
+  degen: 1.0,
   event: 1,
   rest: 1,
 };
@@ -25,6 +27,7 @@ const ROOM_COUNTER_MULT: Record<DepthsRoomKind, number> = {
   fight: 0.95,
   elite: 1.02,
   boss: 1.08,
+  degen: 0.9,
   event: 1,
   rest: 1,
 };

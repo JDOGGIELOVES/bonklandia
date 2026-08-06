@@ -222,7 +222,7 @@ export const DEPTHS_LORE = {
   title: 'Degen Depths',
   subtitle: 'Where copycat mascots hoard stolen frequency',
   intro:
-    'Under Degen Valley, rival meme cultures dig for the roots of the First Bonk. Chart the Depths, bonk the copycats, and reclaim the frequency before they rebrand it.',
+    'Under Degen Valley, rival meme cultures dig for the roots of the First Bonk. Chart the Depths, bonk the copycats — and watch for Valley Leaks, where classic degens tumble in from the main trench.',
   banditHook:
-    'Win a chamber → free bonus pull(s) on the Bonklandia Bandit. Keep spinning with 25¢ quarters if you want. Clear the floor for full champion victory spins. Lose → consolation pulls.',
+    'Win a chamber → free Bandit pull(s). Valley Leak (degen) rooms also pay chips + vibe on clear. Floor clear → champion victory spins. Lose → consolation pulls.',
 };

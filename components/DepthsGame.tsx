@@ -34,7 +34,12 @@ function dismissDepthsCoach(): void {
     /* */
   }
 }
-import { buildDepthsFloor, type DepthsRoom, type DepthsRoomKind } from '@/lib/depths/rooms';
+import {
+  buildDepthsFloor,
+  depthsDegenClearReward,
+  type DepthsRoom,
+  type DepthsRoomKind,
+} from '@/lib/depths/rooms';
 import {
   DEPTHS_CRIT_MULT,
   depthsAbilityCooldownTurns,
@@ -338,17 +343,58 @@ export default function DepthsGame() {
       setChambersCleared(c => c + 1);
       pushLog(room.enemy?.defeatLine ?? 'Chamber cleared!');
       fireChamberFx('clear', room.label);
-      const kind = (room.kind === 'elite' || room.kind === 'boss' ? room.kind : 'fight') as DepthsRoomKind;
+
+      // Valley Leak / Telegram Trench — classic degens pay chips + vibe, then Bandit
+      if (room.kind === 'degen') {
+        const reward = depthsDegenClearReward(fighter.difficulty);
+        setPlayerVibe(v => Math.min(100, v + reward.vibe));
+        setRunChips(c => c + reward.chips);
+        addChips(reward.chips);
+        pushLog(
+          `Valley refund: +${reward.chips} chips, +${reward.vibe} vibe. The trench remembers the First Bonk.`,
+        );
+        const wallet = publicKey?.toBase58();
+        if (connected && wallet) {
+          void earnSpendableChips({
+            wallet,
+            amount: reward.chips,
+            source: 'depths-event',
+          }).then(earned => {
+            if (earned) {
+              pushLog(`+${reward.chips} spendable chips banked for the Cashier.`);
+            }
+          });
+        } else {
+          pushLog(`+${reward.chips} local chips — connect wallet to make them spendable.`);
+        }
+      }
+
+      const kind = (
+        room.kind === 'elite' || room.kind === 'boss' || room.kind === 'degen'
+          ? room.kind
+          : 'fight'
+      ) as DepthsRoomKind;
       const session = buildDepthsRoomBanditSession(kind, fighter.difficulty);
       pushLog(
-        `Win bonus! The ${BRAND.slotMachine} opens — ${session.spins} free pull${session.spins === 1 ? '' : 's'}. ` +
-          'Then optional quarter spins, or continue the Depths.',
+        room.kind === 'degen'
+          ? `Trench bonus! The ${BRAND.slotMachine} opens — ${session.spins} free pull${session.spins === 1 ? '' : 's'} (Valley rates).`
+          : `Win bonus! The ${BRAND.slotMachine} opens — ${session.spins} free pull${session.spins === 1 ? '' : 's'}. ` +
+              'Then optional quarter spins, or continue the Depths.',
       );
       void playWaveClear();
       await wait(650);
       openBandit(session, 'room', true);
     },
-    [fighter, openBandit, playWaveClear, pushLog, fireChamberFx],
+    [
+      fighter,
+      openBandit,
+      playWaveClear,
+      pushLog,
+      fireChamberFx,
+      addChips,
+      connected,
+      publicKey,
+    ],
   );
 
   const onPlayerDefeat = useCallback(() => {
@@ -757,7 +803,8 @@ export default function DepthsGame() {
                   foes.
                 </li>
                 <li>
-                  <strong>Clear chambers</strong> — fight, event, or rest. Map shows your path.
+                  <strong>Clear chambers</strong> — rival fights, events, rest, and a{' '}
+                  <strong>Valley Leak</strong> (classic degens: chips + vibe + Bandit).
                 </li>
                 <li>
                   <strong>Win → Bandit pulls</strong> — free spins on {BRAND.slotMachine}. Floor clear =
