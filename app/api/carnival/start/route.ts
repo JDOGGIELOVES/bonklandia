@@ -17,7 +17,7 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: limited.error }, { status: 429 });
   }
 
-  let body: { wallet?: string; signature?: string };
+  let body: { wallet?: string; signature?: string; paidRaw?: string };
   try {
     body = (await request.json()) as typeof body;
   } catch {
@@ -35,7 +35,20 @@ export async function POST(request: Request) {
   }
 
   const quote = await getCarnivalEntryQuote();
-  const minRaw = BigInt(quote.bongaRaw);
+  // Prefer the amount the client was quoted (and paid) when still within 15% of live quote.
+  // Stops false failures when price refreshes between wallet approve and server verify.
+  let minRaw = BigInt(quote.bongaRaw);
+  if (body.paidRaw && /^\d+$/.test(body.paidRaw)) {
+    try {
+      const paid = BigInt(body.paidRaw);
+      const live = minRaw;
+      const lo = (live * BigInt(85)) / BigInt(100);
+      const hi = (live * BigInt(115)) / BigInt(100);
+      if (paid >= lo && paid <= hi) minRaw = paid;
+    } catch {
+      /* keep live quote */
+    }
+  }
 
   const verified = await verifyBongaEntryPayment({
     signature,

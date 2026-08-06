@@ -16,14 +16,19 @@ const FALLBACK_USD_PER_TOKEN: Record<FamCoinId, number> = {
   // BONK is listed; keep a modest overestimate if API fails.
   bonk: Number(process.env.TOKEN_USD_BONK ?? '0.00002'),
   // Fam coins are often illiquid — assume non-trivial value until proven otherwise.
-  bonga: Number(process.env.TOKEN_USD_BONGA ?? '0.001'),
+  // ~market ballpark when APIs fail (DexScreener usually fills this in).
+  bonga: Number(process.env.TOKEN_USD_BONGA ?? '0.00005'),
   bong: Number(process.env.TOKEN_USD_BONG ?? '0.0001'),
   bink: Number(process.env.TOKEN_USD_BINK ?? '0.00005'),
   bonnie: Number(process.env.TOKEN_USD_BONNIE ?? '0.01'),
   beng: Number(process.env.TOKEN_USD_BENG ?? '0.001'),
 };
 
-type PriceCache = { at: number; byMint: Map<string, number> };
+type PriceCache = {
+  at: number;
+  byMint: Map<string, number>;
+  sourceByMint: Map<string, 'jupiter' | 'dexscreener' | 'coingecko'>;
+};
 let cache: PriceCache | null = null;
 const CACHE_MS = 5 * 60 * 1000;
 
@@ -68,6 +73,44 @@ async function fetchJupiterPrices(mints: string[]): Promise<Map<string, number>>
   return out;
 }
 
+/** DexScreener — reliable for Solana meme coins when Jupiter is down. */
+async function fetchDexScreenerPrices(mints: string[]): Promise<Map<string, number>> {
+  const out = new Map<string, number>();
+  await Promise.all(
+    mints.map(async mint => {
+      try {
+        const res = await fetch(`https://api.dexscreener.com/latest/dex/tokens/${mint}`, {
+          signal: AbortSignal.timeout(5000),
+        });
+        if (!res.ok) return;
+        const data = (await res.json()) as {
+          pairs?: Array<{
+            chainId?: string;
+            priceUsd?: string;
+            liquidity?: { usd?: number };
+            baseToken?: { address?: string };
+          }>;
+        };
+        const pairs = (data.pairs ?? []).filter(
+          p =>
+            p.chainId === 'solana' &&
+            p.baseToken?.address === mint &&
+            p.priceUsd &&
+            Number(p.priceUsd) > 0,
+        );
+        if (!pairs.length) return;
+        // Prefer highest-liquidity pair
+        pairs.sort((a, b) => (b.liquidity?.usd ?? 0) - (a.liquidity?.usd ?? 0));
+        const n = Number(pairs[0]!.priceUsd);
+        if (Number.isFinite(n) && n > 0) out.set(mint, n);
+      } catch {
+        /* skip mint */
+      }
+    }),
+  );
+  return out;
+}
+
 async function fetchCoingeckoBonk(): Promise<number | null> {
   try {
     const res = await fetch(
@@ -86,7 +129,7 @@ async function fetchCoingeckoBonk(): Promise<number | null> {
 /** USD price for 1 whole token unit. */
 export async function getTokenUsdPrice(coinId: FamCoinId): Promise<{
   usd: number;
-  source: 'env' | 'jupiter' | 'coingecko' | 'fallback';
+  source: 'env' | 'jupiter' | 'dexscreener' | 'coingecko' | 'fallback';
 }> {
   const fromEnv = envUsd(coinId);
   if (fromEnv != null) return { usd: fromEnv, source: 'env' };
@@ -95,9 +138,24 @@ export async function getTokenUsdPrice(coinId: FamCoinId): Promise<{
   if (!cache || now - cache.at > CACHE_MS) {
     const mints = Object.values(FAM_TOKEN_MINTS);
     const byMint = await fetchJupiterPrices(mints);
+    const sourceByMint = new Map<string, 'jupiter' | 'dexscreener' | 'coingecko'>();
+    for (const mint of byMint.keys()) sourceByMint.set(mint, 'jupiter');
+
+    // Fill gaps with DexScreener — carnival entry depends on live BONGA.
+    const missing = mints.filter(m => !byMint.has(m));
+    if (missing.length) {
+      const dex = await fetchDexScreenerPrices(missing);
+      for (const [mint, usd] of dex) {
+        byMint.set(mint, usd);
+        sourceByMint.set(mint, 'dexscreener');
+      }
+    }
     const bonkUsd = await fetchCoingeckoBonk();
-    if (bonkUsd != null) byMint.set(FAM_TOKEN_MINTS.bonk, bonkUsd);
-    cache = { at: now, byMint };
+    if (bonkUsd != null) {
+      byMint.set(FAM_TOKEN_MINTS.bonk, bonkUsd);
+      sourceByMint.set(FAM_TOKEN_MINTS.bonk, 'coingecko');
+    }
+    cache = { at: now, byMint, sourceByMint };
   }
 
   const mint = FAM_TOKEN_MINTS[coinId];
@@ -110,7 +168,7 @@ export async function getTokenUsdPrice(coinId: FamCoinId): Promise<{
     }
     return {
       usd: live,
-      source: coinId === 'bonk' ? 'coingecko' : 'jupiter',
+      source: cache.sourceByMint.get(mint) ?? 'jupiter',
     };
   }
 
