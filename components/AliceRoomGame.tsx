@@ -205,6 +205,7 @@ export default function AliceRoomGame() {
   const [localStats, setLocalStats] = useState<AliceLocalStats | null>(null);
   const [shareMsg, setShareMsg] = useState<string | null>(null);
   const [shareBusy, setShareBusy] = useState(false);
+  const [sharePreviewUrl, setSharePreviewUrl] = useState<string | null>(null);
 
   const levelInfo = getLevelInfo(level);
   const defenseEntity = getEntityForLevel(level);
@@ -245,6 +246,15 @@ export default function AliceRoomGame() {
     if (shareBusy) return;
     setShareBusy(true);
     setShareMsg(null);
+    // Drop previous preview so we don't leak blob URLs
+    if (sharePreviewUrl) {
+      try {
+        URL.revokeObjectURL(sharePreviewUrl);
+      } catch {
+        /* */
+      }
+      setSharePreviewUrl(null);
+    }
     try {
       const best = localStats?.bestAliceCoins ?? 0;
       const result = await shareAliceRun({
@@ -256,10 +266,8 @@ export default function AliceRoomGame() {
         isNewBest: aliceCoins > 0 && aliceCoins >= best,
         banked: spendableEarned != null,
       });
-      if (result === 'shared') setShareMsg('Shared — nice pull.');
-      else if (result === 'copied') setShareMsg('Card saved · share text copied.');
-      else if (result === 'downloaded') setShareMsg('Card image downloaded.');
-      else setShareMsg('Share cancelled or unavailable.');
+      setShareMsg(result.message);
+      if (result.previewUrl) setSharePreviewUrl(result.previewUrl);
     } catch {
       setShareMsg('Could not build share card.');
     }
@@ -1291,6 +1299,27 @@ export default function AliceRoomGame() {
                     </button>
                   </div>
                   {shareMsg && <p className="alice-share-msg">{shareMsg}</p>}
+                  {sharePreviewUrl && (
+                    <div className="alice-share-preview">
+                      {/* eslint-disable-next-line @next/next/no-img-element */}
+                      <img
+                        src={sharePreviewUrl}
+                        alt="Your Alice voyage share card"
+                        className="alice-share-preview-img"
+                      />
+                      <p className="alice-share-preview-hint">
+                        Long-press or right-click the image to save / share. Stay on this page — do not open blob
+                        links in a new tab.
+                      </p>
+                      <a
+                        href={sharePreviewUrl}
+                        download="bonklandia-alice-voyage.png"
+                        className="alice-btn alice-btn-share"
+                      >
+                        Download card again
+                      </a>
+                    </div>
+                  )}
                   {claimMsg && <p className="alice-claim-msg">{claimMsg}</p>}
                   {spendableEarned != null && (
                     <div className="alice-bank-receipt" role="status">

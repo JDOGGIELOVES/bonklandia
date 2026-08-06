@@ -1,5 +1,6 @@
 /**
  * Shareable Alice run card — canvas PNG for Web Share / download.
+ * Never navigates the tab to a blob: URL (that caused ERR_FILE_NOT_FOUND).
  */
 
 import { BRAND } from '@/lib/brand';
@@ -58,7 +59,6 @@ export async function renderAliceShareCard(p: AliceSharePayload): Promise<Blob> 
   const ctx = canvas.getContext('2d');
   if (!ctx) throw new Error('Canvas not available');
 
-  // Background
   const bg = ctx.createLinearGradient(0, 0, W, H);
   bg.addColorStop(0, '#1a0533');
   bg.addColorStop(0.45, '#0f0618');
@@ -66,7 +66,6 @@ export async function renderAliceShareCard(p: AliceSharePayload): Promise<Blob> 
   ctx.fillStyle = bg;
   ctx.fillRect(0, 0, W, H);
 
-  // Soft orbs
   const orb = (x: number, y: number, r: number, c: string) => {
     const g = ctx.createRadialGradient(x, y, 0, x, y, r);
     g.addColorStop(0, c);
@@ -78,13 +77,11 @@ export async function renderAliceShareCard(p: AliceSharePayload): Promise<Blob> 
   orb(880, 420, 280, 'rgba(244, 114, 182, 0.28)');
   orb(540, 1100, 360, 'rgba(103, 232, 249, 0.18)');
 
-  // Frame
   ctx.strokeStyle = 'rgba(192, 132, 252, 0.55)';
   ctx.lineWidth = 4;
   fillRoundRect(ctx, 48, 48, W - 96, H - 96, 36);
   ctx.stroke();
 
-  // Brand
   ctx.fillStyle = 'rgba(167, 139, 250, 0.95)';
   ctx.font = '600 36px Georgia, "Times New Roman", serif';
   ctx.textAlign = 'center';
@@ -98,7 +95,6 @@ export async function renderAliceShareCard(p: AliceSharePayload): Promise<Blob> 
   ctx.font = '500 32px system-ui, sans-serif';
   ctx.fillText(BRAND.aliceRoomNav, W / 2, 285);
 
-  // Divider
   ctx.strokeStyle = 'rgba(240, 171, 252, 0.35)';
   ctx.lineWidth = 2;
   ctx.beginPath();
@@ -106,7 +102,6 @@ export async function renderAliceShareCard(p: AliceSharePayload): Promise<Blob> 
   ctx.lineTo(W - 180, 330);
   ctx.stroke();
 
-  // Big stat
   ctx.fillStyle = '#67e8f9';
   ctx.font = '700 28px system-ui, sans-serif';
   ctx.fillText('VOYAGE COMPLETE', W / 2, 400);
@@ -118,7 +113,6 @@ export async function renderAliceShareCard(p: AliceSharePayload): Promise<Blob> 
   ctx.font = '500 30px system-ui, sans-serif';
   ctx.fillText('layers cleared', W / 2, 570);
 
-  // Stat cards
   const cardY = 640;
   const cardH = 160;
   const gap = 28;
@@ -185,64 +179,131 @@ export async function renderAliceShareCard(p: AliceSharePayload): Promise<Blob> 
   });
 }
 
-export type AliceShareResult = 'shared' | 'downloaded' | 'copied' | 'failed';
+export type AliceShareResult = {
+  status: 'shared' | 'downloaded' | 'copied' | 'preview' | 'failed';
+  /** Object URL for in-page preview — caller must revoke when done. */
+  previewUrl?: string;
+  message: string;
+};
 
 /**
- * Prefer native share with image; fall back to download + copy text.
+ * Download without navigating the current tab.
+ * Revokes the blob URL only after a long delay so the browser can finish reading it.
+ */
+function triggerBlobDownload(blob: Blob, filename: string): string {
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = filename;
+  a.rel = 'noopener';
+  // Do NOT set target=_blank — that opens blob: in a new tab → ERR_FILE_NOT_FOUND when revoked
+  a.style.display = 'none';
+  document.body.appendChild(a);
+  a.click();
+  // Keep node briefly; revoke URL later (not immediately)
+  window.setTimeout(() => {
+    try {
+      a.remove();
+    } catch {
+      /* */
+    }
+  }, 2000);
+  window.setTimeout(() => {
+    try {
+      URL.revokeObjectURL(url);
+    } catch {
+      /* */
+    }
+  }, 120_000);
+  return url;
+}
+
+/**
+ * Prefer native share with image; fall back to download + in-page preview.
+ * Never navigates the current page to a blob: URL.
  */
 export async function shareAliceRun(p: AliceSharePayload): Promise<AliceShareResult> {
   const text = buildAliceShareText(p);
   try {
     const blob = await renderAliceShareCard(p);
-    const file = new File([blob], 'bonklandia-alice-voyage.png', { type: 'image/png' });
+    const filename = 'bonklandia-alice-voyage.png';
+    const file = new File([blob], filename, { type: 'image/png' });
     const nav = navigator as Navigator & {
       canShare?: (data: ShareData) => boolean;
       share?: (data: ShareData) => Promise<void>;
     };
 
+    // 1) Native share with file (mobile)
     if (typeof nav.share === 'function') {
-      const data: ShareData = { title: `${BRAND.aliceRoom} · ${BRAND.name}`, text, files: [file] };
-      if (!nav.canShare || nav.canShare(data)) {
+      const withFiles: ShareData = {
+        title: `${BRAND.aliceRoom} · ${BRAND.name}`,
+        text,
+        files: [file],
+      };
+      let canFiles = false;
+      try {
+        canFiles = !nav.canShare || nav.canShare(withFiles);
+      } catch {
+        canFiles = false;
+      }
+      if (canFiles) {
         try {
-          await nav.share(data);
-          return 'shared';
+          await nav.share(withFiles);
+          return { status: 'shared', message: 'Shared — nice pull.' };
         } catch (err) {
-          // User cancel → not a failure
-          if (err instanceof DOMException && err.name === 'AbortError') return 'failed';
+          if (err instanceof DOMException && err.name === 'AbortError') {
+            return { status: 'failed', message: 'Share cancelled.' };
+          }
+          // fall through
         }
       }
-      // Try text-only share
+      // 2) Text-only share (no navigation)
       try {
-        await nav.share({ title: `${BRAND.aliceRoom} · ${BRAND.name}`, text, url: `${BRAND.url}/alice` });
-        return 'shared';
+        await nav.share({
+          title: `${BRAND.aliceRoom} · ${BRAND.name}`,
+          text,
+          url: `${BRAND.url}/alice`,
+        });
+        return { status: 'shared', message: 'Shared text — save the card image from the preview.' };
       } catch (err) {
-        if (err instanceof DOMException && err.name === 'AbortError') return 'failed';
+        if (err instanceof DOMException && err.name === 'AbortError') {
+          return { status: 'failed', message: 'Share cancelled.' };
+        }
       }
     }
 
-    // Download image
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = file.name;
-    a.rel = 'noopener';
-    document.body.appendChild(a);
-    a.click();
-    a.remove();
-    URL.revokeObjectURL(url);
+    // 3) Download + preview (desktop / no Web Share)
+    // Create a durable preview URL for the UI (separate from download)
+    const previewUrl = URL.createObjectURL(blob);
+    triggerBlobDownload(blob, filename);
 
+    let copied = false;
     try {
       await navigator.clipboard?.writeText(text);
-      return 'copied';
+      copied = true;
     } catch {
-      return 'downloaded';
+      /* clipboard may be blocked */
     }
+
+    return {
+      status: copied ? 'copied' : 'preview',
+      previewUrl,
+      message: copied
+        ? 'Card ready — image download started · share text copied. Long-press the preview to save if needed.'
+        : 'Card ready — image download started. Long-press / right-click the preview to save.',
+    };
   } catch {
     try {
       await navigator.clipboard?.writeText(text);
-      return 'copied';
+      return {
+        status: 'copied',
+        message: 'Could not build image — share text was copied instead.',
+      };
     } catch {
-      return 'failed';
+      return {
+        status: 'failed',
+        message: 'Could not share. Copy this page URL: ' + BRAND.url + '/alice',
+      };
     }
   }
 }
