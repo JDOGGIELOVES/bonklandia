@@ -10,7 +10,7 @@ export const RIVAL_MEME_ENEMIES: Enemy[] = [
     name: 'Sir Dooge of Much Wow',
     title: 'Still thinks 2013 is alpha',
     hp: 380,
-    img: enemyImage('dooge.svg'),
+    img: enemyImage('dooge.png'),
     taunt: '"Much rival. Very bonk. Such jealousy. Wow."',
     hitReaction: [
       'Sir Dooge drops his ancient "wow" speech bubble!',
@@ -26,7 +26,7 @@ export const RIVAL_MEME_ENEMIES: Enemy[] = [
     name: 'Pepé the Unbothered',
     title: 'Feels nothing. Posts anyway.',
     hp: 400,
-    img: enemyImage('pepe-unbothered.svg'),
+    img: enemyImage('pepe-unbothered.png'),
     taunt: '"feels nothing. chart is whatever."',
     hitReaction: [
       'Pepé does not blink. A single sweat drop appears… then leaves.',
@@ -42,7 +42,7 @@ export const RIVAL_MEME_ENEMIES: Enemy[] = [
     name: 'Wifless Walter',
     title: "Dog with a hat he didn't pay for",
     hp: 360,
-    img: enemyImage('hatdog.svg'),
+    img: enemyImage('hatdog.png'),
     taunt: '"The hat is the product. The dog is free."',
     hitReaction: [
       'Walter’s hat yeets into the void!',
@@ -58,7 +58,7 @@ export const RIVAL_MEME_ENEMIES: Enemy[] = [
     name: 'Flokir the Loud',
     title: 'Valhalla or zero',
     hp: 440,
-    img: enemyImage('flokir.svg'),
+    img: enemyImage('flokir.png'),
     taunt: '"TO VALHALLA! Or the next candle. Same thing!"',
     hitReaction: [
       'Flokir’s cardboard viking helmet flies off!',
@@ -74,7 +74,7 @@ export const RIVAL_MEME_ENEMIES: Enemy[] = [
     name: 'Popcatto Supremo',
     title: 'Only knows one animation',
     hp: 340,
-    img: enemyImage('popcatto.svg'),
+    img: enemyImage('popcatto.png'),
     taunt: '"POP. POP. POP. That is the whole thesis."',
     hitReaction: [
       'Popcatto’s mouth freezes mid-POP!',
@@ -90,7 +90,7 @@ export const RIVAL_MEME_ENEMIES: Enemy[] = [
     name: 'Mewling Max',
     title: 'Cat-coin tourist on Solana',
     hp: 350,
-    img: enemyImage('mewling.svg'),
+    img: enemyImage('mewling.png'),
     taunt: '"I\'m multi-chain actually. This is just a layover."',
     hitReaction: [
       'Max tries to bridge mid-combo and fails!',
@@ -106,7 +106,7 @@ export const RIVAL_MEME_ENEMIES: Enemy[] = [
     name: 'Brett the Based',
     title: 'Says “based” until it isn’t',
     hp: 460,
-    img: enemyImage('based-brett.svg'),
+    img: enemyImage('based-brett.png'),
     taunt: '"Based. Based. Based. Wait — was that cringe?"',
     hitReaction: [
       'Brett’s based-o-meter dips into cringe!',
@@ -122,7 +122,7 @@ export const RIVAL_MEME_ENEMIES: Enemy[] = [
     name: 'Mogger Mike',
     title: 'Professional aura farmer',
     hp: 400,
-    img: enemyImage('mogger.svg'),
+    img: enemyImage('mogger.png'),
     taunt: '"Check the aura. You wouldn’t get it."',
     hitReaction: [
       'Mike’s aura bar drops 40%!',
@@ -138,7 +138,7 @@ export const RIVAL_MEME_ENEMIES: Enemy[] = [
     name: 'Giga Shiba Impostor',
     title: 'Claims he invented bonking',
     hp: 480,
-    img: enemyImage('giga-shiba.svg'),
+    img: enemyImage('giga-shiba.png'),
     taunt: '"I\'m the original bonker. You\'re just frequency LARPers."',
     hitReaction: [
       'Knockoff gold paint chips off his coat!',
@@ -154,7 +154,7 @@ export const RIVAL_MEME_ENEMIES: Enemy[] = [
     name: 'The Copycat Council',
     title: 'Three mascots. One original idea.',
     hp: 560,
-    img: enemyImage('copycat-council.svg'),
+    img: enemyImage('copycat-council.png'),
     taunt: '"We voted. Your meme is derivative of our derivative."',
     hitReaction: [
       'The dog head argues with the frog head!',

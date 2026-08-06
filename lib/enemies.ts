@@ -1,5 +1,5 @@
 /** Bump when enemy portraits in public/assets/enemies/ are replaced */
-export const ENEMY_ASSET_VERSION = '20260717r';
+export const ENEMY_ASSET_VERSION = '20260806d';
 
 export function enemyImage(file: string): string {
   return `/assets/enemies/${file}?v=${ENEMY_ASSET_VERSION}`;
