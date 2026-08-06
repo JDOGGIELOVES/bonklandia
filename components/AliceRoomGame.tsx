@@ -158,7 +158,6 @@ export default function AliceRoomGame() {
     entitySpeaking,
     voiceEnabled,
     voiceStatus,
-    speechSupported,
     unlockAudio,
     toggleMute,
     toggleVoice,
@@ -700,7 +699,7 @@ export default function AliceRoomGame() {
                 type="button"
                 className={`casino-audio-btn alice-voice-btn ${voiceEnabled ? 'alice-voice-btn-on' : ''}`}
                 onClick={() => {
-                  // Stay in user gesture — no await before speak
+                  // Unlock SFX/music + entity voice in the same tap
                   void unlockAudio();
                   toggleVoice();
                 }}
@@ -708,12 +707,12 @@ export default function AliceRoomGame() {
                 aria-label={
                   voiceEnabled
                     ? 'Turn entity voices off'
-                    : 'Turn entity voices on — plays “Voice is on” immediately'
+                    : 'Turn entity voices on — plays a short confirmation'
                 }
                 title={
                   voiceEnabled
                     ? 'Entity voice ON — click to silence'
-                    : 'Entity voice OFF — click to test (you should hear “Voice is on”)'
+                    : 'Entity voice OFF — click once (you should hear a short line)'
                 }
               >
                 {voiceEnabled ? '🗣 Voice On' : '🗣 Voice Off'}
@@ -723,7 +722,9 @@ export default function AliceRoomGame() {
                 className="casino-audio-btn alice-voice-test-btn"
                 onClick={() => {
                   void unlockAudio();
-                  hearEntityLine('Hello from the Alice Room. If you hear this, speech is working.');
+                  hearEntityLine(
+                    'Hello from the Alice Room. If you hear this, speech is working.',
+                  );
                 }}
                 aria-label="Test character speech now"
                 title="Plays a short test line right now"
@@ -743,11 +744,6 @@ export default function AliceRoomGame() {
             {voiceStatus && (
               <p className="alice-voice-status" role="status">
                 {voiceStatus}
-              </p>
-            )}
-            {!speechSupported && (
-              <p className="alice-voice-status" role="status">
-                This browser does not support spoken entity lines. Try Chrome or Edge.
               </p>
             )}
             <div className="casino-wallet-bar alice-wallet-compact">
@@ -1191,6 +1187,7 @@ export default function AliceRoomGame() {
                                 defenseEntity.id,
                               );
                             }}
+                            title="Unlocks sound and speaks this line"
                           >
                             {voiceEnabled ? 'Replay line' : 'Hear them speak'}
                           </button>

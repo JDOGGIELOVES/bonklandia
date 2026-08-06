@@ -12,13 +12,13 @@ import {
   isAliceSpeechSupported,
   speakAliceLine,
   stopAliceSpeech,
+  unlockAliceVoice,
   warmAliceVoices,
 } from '@/lib/alice-voice';
 import {
   isAliceVoiceEnabled,
   setAliceVoiceEnabled,
   subscribeAliceVoice,
-  toggleAliceVoiceEnabled,
 } from '@/lib/alice-voice-pref';
 import {
   applyAudioChannels,
@@ -88,6 +88,8 @@ export function useAliceAudio(level = 1) {
     const music = musicRef.current;
     await sfx.ensureContext();
     await music.ensureContext();
+    // Unlock HTMLAudioElement for entity voice (Solflare / Chrome autoplay rules)
+    await unlockAliceVoice();
     if (!sfx.isUnlocked && !music.isUnlocked) return false;
     setAudioReady(true);
 
@@ -163,34 +165,42 @@ export function useAliceAudio(level = 1) {
   );
 
   /**
-   * Toggle VO. Turning ON speaks a short confirmation immediately
-   * (must stay in the click gesture for iOS / Chrome).
+   * Toggle VO. Turning ON unlocks audio then speaks a short confirmation.
+   * Must be called from a click/tap (Chrome + Solflare autoplay rules).
    */
   const toggleVoice = useCallback(() => {
-    warmAliceVoices();
-    const next = toggleAliceVoiceEnabled();
-    setVoiceEnabledState(next);
-    if (!next) {
+    if (isAliceVoiceEnabled()) {
+      setAliceVoiceEnabled(false);
+      setVoiceEnabledState(false);
       stopEntitySpeech();
-      setVoiceStatus('Voice off.');
-      return next;
+      setVoiceStatus('Voice off — pull lever or open the bank without speech.');
+      return false;
     }
-    // Network TTS so you hear something even if OS speech is dead
-    speakEntityLine('Voice is on.', undefined, { force: true, preferNetwork: true });
-    return next;
+    // Turning on: unlock in this gesture, then confirm line
+    void (async () => {
+      await unlockAliceVoice();
+      setAliceVoiceEnabled(true);
+      setVoiceEnabledState(true);
+      speakEntityLine('Voice is on. Pull the lever — we speak when you play.', undefined, {
+        force: true,
+        preferNetwork: true,
+      });
+    })();
+    return true;
   }, [stopEntitySpeech, speakEntityLine]);
 
   /** Enable VO (if needed) and speak a line now — used by “Hear them speak” / Test voice. */
   const hearEntityLine = useCallback(
     (text: string, entityId?: string) => {
       const line = text.trim() || 'Hello from the Alice Room.';
-      warmAliceVoices();
-      if (!isAliceVoiceEnabled()) {
-        setAliceVoiceEnabled(true);
-        setVoiceEnabledState(true);
-      }
-      // Network-first for reliability; must be called from a click
-      speakEntityLine(line, entityId, { force: true, preferNetwork: true });
+      void (async () => {
+        await unlockAliceVoice();
+        if (!isAliceVoiceEnabled()) {
+          setAliceVoiceEnabled(true);
+          setVoiceEnabledState(true);
+        }
+        speakEntityLine(line, entityId, { force: true, preferNetwork: true });
+      })();
     },
     [speakEntityLine],
   );
