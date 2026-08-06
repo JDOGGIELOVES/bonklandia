@@ -1,5 +1,5 @@
 /** Bump when enemy portraits in public/assets/enemies/ are replaced */
-export const ENEMY_ASSET_VERSION = '20260806d';
+export const ENEMY_ASSET_VERSION = '20260806e';
 
 export function enemyImage(file: string): string {
   return `/assets/enemies/${file}?v=${ENEMY_ASSET_VERSION}`;
@@ -24,7 +24,7 @@ export const DEGEN_ENEMIES: Enemy[] = [
     name: 'Captain Fudder',
     title: 'Spreads FUD at 3am',
     hp: 280,
-    img: enemyImage('fudder.svg'),
+    img: enemyImage('fudder.png'),
     taunt: '"Guys it\'s literally going to zero. I read it on Discord."',
     hitReaction: [
       'Captain Fudder drops his "IT\'S A SCAM" sign!',
@@ -40,7 +40,7 @@ export const DEGEN_ENEMIES: Enemy[] = [
     name: 'Sir Jeets-A-Lot',
     title: 'Sells the bottom every time',
     hp: 240,
-    img: enemyImage('jeeter.svg'),
+    img: enemyImage('jeeter.png'),
     taunt: '"I\'m just taking profits bro" *sells at -40%*',
     hitReaction: [
       'Sir Jeets-A-Lot panic-sells his lunch money!',
@@ -56,7 +56,7 @@ export const DEGEN_ENEMIES: Enemy[] = [
     name: 'Karen the Non-Believer',
     title: 'Still waiting for BTC to die',
     hp: 300,
-    img: enemyImage('non-believer.svg'),
+    img: enemyImage('non-believer.png'),
     taunt: '"Crypto is a ponzi. My cousin\'s friend lost everything."',
     hitReaction: [
       'Karen adjusts her "I told you so" glasses!',
@@ -72,7 +72,7 @@ export const DEGEN_ENEMIES: Enemy[] = [
     name: 'Ruggy McPull',
     title: 'Your funds are now his funds',
     hp: 350,
-    img: enemyImage('scammer.svg'),
+    img: enemyImage('scammer.png'),
     taunt: '"Trust me bro, liquidity is locked forever* (*not locked)"',
     hitReaction: [
       'Ruggy\'s fake Rolex falls off!',
@@ -88,7 +88,7 @@ export const DEGEN_ENEMIES: Enemy[] = [
     name: 'Paper Hands Pete',
     title: 'Holds for 4 minutes max',
     hp: 200,
-    img: enemyImage('paper-hands.svg'),
+    img: enemyImage('paper-hands.png'),
     taunt: '"Chart dipped 0.3%, I\'m out, I\'m OUT!"',
     hitReaction: [
       'Paper Hands Pete\'s hands literally dissolve!',
@@ -104,7 +104,7 @@ export const DEGEN_ENEMIES: Enemy[] = [
     name: 'NGMI Nigel',
     title: 'Professional vibe killer',
     hp: 260,
-    img: enemyImage('ngmi.svg'),
+    img: enemyImage('ngmi.png'),
     taunt: '"We\'re all gonna make it? Nah. I make spreadsheets."',
     hitReaction: [
       'Nigel\'s Excel chart crashes!',
@@ -120,7 +120,7 @@ export const DEGEN_ENEMIES: Enemy[] = [
     name: 'Grandpa Boomer',
     title: 'Still bragging about his 0.5% savings account',
     hp: 310,
-    img: enemyImage('boomer.svg'),
+    img: enemyImage('boomer.png'),
     taunt: '"Back in my day we had pensions. This internet money is Monopoly cash."',
     hitReaction: [
       'Grandpa Boomer drops his 2013 "Bitcoin is Dead" newspaper!',
@@ -136,7 +136,7 @@ export const DEGEN_ENEMIES: Enemy[] = [
     name: 'Shilliam Shillson',
     title: 'Paid promotion disguised as alpha',
     hp: 270,
-    img: enemyImage('shill.svg'),
+    img: enemyImage('shill.png'),
     taunt: '"This gem is gonna 1000x! *not financial advice* (it is)"',
     hitReaction: [
       'Shilliam\'s fake laser eyes fall off!',
@@ -152,7 +152,7 @@ export const DEGEN_ENEMIES: Enemy[] = [
     name: 'Crystal Charta',
     title: 'Technical analysis via horoscope',
     hp: 290,
-    img: enemyImage('astrologer.svg'),
+    img: enemyImage('astrologer.png'),
     taunt: '"Mercury is in retrograde. The chart says dump. Trust the stars."',
     hitReaction: [
       'Crystal Charta\'s crystal ball shows a red candle!',
@@ -168,7 +168,7 @@ export const DEGEN_ENEMIES: Enemy[] = [
     name: 'Copium Carl',
     title: 'Mainlines hopium derivatives',
     hp: 230,
-    img: enemyImage('copium.svg'),
+    img: enemyImage('copium.png'),
     taunt: '"It\'s just a healthy correction. Recovery any day now. Any day..."',
     hitReaction: [
       'Carl\'s copium tank springs a leak!',
@@ -184,7 +184,7 @@ export const DEGEN_ENEMIES: Enemy[] = [
     name: 'Leverage Lenny',
     title: '100x or homeless',
     hp: 320,
-    img: enemyImage('leverage.svg'),
+    img: enemyImage('leverage.png'),
     taunt: '"I only need a 1% move. What could go wrong with 100x?"',
     hitReaction: [
       'Leverage Lenny gets liquidated mid-sentence!',
@@ -200,7 +200,7 @@ export const DEGEN_ENEMIES: Enemy[] = [
     name: 'Airdrop Andy',
     title: '47 wallets, zero loyalty',
     hp: 250,
-    img: enemyImage('airdrop.svg'),
+    img: enemyImage('airdrop.png'),
     taunt: '"I\'m not a sybil, these are all my cousins. Free money!"',
     hitReaction: [
       'Airdrop Andy\'s 47 wallets get flagged!',
