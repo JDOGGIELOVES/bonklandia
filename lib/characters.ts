@@ -1,5 +1,5 @@
 /** Bump when character portraits in public/assets/characters/ are replaced */
-export const CHARACTER_ASSET_VERSION = '20260717a';
+export const CHARACTER_ASSET_VERSION = '20260806k';
 
 export function characterImage(file: string): string {
   return `/assets/characters/${file}?v=${CHARACTER_ASSET_VERSION}`;

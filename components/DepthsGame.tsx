@@ -759,8 +759,8 @@ export default function DepthsGame() {
       <div className="depths-shell">
         <header className="depths-header">
           <div className="depths-nav">
-            <Link href="/" className="art-btn px-4 py-2 text-[#f0d878]">
-              ← Gallery
+            <Link href="/#hall-of-champions" className="art-btn px-4 py-2 text-[#f0d878]">
+              ← {BRAND.degenValley}
             </Link>
             <Link href="/alice" className="art-btn px-4 py-2 text-[#f0abfc]">
               {BRAND.aliceRoomNav}

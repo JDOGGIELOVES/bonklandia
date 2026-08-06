@@ -14,13 +14,17 @@ export const BRAND = {
   casino: 'Bonklandia Casino',
   slotMachine: 'BONKLANDIA BANDIT',
   depths: 'Degen Depths',
+  /** Main home combat path — champion select + wave fights. */
+  degenValley: 'Degen Valley',
+  degenValleyNav: 'Degen Valley',
+  degenValleyCta: 'Enter the Valley →',
   /** In-world name of the Wonderland side game. */
   aliceRoom: 'The Alice Room',
   /** Home nav plaque — how players open the rabbit hole. */
   aliceRoomNav: 'Eat the Mushroom',
   storagePrefix: 'bonklandia',
   /** Bump on each production ship so you can confirm the live build. */
-  buildId: '2026-07-30j',
+  buildId: '2026-07-30k',
 } as const;
 
 export const LEGACY_STORAGE_KEYS = {

@@ -877,8 +877,11 @@ export default function Home() {
                 <span className="hall-arch-keystone">VI</span>
               </div>
               <div className="hall-of-champions-header">
+                <p className="hall-of-champions-kicker">{BRAND.degenValley}</p>
                 <h2 className="hall-of-champions-title">Hall of Champions</h2>
-                <p className="hall-of-champions-subtitle">Choose thy bloodline — six houses of the Bonk</p>
+                <p className="hall-of-champions-subtitle">
+                  Choose thy bloodline — then enter {BRAND.degenValley} (main wave combat)
+                </p>
                 <p className="hall-of-champions-subtitle opacity-50 text-sm mt-1" aria-label="Build version">
                   Build {BRAND.buildId} · Also try {BRAND.aliceRoomNav} or {BRAND.depths}
                 </p>

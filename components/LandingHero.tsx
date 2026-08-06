@@ -3,14 +3,17 @@ import BonkBankBadge from '@/components/BonkBankBadge';
 import { BRAND } from '@/lib/brand';
 
 /**
- * Home entrance: nav plaques + clear “realm paths” so Alice / Depths / combat
- * are obvious destinations (not buried next to the champion grid).
+ * Home entrance: nav plaques + clear “realm paths” so Valley / Alice / Depths
+ * are obvious destinations (combat is not buried under scroll alone).
  */
 export default function LandingHero() {
   return (
     <header className="tavern-entrance">
       <div className="tavern-entrance-nav">
         <BonkBankBadge />
+        <a href="#hall-of-champions" className="tavern-nav-plaque tavern-nav-plaque-valley">
+          {BRAND.degenValleyNav}
+        </a>
         <Link href="/depths" className="tavern-nav-plaque">
           {BRAND.depths}
         </Link>
@@ -51,17 +54,25 @@ export default function LandingHero() {
 
       <section className="realm-paths" aria-label="Paths through Bonklandia">
         <h2 className="realm-paths-title">Where will you go?</h2>
-        <p className="realm-paths-sub">Three doors. One realm. Pick a path — or scroll to the Hall of Champions.</p>
+        <p className="realm-paths-sub">
+          Four doors. One realm. <strong className="text-[#f0d878]">{BRAND.degenValley}</strong> is the
+          classic wave fight — pick a champion below.
+        </p>
         <div className="realm-paths-grid">
-          <a href="#hall-of-champions" className="realm-path-card realm-path-combat">
+          <a
+            href="#hall-of-champions"
+            className="realm-path-card realm-path-combat realm-path-valley"
+            id="degen-valley-path"
+          >
             <span className="realm-path-emoji" aria-hidden>
               ⚔
             </span>
-            <strong className="realm-path-name">Hall of Champions</strong>
+            <strong className="realm-path-name">{BRAND.degenValley}</strong>
             <p className="realm-path-blurb">
-              Pick a bloodline and bonk through Degen Valley. Earn chips. Free Bandit pulls on floors.
+              Main game: choose a bloodline, bonk through 12 degen waves, earn chips, free Bandit on
+              clear.
             </p>
-            <span className="realm-path-cta">Choose champion ↓</span>
+            <span className="realm-path-cta">{BRAND.degenValleyCta}</span>
           </a>
 
           <Link href="/alice" className="realm-path-card realm-path-alice">
@@ -82,7 +93,7 @@ export default function LandingHero() {
             </span>
             <strong className="realm-path-name">{BRAND.depths}</strong>
             <p className="realm-path-blurb">
-              Chamber crawl with rival mascots. Clear rooms for free Bandit spins and chip rewards.
+              Chamber crawl: rivals, Valley Leak degens, rest camps. Free Bandit pulls per clear.
             </p>
             <span className="realm-path-cta">Descend →</span>
           </Link>

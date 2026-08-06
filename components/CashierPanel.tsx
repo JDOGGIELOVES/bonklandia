@@ -544,7 +544,7 @@ export default function CashierPanel({ showBackLink = true }: CashierPanelProps)
                     <div className="cashier-earn-links">
                       <Link href="/depths">{BRAND.depths}</Link>
                       <Link href="/alice">{BRAND.aliceRoomNav}</Link>
-                      <Link href="/">Combat + Bandit</Link>
+                      <Link href="/#hall-of-champions">{BRAND.degenValley}</Link>
                     </div>
                   )}
                 </div>
