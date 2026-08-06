@@ -72,14 +72,6 @@ const LEVER_PULL_MS = CASINO_SPIN_START_DELAY_MS;
 
 type LogLine = { id: number; text: string };
 
-/** Ambient vibe entity while playing (current layer). */
-function ambientEntityIdFor(level: number, phase: AlicePhase): string | null {
-  if (phase === 'intro') return null;
-  if (phase === 'victory') return 'the-other';
-  if (phase === 'defeat') return getEntityForLevel(Math.max(1, level)).id;
-  return getEntityForLevel(level).id;
-}
-
 function AliceSymbolCell({ symbol }: { symbol: AliceSymbol }) {
   const [imgFailed, setImgFailed] = useState(false);
   const showImg = Boolean(symbol.image) && !imgFailed;
@@ -543,7 +535,6 @@ export default function AliceRoomGame() {
         void playLandClunk('shield');
         void playWinResult('fam-any');
         flashPayline('shield');
-        fireTripFx(entity.id, 'clear');
         setTripKill(s => resetTripKillStreak(s));
         setMessage(result.message);
         setPhase('block-result');
@@ -561,7 +552,6 @@ export default function AliceRoomGame() {
       stopEntitySpeech();
       void playLandClunk('soft');
       void playWinResult('none');
-      fireTripFx(entity.id, 'encounter');
       setPhase('block-result');
       setShieldBeat({
         kind: 'fail',
@@ -597,7 +587,6 @@ export default function AliceRoomGame() {
       speakEntityLine,
       stopEntitySpeech,
       playLandClunk,
-      fireTripFx,
     ],
   );
 
@@ -778,8 +767,6 @@ export default function AliceRoomGame() {
 
   const meltClass = `alice-melt-${Math.min(10, Math.max(0, melt || level - 1))}`;
   const inPlay = phase !== 'intro';
-  const ambientEntity = ambientEntityIdFor(level, phase);
-  const vibeClass = ambientEntity ? `alice-vibe-${ambientEntity}` : '';
 
   return (
     <div
@@ -787,7 +774,6 @@ export default function AliceRoomGame() {
         'alice-room',
         'alice-machine-scene',
         meltClass,
-        vibeClass,
         inPlay ? 'alice-room-playing' : '',
         canPullPlayer ? 'alice-room-pull-ready' : '',
         canPullPrize ? 'alice-room-prize-ready' : '',
@@ -796,15 +782,9 @@ export default function AliceRoomGame() {
       ]
         .filter(Boolean)
         .join(' ')}
-      data-entity-vibe={ambientEntity ?? undefined}
     >
       <div className="alice-room-bg" aria-hidden />
-      <AliceTripFx
-        ambientEntityId={inPlay ? ambientEntity : null}
-        burst={tripBurst}
-        active={inPlay}
-        onBurstEnd={() => setTripBurst(null)}
-      />
+      <AliceTripFx burst={tripBurst} onBurstEnd={() => setTripBurst(null)} />
       <div className="casino-scene-vignette alice-vignette" />
       <div className="alice-room-content">
         <header className={`casino-header alice-machine-header ${inPlay ? 'alice-header-play' : ''}`}>
@@ -1000,8 +980,8 @@ export default function AliceRoomGame() {
               </button>
             </div>
             <p className="alice-intro-fx-hint">
-              Preview should flash the whole screen (not just a soft glow). If you only see a faint aura, hard
-              refresh — old builds hid FX under the cabinet.
+              Trip FX plays only when an entity is introduced (brief full-screen flash), then clears so door
+              text stays readable.
             </p>
           </section>
         )}

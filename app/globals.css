@@ -8628,11 +8628,12 @@ html {
   isolation: isolate;
 }
 
+/* Ambient wash disabled in UI (intro bursts only). Rules kept inert. */
 .alice-trip-ambient {
+  display: none;
   position: absolute;
   inset: 0;
-  opacity: 0.72;
-  transition: opacity 0.6s ease;
+  opacity: 0;
   z-index: 1;
 }
 .alice-trip-ambient-wash,
@@ -8752,10 +8753,7 @@ html {
   pointer-events: none;
 }
 
-.alice-room-tripping .alice-room-content {
-  animation: alice-content-trip 2s ease-out;
-  filter: saturate(1.15);
-}
+/* Do not filter .alice-room-content during bursts — door / choice text must stay readable. */
 .alice-room-tripping .alice-room-bg {
   animation: alice-bg-trip 2s ease-out;
 }
@@ -8804,9 +8802,7 @@ html {
     );
   animation-name: alice-pattern-jester;
 }
-.alice-room.alice-vibe-jester.alice-room-tripping .alice-room-content {
-  animation-name: alice-content-jester;
-}
+
 
 .alice-vibe-mantis {
   --alice-fx-a: rgba(74, 222, 128, 0.95);
@@ -8928,16 +8924,8 @@ html {
   animation-name: alice-core-void;
 }
 
-.alice-room.alice-vibe-machine-elf .alice-room-bg { filter: hue-rotate(-8deg) saturate(1.35) brightness(1.08); }
-.alice-room.alice-vibe-jester .alice-room-bg { filter: hue-rotate(25deg) saturate(1.45) contrast(1.08); }
-.alice-room.alice-vibe-mantis .alice-room-bg { filter: hue-rotate(70deg) saturate(1.4); }
-.alice-room.alice-vibe-grey .alice-room-bg { filter: saturate(0.7) brightness(1.12) contrast(1.08); }
-.alice-room.alice-vibe-light-being .alice-room-bg { filter: brightness(1.18) saturate(1.2) hue-rotate(-5deg); }
-.alice-room.alice-vibe-goddess .alice-room-bg { filter: hue-rotate(-15deg) saturate(1.4) brightness(1.1); }
-.alice-room.alice-vibe-fractal-being .alice-room-bg { filter: hue-rotate(180deg) saturate(1.5) contrast(1.1); }
-.alice-room.alice-vibe-serpent .alice-room-bg { filter: hue-rotate(95deg) saturate(1.4); }
-.alice-room.alice-vibe-ancestor .alice-room-bg { filter: sepia(0.4) saturate(1.3) brightness(1.08); }
-.alice-room.alice-vibe-the-other .alice-room-bg { filter: hue-rotate(260deg) saturate(1.55) contrast(1.15) brightness(0.9); }
+/* Continuous room vibe filters removed — they washed out door text during encounters.
+   Personality color lives only on the short intro burst overlay. */
 
 .alice-trip-burst-clear .alice-trip-burst-veil { filter: brightness(1.35); }
 .alice-trip-burst-eject .alice-trip-burst-veil {
