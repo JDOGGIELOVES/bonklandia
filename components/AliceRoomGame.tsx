@@ -45,7 +45,6 @@ import {
   type AliceLocalStats,
 } from '@/lib/alice-stats';
 import {
-  buildAliceXShareUrl,
   prepareAliceSharePreview,
   shareAliceRun,
   type AliceSharePayload,
@@ -522,7 +521,7 @@ export default function AliceRoomGame() {
       setPhase('block-spinning');
       setMessage(`Shielding — need three ${entity.label}s…`);
       pushLog(`Shield pull — three ${entity.label}s on the line.`);
-      // Attack line was spoken when waiting for the second lever pull.
+      // Attack line starts on the prize pull; let it finish unless the layer ends.
 
       const result = await runReelSpin(() => {
         const r = spinBlockReels(forLevel);
@@ -593,8 +592,14 @@ export default function AliceRoomGame() {
   const doPlayerSpin = async () => {
     if (busy || spinning || phase !== 'player-spin') return;
     setBusy(true);
-    setPhase('spinning');
     const forLevel = level;
+    const info = getLevelInfo(forLevel);
+    const entity = getEntityForLevel(forLevel);
+    // Speak on FIRST lever pull (still inside user gesture). Do not restart on shield pull —
+    // that cut off the line when players yanked the second spin early.
+    spokeAttackForLevel.current = forLevel;
+    speakEntityLine(info.attackLine, entity.id);
+    setPhase('spinning');
     const result = await runReelSpin(() => {
       const r = spinPlayerReels(forLevel);
       return { reels: r.reels, message: r.message, aliceCoins: r.aliceCoins };
@@ -614,29 +619,17 @@ export default function AliceRoomGame() {
     setPhase('player-result');
     setMessage(result.message);
     await sleep(700);
-    const info = getLevelInfo(forLevel);
-    const entity = getEntityForLevel(forLevel);
     setPhase('elf-attack');
-    setMessage(
-      voiceEnabled
-        ? `Pull the lever for shield — land 3× ${entity.label}. (Voice on — they speak when you pull.)`
-        : `Pull the lever for shield — land 3× ${entity.label}.`,
-    );
+    setMessage(`Pull the lever for shield — land 3× ${entity.label}.`);
     pushLog(`── ${info.name} ── Pull again to shield (3× ${entity.label}).`);
-    spokeAttackForLevel.current = forLevel;
-    // Note: auto-speak after a long spin often fails on mobile (no user gesture).
-    // Reliable speech is on shield pull (gesture) and “Hear them speak”.
     setBusy(false);
   };
 
-  /** Second intentional lever pull: shield defense reels. */
+  /** Second intentional lever pull: shield defense reels (does not restart VO). */
   const doShieldSpin = async () => {
     if (busy || spinning || phase !== 'elf-attack') return;
     setBusy(true);
-    // User gesture — best moment for TTS on iOS/Chrome
-    const info = getLevelInfo(level);
-    const entity = getEntityForLevel(level);
-    speakEntityLine(info.attackLine, entity.id);
+    // Leave attack line playing — only stop speech when the layer ends or doors open.
     await runDefenseSpin(level);
   };
 
@@ -1415,14 +1408,6 @@ export default function AliceRoomGame() {
                       >
                         {shareBusy ? 'Sharing…' : 'Share voyage card'}
                       </button>
-                      <a
-                        className="alice-btn alice-btn-x"
-                        href={buildAliceXShareUrl(buildSharePayload())}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                      >
-                        Post on X
-                      </a>
                       {sharePreviewUrl ? (
                         <a
                           href={sharePreviewUrl}
@@ -1435,8 +1420,8 @@ export default function AliceRoomGame() {
                     </div>
                     {shareMsg ? <p className="alice-share-msg">{shareMsg}</p> : null}
                     <p className="alice-share-preview-hint">
-                      Mobile: Share opens the system sheet. Desktop: download + text copy. Long-press the
-                      image if needed — stay on this page.
+                      Share / download stays on this page so you can bank chips after. Bank Final Tally
+                      before leaving if you want spendable chips.
                     </p>
                   </div>
 
@@ -1557,14 +1542,15 @@ export default function AliceRoomGame() {
                       >
                         {shareBusy ? 'Sharing…' : 'Share trip card'}
                       </button>
-                      <a
-                        className="alice-btn alice-btn-x"
-                        href={buildAliceXShareUrl(buildSharePayload())}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                      >
-                        Post on X
-                      </a>
+                      {sharePreviewUrl ? (
+                        <a
+                          href={sharePreviewUrl}
+                          download="bonklandia-alice-trip-kill.png"
+                          className="alice-btn alice-btn-ghost"
+                        >
+                          Download PNG
+                        </a>
+                      ) : null}
                     </div>
                     {shareMsg ? <p className="alice-share-msg">{shareMsg}</p> : null}
                   </div>

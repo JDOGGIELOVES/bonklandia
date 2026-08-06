@@ -185,7 +185,7 @@ export function useAliceAudio(level = 1) {
       await unlockAliceVoice();
       setAliceVoiceEnabled(true);
       setVoiceEnabledState(true);
-      speakEntityLine('Voice is on. Pull the lever — we speak when you play.', undefined, {
+      speakEntityLine('Voice is on. We speak on the first pull of each layer.', undefined, {
         force: true,
         preferNetwork: true,
       });
