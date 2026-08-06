@@ -1,47 +1,71 @@
 /**
- * Alice Room ambience — free music from the same family as Bandit music:
- * Kevin MacLeod / incompetech.com (Creative Commons BY 3.0).
- *
- * Primary: Folk Round — lively tempo / pulse for Machine Elves and deeper layers.
- * Lever/reel SFX still come from CasinoAudioEngine (Bandit) — music-only stop there.
+ * Alice Room ambience — free music from Kevin MacLeod / incompetech.com (CC BY 3.0).
+ * Beds morph as the trip deepens (layer → darker / stranger).
+ * Lever/reel SFX still come from CasinoAudioEngine (Bandit).
  */
 
-/** Primary bed — more rhythm than sparse piano */
-export const ALICE_AMBIENCE_URL = '/audio/alice/folk-round.mp3';
+export type AliceAmbienceBed = {
+  key: string;
+  url: string;
+  credit: string;
+};
 
-/**
- * Attribution (CC BY 3.0) — required when using Kevin MacLeod / incompetech.
- */
-export const ALICE_AMBIENCE_CREDIT =
-  'Folk Round · Kevin MacLeod (incompetech.com) · CC BY 3.0';
-
-/** Optional beds for future layer morphing / A-B */
 export const ALICE_AMBIENCE_ALTS = {
   folkRound: {
+    key: 'folkRound',
     url: '/audio/alice/folk-round.mp3',
     credit: 'Folk Round · Kevin MacLeod (incompetech.com) · CC BY 3.0',
   },
   tellerOfTheTales: {
+    key: 'tellerOfTheTales',
     url: '/audio/alice/teller-of-the-tales.mp3',
     credit: 'Teller of the Tales · Kevin MacLeod (incompetech.com) · CC BY 3.0',
   },
-  gymnopedieNo1: {
-    url: '/audio/alice/gymnopedie-no1.mp3',
-    credit: 'Gymnopedie No. 1 · Erik Satie / Kevin MacLeod (incompetech.com) · CC BY 3.0',
-  },
   dreamsBecomeReal: {
+    key: 'dreamsBecomeReal',
     url: '/audio/alice/dreams-become-real.mp3',
     credit: 'Dreams Become Real · Kevin MacLeod (incompetech.com) · CC BY 3.0',
   },
   virtutesInstrumenti: {
+    key: 'virtutesInstrumenti',
     url: '/audio/alice/virtutes-instrumenti.mp3',
     credit: 'Virtutes Instrumenti · Kevin MacLeod (incompetech.com) · CC BY 3.0',
   },
   oppressiveGloom: {
+    key: 'oppressiveGloom',
     url: '/audio/alice/oppressive-gloom.mp3',
     credit: 'Oppressive Gloom · Kevin MacLeod (incompetech.com) · CC BY 3.0',
   },
-} as const;
+  gymnopedieNo1: {
+    key: 'gymnopedieNo1',
+    url: '/audio/alice/gymnopedie-no1.mp3',
+    credit: 'Gymnopedie No. 1 · Erik Satie / Kevin MacLeod (incompetech.com) · CC BY 3.0',
+  },
+} as const satisfies Record<string, AliceAmbienceBed>;
+
+/** Primary bed URL (layer 1) — kept for simple importers. */
+export const ALICE_AMBIENCE_URL = ALICE_AMBIENCE_ALTS.folkRound.url;
+
+/** Default credit (layer 1). */
+export const ALICE_AMBIENCE_CREDIT = ALICE_AMBIENCE_ALTS.folkRound.credit;
+
+/**
+ * Voyage depth → music bed.
+ * Early: lively / folk · mid: dreamlike · late: heavy · boss: uncanny piano.
+ */
+export function ambienceBedForLevel(level: number): AliceAmbienceBed {
+  const L = Math.max(1, Math.min(10, Math.floor(level)));
+  if (L <= 2) return ALICE_AMBIENCE_ALTS.folkRound;
+  if (L <= 4) return ALICE_AMBIENCE_ALTS.tellerOfTheTales;
+  if (L <= 6) return ALICE_AMBIENCE_ALTS.dreamsBecomeReal;
+  if (L <= 8) return ALICE_AMBIENCE_ALTS.virtutesInstrumenti;
+  if (L === 9) return ALICE_AMBIENCE_ALTS.oppressiveGloom;
+  return ALICE_AMBIENCE_ALTS.gymnopedieNo1;
+}
+
+export function aliceAmbienceCreditForLevel(level: number): string {
+  return ambienceBedForLevel(level).credit;
+}
 
 export class AliceAudioEngine {
   private ctx: AudioContext | null = null;
@@ -50,13 +74,15 @@ export class AliceAudioEngine {
   private muted = false;
   private unlocked = false;
   private musicSource: AudioBufferSourceNode | null = null;
-  private musicBuffer: AudioBuffer | null = null;
-  private musicLoadPromise: Promise<AudioBuffer | null> | null = null;
+  private musicFade: GainNode | null = null;
+  private bufferCache = new Map<string, AudioBuffer>();
+  private loadPromises = new Map<string, Promise<AudioBuffer | null>>();
+  private activeBedKey: string | null = null;
   private musicRunning = false;
   private musicGeneration = 0;
-  /** Bed level when no dialogue is speaking (Folk Round is denser than piano). */
+  /** Bed level when no dialogue is speaking. */
   private musicGain = 0.26;
-  /** Near-mute under entity VO so system TTS can be heard. */
+  /** Near-mute under entity VO. */
   private musicDuckGain = 0.04;
   private musicDucked = false;
   private level = 1;
@@ -94,10 +120,13 @@ export class AliceAudioEngine {
     return this.muted;
   }
 
+  get activeCredit() {
+    return ambienceBedForLevel(this.level).credit;
+  }
+
   setMuted(muted: boolean) {
     this.muted = muted;
     this.applyGain();
-    // Never auto-restart on unmute — that stacked Folk Round with itself / lobby.
     if (muted) this.stopAmbience();
   }
 
@@ -117,8 +146,14 @@ export class AliceAudioEngine {
   }
 
   setLevel(level: number) {
-    this.level = Math.max(1, Math.min(10, Math.floor(level)));
+    const next = Math.max(1, Math.min(10, Math.floor(level)));
+    const prevBed = ambienceBedForLevel(this.level);
+    this.level = next;
     this.applyGain();
+    const bed = ambienceBedForLevel(next);
+    if (this.musicRunning && bed.key !== prevBed.key) {
+      void this.startMusicLoop(true);
+    }
   }
 
   setMusicDucked(ducked: boolean) {
@@ -142,7 +177,6 @@ export class AliceAudioEngine {
     setActiveMusicBed('alice');
     try {
       const { getCasinoAudioEngine } = await import('@/lib/casino-audio');
-      // Music only — lever/reel SFX live on the casino engine.
       getCasinoAudioEngine().stopMusicOnly();
     } catch {
       /* */
@@ -151,7 +185,9 @@ export class AliceAudioEngine {
     this.level = Math.max(1, Math.min(10, Math.floor(level)));
     this.musicRunning = true;
     this.applyGain();
-    await this.startMusicLoop();
+    // Prefetch mid-trip beds so layer changes don’t hitch
+    void this.prefetchNearbyBeds();
+    await this.startMusicLoop(false);
 
     if (getActiveMusicBed() !== 'alice') {
       this.stopAmbience();
@@ -162,37 +198,60 @@ export class AliceAudioEngine {
     this.musicRunning = false;
     this.musicDucked = false;
     this.musicGeneration += 1;
+    this.activeBedKey = null;
     this.killMusicGraph();
   }
 
-  private async loadMusicBuffer(): Promise<AudioBuffer | null> {
-    if (this.musicBuffer) return this.musicBuffer;
-    if (this.musicLoadPromise) return this.musicLoadPromise;
+  private prefetchNearbyBeds() {
+    const keys = new Set<string>();
+    for (const L of [this.level, this.level + 1, this.level + 2, 10]) {
+      keys.add(ambienceBedForLevel(L).url);
+    }
+    for (const url of keys) {
+      void this.loadMusicBuffer(url);
+    }
+  }
 
-    this.musicLoadPromise = (async () => {
+  private async loadMusicBuffer(url: string): Promise<AudioBuffer | null> {
+    const cached = this.bufferCache.get(url);
+    if (cached) return cached;
+    const inflight = this.loadPromises.get(url);
+    if (inflight) return inflight;
+
+    const promise = (async () => {
       const ctx = await this.ensureContext();
       if (!ctx) return null;
       try {
-        const response = await fetch(ALICE_AMBIENCE_URL);
+        const response = await fetch(url);
         if (!response.ok) return null;
         const data = await response.arrayBuffer();
-        this.musicBuffer = await ctx.decodeAudioData(data.slice(0));
-        return this.musicBuffer;
+        const buffer = await ctx.decodeAudioData(data.slice(0));
+        this.bufferCache.set(url, buffer);
+        return buffer;
       } catch {
         return null;
+      } finally {
+        this.loadPromises.delete(url);
       }
     })();
 
-    return this.musicLoadPromise;
+    this.loadPromises.set(url, promise);
+    return promise;
   }
 
-  private async startMusicLoop() {
+  /**
+   * @param crossfade when true, fade out the current bed then fade in the next.
+   */
+  private async startMusicLoop(crossfade: boolean) {
     if (!this.ctx || !this.musicBus || this.muted || !this.musicRunning) return;
 
-    const gen = ++this.musicGeneration;
-    this.killMusicGraph();
+    const bed = ambienceBedForLevel(this.level);
+    if (this.activeBedKey === bed.key && this.musicSource) {
+      return;
+    }
 
-    const buffer = await this.loadMusicBuffer();
+    const gen = ++this.musicGeneration;
+    const buffer = await this.loadMusicBuffer(bed.url);
     if (
       gen !== this.musicGeneration ||
       !buffer ||
@@ -204,6 +263,43 @@ export class AliceAudioEngine {
       return;
     }
 
+    // Fade out previous source if any
+    const prevFade = this.musicFade;
+    const prevSource = this.musicSource;
+    if (crossfade && prevFade && prevSource && this.ctx) {
+      const t = this.ctx.currentTime;
+      try {
+        prevFade.gain.cancelScheduledValues(t);
+        prevFade.gain.setValueAtTime(prevFade.gain.value, t);
+        prevFade.gain.linearRampToValueAtTime(0, t + 1.1);
+      } catch {
+        /* */
+      }
+      window.setTimeout(() => {
+        try {
+          prevSource.stop();
+        } catch {
+          /* */
+        }
+        try {
+          prevSource.disconnect();
+        } catch {
+          /* */
+        }
+        try {
+          prevFade.disconnect();
+        } catch {
+          /* */
+        }
+      }, 1200);
+      this.musicSource = null;
+      this.musicFade = null;
+    } else {
+      this.killMusicGraph();
+    }
+
+    if (gen !== this.musicGeneration || !this.ctx || !this.musicBus) return;
+
     const source = this.ctx.createBufferSource();
     source.buffer = buffer;
     source.loop = true;
@@ -212,15 +308,14 @@ export class AliceAudioEngine {
     source.connect(fade);
     fade.connect(this.musicBus);
     const t = this.ctx.currentTime;
-    fade.gain.linearRampToValueAtTime(1, t + 1.8);
+    fade.gain.linearRampToValueAtTime(1, t + (crossfade ? 1.4 : 1.8));
     source.start();
     this.musicSource = source;
+    this.musicFade = fade;
+    this.activeBedKey = bed.key;
+    void this.prefetchNearbyBeds();
   }
 
-  /**
-   * Disconnect music bus so any orphaned BufferSources die with it,
-   * then rebuild a clean bus for the next loop.
-   */
   private killMusicGraph() {
     if (this.musicSource) {
       try {
@@ -234,6 +329,14 @@ export class AliceAudioEngine {
         /* */
       }
       this.musicSource = null;
+    }
+    if (this.musicFade) {
+      try {
+        this.musicFade.disconnect();
+      } catch {
+        /* */
+      }
+      this.musicFade = null;
     }
     if (!this.ctx || !this.master) return;
     try {

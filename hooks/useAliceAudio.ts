@@ -7,7 +7,10 @@ import {
   CASINO_SPIN_START_DELAY_MS,
   getCasinoAudioEngine,
 } from '@/lib/casino-audio';
-import { ALICE_AMBIENCE_CREDIT, getAliceAudioEngine } from '@/lib/alice-audio';
+import {
+  aliceAmbienceCreditForLevel,
+  getAliceAudioEngine,
+} from '@/lib/alice-audio';
 import {
   isAliceSpeechSupported,
   speakAliceLine,
@@ -78,6 +81,7 @@ export function useAliceAudio(level = 1) {
 
   useEffect(() => {
     if (!audioReady || musicMuted) return;
+    // Crossfades bed when the voyage layer enters a new music stage
     musicRef.current.setLevel(level);
   }, [level, audioReady, musicMuted]);
 
@@ -282,6 +286,7 @@ export function useAliceAudio(level = 1) {
     speakEntityLine,
     hearEntityLine,
     stopEntitySpeech,
-    ambienceCredit: ALICE_AMBIENCE_CREDIT,
+    /** Credit for the bed that matches current voyage depth. */
+    ambienceCredit: aliceAmbienceCreditForLevel(level),
   };
 }
