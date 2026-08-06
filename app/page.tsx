@@ -1086,11 +1086,11 @@ export default function Home() {
                 <div className="art-portrait mx-auto mb-4 w-fit">
                   <div className="art-portrait-inner">
                     <Image
-                      src={fighter.img}
-                      alt={fighter.name}
+                      src={fighter.logo}
+                      alt={`${fighter.name} logo`}
                       width={160}
-                      height={215}
-                      className="character-img w-[150px] h-[200px] object-contain"
+                      height={160}
+                      className="character-img valley-fighter-logo w-[150px] h-[150px] object-contain"
                       priority
                       unoptimized
                     />
@@ -1183,11 +1183,11 @@ export default function Home() {
                 <div className="art-portrait">
                   <div className="art-portrait-inner">
                     <Image
-                      src={fighter.img}
-                      alt={fighter.name}
-                      width={340}
-                      height={460}
-                      className="character-img fighter-img object-contain"
+                      src={fighter.logo}
+                      alt={`${fighter.name} logo`}
+                      width={280}
+                      height={280}
+                      className="character-img fighter-img valley-fighter-logo object-contain"
                       priority
                       unoptimized
                     />

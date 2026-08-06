@@ -56,7 +56,8 @@ export const SLOT_SYMBOL_POOL: SlotSymbol[] = [
   ...PLAYABLE_CHARACTERS.map(c => ({
     id: `fam-${c.id}`,
     label: c.name,
-    image: c.img,
+    // Degen Valley bandit reels use token logos (not D&D hero art)
+    image: c.logo,
     kind: 'fam' as const,
   })),
   ...DEGEN_ENEMIES.map(e => ({

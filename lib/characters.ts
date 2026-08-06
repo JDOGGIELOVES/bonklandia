@@ -1,17 +1,18 @@
 /**
- * Bump when hero portraits change.
- * Home + Depths + Valley combat ONLY use /assets/heroes/ (medieval D&D full-body art).
- * Never point those screens at /assets/logos or mascot cartoons.
+ * Asset rules (do not mix):
+ * - img / heroImage  → Home gallery + Degen Depths (D&D medieval heroes only)
+ * - logo / logoImage → Cashier + Degen Valley combat + carnival family d6 faces
+ * Never use pink-cape mascot cartoons (removed).
  */
-export const HERO_ASSET_VERSION = '20260806hero2';
+export const HERO_ASSET_VERSION = '20260806hero3';
 
 /** @deprecated Prefer heroImage — kept for Bonga Chill and misc character files. */
 export const CHARACTER_ASSET_VERSION = HERO_ASSET_VERSION;
 
 /** Bump when token logos in public/assets/logos/ are replaced */
-export const LOGO_ASSET_VERSION = '20260806logo1';
+export const LOGO_ASSET_VERSION = '20260806logo2';
 
-/** Medieval D&D hero portraits — Home gallery, Depths roster/combat, Valley waves. */
+/** Medieval D&D hero portraits — Home champion select + Degen Depths only. */
 export function heroImage(file: string): string {
   return `/assets/heroes/${file}?v=${HERO_ASSET_VERSION}`;
 }
@@ -21,7 +22,7 @@ export function characterImage(file: string): string {
   return `/assets/characters/${file}?v=${CHARACTER_ASSET_VERSION}`;
 }
 
-/** Coin logo from token metadata — Cashier / SPL token UI only. */
+/** Official token logos — Cashier, Degen Valley combat, carnival d6 faces. */
 export function logoImage(file: string): string {
   return `/assets/logos/${file}?v=${LOGO_ASSET_VERSION}`;
 }
@@ -72,9 +73,9 @@ export type PlayableCharacter = {
   name: string;
   role: string;
   tagline: string;
-  /** Medieval full-body hero — Home, Depths, Valley combat only (never logos/mascots). */
+  /** D&D medieval full-body — Home gallery + Degen Depths only. */
   img: string;
-  /** Official token logo (metadata) — Cashier cash-out only. */
+  /** Official mint logo — Cashier + Degen Valley combat + carnival d6. */
   logo: string;
   hp: number;
   power: number;

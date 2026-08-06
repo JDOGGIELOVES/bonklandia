@@ -22,6 +22,7 @@ import { findWalletTokenAccount } from '@/lib/token-accounts';
 import { sendSolTransferWithWallet } from '@/lib/wallet/send-sol-transfer';
 import BoardwalkWheel, { TIER_COLORS, type BoardwalkSpace } from '@/components/BoardwalkWheel';
 import CarnivalClown from '@/components/CarnivalClown';
+import FamilyLogoDice from '@/components/FamilyLogoDice';
 import {
   unlockBoardwalkAudio,
   playWheelStop,
@@ -416,10 +417,7 @@ export default function CarnivalWheelGame() {
             </div>
           </div>
 
-          <div className={`carnival-dice ${spinning ? 'carnival-dice-rolling' : ''}`} aria-label={`Dice ${diceFace}`}>
-            <span className="carnival-dice-face">{diceFace}</span>
-            <span className="carnival-dice-label">Family d6</span>
-          </div>
+          <FamilyLogoDice face={diceFace} rolling={spinning} />
         </section>
 
         <section className="carnival-panel carnival-controls">

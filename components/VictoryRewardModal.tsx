@@ -61,11 +61,11 @@ export default function VictoryRewardModal({
           <div className="art-portrait mx-auto w-fit mb-3">
             <div className="art-portrait-inner">
               <Image
-                src={fighter.img}
-                alt={fighter.name}
+                src={fighter.logo}
+                alt={`${fighter.name} logo`}
                 width={100}
-                height={130}
-                className="character-img w-[90px] h-[120px] object-contain"
+                height={100}
+                className="character-img valley-fighter-logo w-[90px] h-[90px] object-contain"
                 unoptimized
               />
             </div>

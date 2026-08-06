@@ -602,38 +602,78 @@ body {
   letter-spacing: 0.04em;
 }
 
-.carnival-dice {
-  margin-top: 0.85rem;
-  width: 80px;
-  height: 80px;
-  border-radius: 12px;
-  background: linear-gradient(145deg, #f8fafc, #cbd5e1);
-  color: #0f172a;
+/* Degen Valley combat — token logos (square coin art) */
+.valley-fighter-logo {
+  border-radius: 50%;
+  background: radial-gradient(circle at 35% 30%, rgba(255, 240, 180, 0.15), transparent 55%),
+    rgba(0, 0, 0, 0.35);
+  padding: 8%;
+  box-sizing: border-box;
+}
+
+/* Carnival family d6 — one logo per face */
+.fam-logo-dice {
+  margin-top: 1rem;
+  perspective: 600px;
   display: flex;
   flex-direction: column;
   align-items: center;
-  justify-content: center;
-  box-shadow: 0 8px 20px rgba(0, 0, 0, 0.35);
-  border: 2px solid #94a3b8;
   z-index: 2;
 }
-.carnival-dice-rolling {
-  animation: carnival-dice-shake 0.35s ease-in-out infinite;
+.fam-logo-dice-cube {
+  position: relative;
+  width: 88px;
+  height: 88px;
+  transform-style: preserve-3d;
+  transition: transform 0.65s cubic-bezier(0.2, 0.8, 0.2, 1);
 }
-@keyframes carnival-dice-shake {
-  0%, 100% { transform: rotate(-6deg); }
-  50% { transform: rotate(6deg); }
+.fam-logo-dice-rolling .fam-logo-dice-cube {
+  animation: fam-logo-dice-tumble 0.55s linear infinite;
 }
-.carnival-dice-face {
-  font-size: 1.9rem;
-  font-weight: 900;
-  line-height: 1;
+@keyframes fam-logo-dice-tumble {
+  0% { transform: rotateX(0deg) rotateY(0deg); }
+  100% { transform: rotateX(360deg) rotateY(420deg); }
 }
-.carnival-dice-label {
+.fam-logo-dice-face {
+  position: absolute;
+  inset: 0;
+  width: 88px;
+  height: 88px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: linear-gradient(145deg, #2a1a0c, #1a1008);
+  border: 2px solid #d4af37;
+  border-radius: 10px;
+  box-shadow: inset 0 0 12px rgba(0, 0, 0, 0.5);
+  backface-visibility: hidden;
+}
+.fam-logo-dice-img {
+  width: 72% !important;
+  height: 72% !important;
+  object-fit: contain;
+  border-radius: 50%;
+}
+.fam-logo-dice-num {
+  position: absolute;
+  bottom: 3px;
+  right: 5px;
   font-size: 0.55rem;
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
-  opacity: 0.7;
+  font-weight: 800;
+  color: rgba(240, 216, 120, 0.75);
+}
+/* Cube layout: 1 front, 2 right, 3 back, 4 left, 5 top, 6 bottom */
+.fam-logo-dice-face-1 { transform: rotateY(0deg) translateZ(44px); }
+.fam-logo-dice-face-2 { transform: rotateY(90deg) translateZ(44px); }
+.fam-logo-dice-face-3 { transform: rotateY(180deg) translateZ(44px); }
+.fam-logo-dice-face-4 { transform: rotateY(-90deg) translateZ(44px); }
+.fam-logo-dice-face-5 { transform: rotateX(90deg) translateZ(44px); }
+.fam-logo-dice-face-6 { transform: rotateX(-90deg) translateZ(44px); }
+.fam-logo-dice-caption {
+  margin: 0.55rem 0 0;
+  font-size: 0.72rem;
+  color: rgba(245, 230, 200, 0.65);
+  letter-spacing: 0.04em;
 }
 .carnival-tier-swatch {
   display: inline-block;
