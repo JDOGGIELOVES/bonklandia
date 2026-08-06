@@ -1,5 +1,5 @@
 /**
- * Shareable Alice run card — canvas PNG for Web Share / download.
+ * Shareable Alice run card — canvas PNG for Web Share / download / X.
  * Never navigates the tab to a blob: URL (that caused ERR_FILE_NOT_FOUND).
  */
 
@@ -13,6 +13,8 @@ export type AliceSharePayload = {
   spendableEstimate: number;
   isNewBest?: boolean;
   banked?: boolean;
+  /** Full clear vs trip kill / early exit. */
+  outcome?: 'victory' | 'defeat';
 };
 
 function fillRoundRect(
@@ -34,19 +36,32 @@ function fillRoundRect(
 }
 
 export function buildAliceShareText(p: AliceSharePayload): string {
+  const victory = p.outcome !== 'defeat';
   const bankLine =
     p.spendableEarned != null && p.spendableEarned > 0
       ? `Banked +${p.spendableEarned.toLocaleString()} spendable chips`
-      : `~${p.spendableEstimate.toLocaleString()} chips if banked`;
+      : victory
+        ? `~${p.spendableEstimate.toLocaleString()} chips if banked`
+        : 'No bank — trip kill';
   return [
-    `I finished ${BRAND.aliceRoom} on ${BRAND.name}!`,
-    `Layers ${p.layersCleared}/${p.totalLayers} · ${p.aliceCoins.toLocaleString()} Alice Coins`,
+    victory
+      ? `I finished ${BRAND.aliceRoom} on ${BRAND.name}!`
+      : `I reached layer ${p.layersCleared}/${p.totalLayers} in ${BRAND.aliceRoom} on ${BRAND.name}.`,
+    victory
+      ? `Layers ${p.layersCleared}/${p.totalLayers} · ${p.aliceCoins.toLocaleString()} Alice Coins`
+      : `Layers cleared ${p.layersCleared}/${p.totalLayers} — the entities ejected me.`,
     bankLine,
     p.isNewBest ? 'New personal best on this device.' : '',
     `${BRAND.url}/alice`,
   ]
     .filter(Boolean)
     .join('\n');
+}
+
+/** Opens X compose with prefilled voyage text (image still via Share / download). */
+export function buildAliceXShareUrl(p: AliceSharePayload): string {
+  const text = buildAliceShareText(p);
+  return `https://twitter.com/intent/tweet?text=${encodeURIComponent(text)}`;
 }
 
 /** Render a 1080×1350 story-style card. */
@@ -59,10 +74,18 @@ export async function renderAliceShareCard(p: AliceSharePayload): Promise<Blob> 
   const ctx = canvas.getContext('2d');
   if (!ctx) throw new Error('Canvas not available');
 
+  const victory = p.outcome !== 'defeat';
+
   const bg = ctx.createLinearGradient(0, 0, W, H);
-  bg.addColorStop(0, '#1a0533');
-  bg.addColorStop(0.45, '#0f0618');
-  bg.addColorStop(1, '#05010c');
+  if (victory) {
+    bg.addColorStop(0, '#1a0533');
+    bg.addColorStop(0.45, '#0f0618');
+    bg.addColorStop(1, '#05010c');
+  } else {
+    bg.addColorStop(0, '#1a0810');
+    bg.addColorStop(0.5, '#0c0410');
+    bg.addColorStop(1, '#050108');
+  }
   ctx.fillStyle = bg;
   ctx.fillRect(0, 0, W, H);
 
@@ -73,11 +96,17 @@ export async function renderAliceShareCard(p: AliceSharePayload): Promise<Blob> 
     ctx.fillStyle = g;
     ctx.fillRect(x - r, y - r, r * 2, r * 2);
   };
-  orb(220, 280, 320, 'rgba(168, 85, 247, 0.35)');
-  orb(880, 420, 280, 'rgba(244, 114, 182, 0.28)');
-  orb(540, 1100, 360, 'rgba(103, 232, 249, 0.18)');
+  if (victory) {
+    orb(220, 280, 320, 'rgba(168, 85, 247, 0.35)');
+    orb(880, 420, 280, 'rgba(244, 114, 182, 0.28)');
+    orb(540, 1100, 360, 'rgba(103, 232, 249, 0.18)');
+  } else {
+    orb(220, 280, 300, 'rgba(244, 63, 94, 0.28)');
+    orb(880, 400, 260, 'rgba(168, 85, 247, 0.22)');
+    orb(540, 1100, 320, 'rgba(251, 113, 133, 0.14)');
+  }
 
-  ctx.strokeStyle = 'rgba(192, 132, 252, 0.55)';
+  ctx.strokeStyle = victory ? 'rgba(192, 132, 252, 0.55)' : 'rgba(251, 113, 133, 0.5)';
   ctx.lineWidth = 4;
   fillRoundRect(ctx, 48, 48, W - 96, H - 96, 36);
   ctx.stroke();
@@ -87,7 +116,7 @@ export async function renderAliceShareCard(p: AliceSharePayload): Promise<Blob> 
   ctx.textAlign = 'center';
   ctx.fillText(BRAND.name.toUpperCase(), W / 2, 140);
 
-  ctx.fillStyle = '#fce7f3';
+  ctx.fillStyle = victory ? '#fce7f3' : '#fecdd3';
   ctx.font = '700 72px Georgia, "Times New Roman", serif';
   ctx.fillText(BRAND.aliceRoom, W / 2, 230);
 
@@ -95,23 +124,23 @@ export async function renderAliceShareCard(p: AliceSharePayload): Promise<Blob> 
   ctx.font = '500 32px system-ui, sans-serif';
   ctx.fillText(BRAND.aliceRoomNav, W / 2, 285);
 
-  ctx.strokeStyle = 'rgba(240, 171, 252, 0.35)';
+  ctx.strokeStyle = victory ? 'rgba(240, 171, 252, 0.35)' : 'rgba(251, 113, 133, 0.35)';
   ctx.lineWidth = 2;
   ctx.beginPath();
   ctx.moveTo(180, 330);
   ctx.lineTo(W - 180, 330);
   ctx.stroke();
 
-  ctx.fillStyle = '#67e8f9';
+  ctx.fillStyle = victory ? '#67e8f9' : '#fda4af';
   ctx.font = '700 28px system-ui, sans-serif';
-  ctx.fillText('VOYAGE COMPLETE', W / 2, 400);
+  ctx.fillText(victory ? 'VOYAGE COMPLETE' : 'TRIP KILL', W / 2, 400);
 
-  ctx.fillStyle = '#f0abfc';
+  ctx.fillStyle = victory ? '#f0abfc' : '#fb7185';
   ctx.font = '800 96px system-ui, sans-serif';
   ctx.fillText(`${p.layersCleared}/${p.totalLayers}`, W / 2, 520);
   ctx.fillStyle = 'rgba(233, 213, 255, 0.8)';
   ctx.font = '500 30px system-ui, sans-serif';
-  ctx.fillText('layers cleared', W / 2, 570);
+  ctx.fillText(victory ? 'layers cleared' : 'layers reached', W / 2, 570);
 
   const cardY = 640;
   const cardH = 160;
@@ -133,16 +162,23 @@ export async function renderAliceShareCard(p: AliceSharePayload): Promise<Blob> 
     ctx.fillText(value, x + cardW / 2, cardY + 112);
   };
 
-  drawCard(96, 'ALICE COINS', p.aliceCoins.toLocaleString(), 'rgba(240, 171, 252, 0.55)');
+  drawCard(
+    96,
+    'ALICE COINS',
+    p.aliceCoins.toLocaleString(),
+    victory ? 'rgba(240, 171, 252, 0.55)' : 'rgba(251, 113, 133, 0.45)',
+  );
   const chipVal =
     p.spendableEarned != null
       ? `+${p.spendableEarned.toLocaleString()}`
-      : `~${p.spendableEstimate.toLocaleString()}`;
+      : victory
+        ? `~${p.spendableEstimate.toLocaleString()}`
+        : '—';
   drawCard(
     96 + cardW + gap,
-    p.spendableEarned != null ? 'BANKED CHIPS' : 'CHIP EST.',
+    p.spendableEarned != null ? 'BANKED CHIPS' : victory ? 'CHIP EST.' : 'BANK',
     chipVal,
-    'rgba(103, 232, 249, 0.55)',
+    victory ? 'rgba(103, 232, 249, 0.55)' : 'rgba(148, 163, 184, 0.45)',
   );
 
   if (p.isNewBest) {
@@ -153,11 +189,21 @@ export async function renderAliceShareCard(p: AliceSharePayload): Promise<Blob> 
     ctx.fillStyle = 'rgba(110, 231, 183, 0.95)';
     ctx.font = '600 30px system-ui, sans-serif';
     ctx.fillText('Banked to the server ledger', W / 2, 880);
+  } else if (!victory) {
+    ctx.fillStyle = 'rgba(253, 164, 175, 0.9)';
+    ctx.font = '600 28px system-ui, sans-serif';
+    ctx.fillText('Presence required · try again slower', W / 2, 880);
   }
 
   ctx.fillStyle = 'rgba(233, 213, 255, 0.7)';
   ctx.font = '500 28px system-ui, sans-serif';
-  ctx.fillText('Pull for coins. Pull for shield. Choose carefully.', W / 2, 980);
+  ctx.fillText(
+    victory
+      ? 'Pull for coins. Pull for shield. Choose carefully.'
+      : 'Same door twice without presence ends the voyage.',
+    W / 2,
+    980,
+  );
 
   ctx.fillStyle = '#f0abfc';
   ctx.font = '700 36px system-ui, sans-serif';
@@ -181,26 +227,28 @@ export async function renderAliceShareCard(p: AliceSharePayload): Promise<Blob> 
 
 export type AliceShareResult = {
   status: 'shared' | 'downloaded' | 'copied' | 'preview' | 'failed';
-  /** Object URL for in-page preview — caller must revoke when done. */
   previewUrl?: string;
   message: string;
 };
 
-/**
- * Download without navigating the current tab.
- * Revokes the blob URL only after a long delay so the browser can finish reading it.
- */
+/** Build card image for in-page preview only (no download / share sheet). */
+export async function prepareAliceSharePreview(
+  p: AliceSharePayload,
+): Promise<{ previewUrl: string; text: string }> {
+  const text = buildAliceShareText(p);
+  const blob = await renderAliceShareCard(p);
+  return { previewUrl: URL.createObjectURL(blob), text };
+}
+
 function triggerBlobDownload(blob: Blob, filename: string): string {
   const url = URL.createObjectURL(blob);
   const a = document.createElement('a');
   a.href = url;
   a.download = filename;
   a.rel = 'noopener';
-  // Do NOT set target=_blank — that opens blob: in a new tab → ERR_FILE_NOT_FOUND when revoked
   a.style.display = 'none';
   document.body.appendChild(a);
   a.click();
-  // Keep node briefly; revoke URL later (not immediately)
   window.setTimeout(() => {
     try {
       a.remove();
@@ -218,22 +266,21 @@ function triggerBlobDownload(blob: Blob, filename: string): string {
   return url;
 }
 
-/**
- * Prefer native share with image; fall back to download + in-page preview.
- * Never navigates the current page to a blob: URL.
- */
+/** Prefer native share with image; fall back to download + in-page preview. */
 export async function shareAliceRun(p: AliceSharePayload): Promise<AliceShareResult> {
   const text = buildAliceShareText(p);
   try {
     const blob = await renderAliceShareCard(p);
-    const filename = 'bonklandia-alice-voyage.png';
+    const filename =
+      p.outcome === 'defeat'
+        ? 'bonklandia-alice-trip-kill.png'
+        : 'bonklandia-alice-voyage.png';
     const file = new File([blob], filename, { type: 'image/png' });
     const nav = navigator as Navigator & {
       canShare?: (data: ShareData) => boolean;
       share?: (data: ShareData) => Promise<void>;
     };
 
-    // 1) Native share with file (mobile)
     if (typeof nav.share === 'function') {
       const withFiles: ShareData = {
         title: `${BRAND.aliceRoom} · ${BRAND.name}`,
@@ -254,17 +301,18 @@ export async function shareAliceRun(p: AliceSharePayload): Promise<AliceShareRes
           if (err instanceof DOMException && err.name === 'AbortError') {
             return { status: 'failed', message: 'Share cancelled.' };
           }
-          // fall through
         }
       }
-      // 2) Text-only share (no navigation)
       try {
         await nav.share({
           title: `${BRAND.aliceRoom} · ${BRAND.name}`,
           text,
           url: `${BRAND.url}/alice`,
         });
-        return { status: 'shared', message: 'Shared text — save the card image from the preview.' };
+        return {
+          status: 'shared',
+          message: 'Shared text — attach the card image from the preview.',
+        };
       } catch (err) {
         if (err instanceof DOMException && err.name === 'AbortError') {
           return { status: 'failed', message: 'Share cancelled.' };
@@ -272,8 +320,6 @@ export async function shareAliceRun(p: AliceSharePayload): Promise<AliceShareRes
       }
     }
 
-    // 3) Download + preview (desktop / no Web Share)
-    // Create a durable preview URL for the UI (separate from download)
     const previewUrl = URL.createObjectURL(blob);
     triggerBlobDownload(blob, filename);
 
@@ -282,15 +328,15 @@ export async function shareAliceRun(p: AliceSharePayload): Promise<AliceShareRes
       await navigator.clipboard?.writeText(text);
       copied = true;
     } catch {
-      /* clipboard may be blocked */
+      /* */
     }
 
     return {
       status: copied ? 'copied' : 'preview',
       previewUrl,
       message: copied
-        ? 'Card ready — image download started · share text copied. Long-press the preview to save if needed.'
-        : 'Card ready — image download started. Long-press / right-click the preview to save.',
+        ? 'Card ready — image download started · share text copied.'
+        : 'Card ready — image download started. Long-press the preview to save.',
     };
   } catch {
     try {

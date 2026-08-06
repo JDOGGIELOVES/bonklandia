@@ -38,7 +38,12 @@ import {
   noteAliceVoyageEnd,
   type AliceLocalStats,
 } from '@/lib/alice-stats';
-import { shareAliceRun } from '@/lib/alice-share-card';
+import {
+  buildAliceXShareUrl,
+  prepareAliceSharePreview,
+  shareAliceRun,
+  type AliceSharePayload,
+} from '@/lib/alice-share-card';
 import { loadChipLedgerToken, saveChipLedgerToken } from '@/lib/chip-ledger-client';
 import { CASINO_SPIN_DURATION_MS, CASINO_SPIN_START_DELAY_MS } from '@/lib/casino-audio';
 import { useAliceAudio } from '@/hooks/useAliceAudio';
@@ -205,6 +210,8 @@ export default function AliceRoomGame() {
   const [shareMsg, setShareMsg] = useState<string | null>(null);
   const [shareBusy, setShareBusy] = useState(false);
   const [sharePreviewUrl, setSharePreviewUrl] = useState<string | null>(null);
+  /** Layers cleared at end-of-run (victory or trip kill) for the share card. */
+  const [endLayersCleared, setEndLayersCleared] = useState(0);
 
   const levelInfo = getLevelInfo(level);
   const defenseEntity = getEntityForLevel(level);
@@ -241,42 +248,114 @@ export default function AliceRoomGame() {
     setShowCoach(false);
   };
 
+  const revokeSharePreview = useCallback(() => {
+    setSharePreviewUrl(prev => {
+      if (prev) {
+        try {
+          URL.revokeObjectURL(prev);
+        } catch {
+          /* */
+        }
+      }
+      return null;
+    });
+  }, []);
+
+  const buildSharePayload = useCallback((): AliceSharePayload => {
+    const victory = phase === 'victory';
+    const layers = victory ? TOTAL_LEVELS : endLayersCleared || Math.max(0, level - 1);
+    const best = localStats?.bestAliceCoins ?? 0;
+    return {
+      aliceCoins: victory ? aliceCoins : 0,
+      layersCleared: layers,
+      totalLayers: TOTAL_LEVELS,
+      spendableEarned: victory ? spendableEarned : null,
+      spendableEstimate: victory ? aliceCoinsToSpendable(aliceCoins) : 0,
+      isNewBest: victory && aliceCoins > 0 && aliceCoins >= best,
+      banked: victory && spendableEarned != null,
+      outcome: victory ? 'victory' : 'defeat',
+    };
+  }, [phase, endLayersCleared, level, localStats?.bestAliceCoins, aliceCoins, spendableEarned]);
+
   const onShareRun = async () => {
     if (shareBusy) return;
     setShareBusy(true);
     setShareMsg(null);
-    // Drop previous preview so we don't leak blob URLs
-    if (sharePreviewUrl) {
-      try {
-        URL.revokeObjectURL(sharePreviewUrl);
-      } catch {
-        /* */
-      }
-      setSharePreviewUrl(null);
-    }
     try {
-      const best = localStats?.bestAliceCoins ?? 0;
-      const result = await shareAliceRun({
-        aliceCoins,
-        layersCleared: TOTAL_LEVELS,
-        totalLayers: TOTAL_LEVELS,
-        spendableEarned,
-        spendableEstimate: aliceCoinsToSpendable(aliceCoins),
-        isNewBest: aliceCoins > 0 && aliceCoins >= best,
-        banked: spendableEarned != null,
-      });
+      const result = await shareAliceRun(buildSharePayload());
       setShareMsg(result.message);
-      if (result.previewUrl) setSharePreviewUrl(result.previewUrl);
+      if (result.previewUrl) {
+        revokeSharePreview();
+        setSharePreviewUrl(result.previewUrl);
+      }
     } catch {
       setShareMsg('Could not build share card.');
     }
     setShareBusy(false);
   };
 
+  // Auto-render share card when the voyage ends so Share is the win moment.
+  useEffect(() => {
+    if (phase !== 'victory' && phase !== 'defeat') return;
+    let cancelled = false;
+    const payload = buildSharePayload();
+    void (async () => {
+      try {
+        const { previewUrl } = await prepareAliceSharePreview(payload);
+        if (cancelled) {
+          try {
+            URL.revokeObjectURL(previewUrl);
+          } catch {
+            /* */
+          }
+          return;
+        }
+        setSharePreviewUrl(prev => {
+          if (prev) {
+            try {
+              URL.revokeObjectURL(prev);
+            } catch {
+              /* */
+            }
+          }
+          return previewUrl;
+        });
+        setShareMsg(
+          phase === 'victory'
+            ? 'Your voyage card is ready — share it, then bank chips.'
+            : 'Trip card ready — share how deep you got, then try again.',
+        );
+      } catch {
+        if (!cancelled) setShareMsg('Share card unavailable — tap Share to retry.');
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [phase, spendableEarned, buildSharePayload]);
+
+  useEffect(() => {
+    return () => {
+      setSharePreviewUrl(prev => {
+        if (prev) {
+          try {
+            URL.revokeObjectURL(prev);
+          } catch {
+            /* */
+          }
+        }
+        return null;
+      });
+    };
+  }, []);
+
   const startDive = async () => {
     setBusy(true);
     setClaimMsg(null);
     setSpendableEarned(null);
+    setShareMsg(null);
+    revokeSharePreview();
+    setEndLayersCleared(0);
     setDoubleUsed(false);
     setTripKill(emptyTripKillState());
     setMelt(0);
@@ -382,9 +461,10 @@ export default function AliceRoomGame() {
       setJustLanded(false);
 
       if (fromLevel >= TOTAL_LEVELS) {
+        setEndLayersCleared(TOTAL_LEVELS);
         setPhase('victory');
-        setMessage('Through the layers. Bank your final tally when ready.');
-        pushLog('Boss cleared. Bank the final tally with your wallet.');
+        setMessage('Through the layers. Share your card, then bank when ready.');
+        pushLog('Boss cleared. Share the voyage — then bank with your wallet.');
         markVoyageEnd({
           aliceCoins: typeof coinsAtEnd === 'number' ? coinsAtEnd : aliceCoins,
           layersCleared: TOTAL_LEVELS,
@@ -542,12 +622,14 @@ export default function AliceRoomGame() {
     setTripKill(nextKill);
 
     if (killResult.kill) {
+      const cleared = Math.max(0, level - 1);
       setAliceCoins(0);
       setChoices([]);
+      setEndLayersCleared(cleared);
       setPhase('defeat');
       setMessage(killResult.message);
       pushLog(killResult.message);
-      markVoyageEnd({ aliceCoins: 0, layersCleared: Math.max(0, level - 1) });
+      markVoyageEnd({ aliceCoins: 0, layersCleared: cleared });
       setBusy(false);
       return;
     }
@@ -1229,7 +1311,8 @@ export default function AliceRoomGame() {
               )}
 
               {phase === 'victory' && (
-                <section className="alice-panel alice-victory">
+                <section className="alice-panel alice-victory alice-end-screen">
+                  <p className="alice-end-kicker">Through the layers</p>
                   <h2>Voyage complete</h2>
                   <div className="alice-run-recap" aria-label="Run recap">
                     <p className="alice-run-recap-title">Run recap</p>
@@ -1260,6 +1343,58 @@ export default function AliceRoomGame() {
                       )}
                     </ul>
                   </div>
+
+                  <div className="alice-share-hero" aria-label="Share your voyage">
+                    <h3 className="alice-share-hero-title">Share your voyage</h3>
+                    <p className="alice-share-hero-sub">
+                      Post the card so others can Eat the Mushroom. Then bank chips on the server ledger.
+                    </p>
+                    {sharePreviewUrl ? (
+                      <div className="alice-share-preview alice-share-preview-hero">
+                        {/* eslint-disable-next-line @next/next/no-img-element */}
+                        <img
+                          src={sharePreviewUrl}
+                          alt="Your Alice voyage share card"
+                          className="alice-share-preview-img"
+                        />
+                      </div>
+                    ) : (
+                      <p className="alice-share-msg">Building your card…</p>
+                    )}
+                    <div className="alice-share-cta-row">
+                      <button
+                        type="button"
+                        className="alice-btn alice-btn-share alice-btn-share-primary"
+                        disabled={shareBusy}
+                        onClick={() => void onShareRun()}
+                      >
+                        {shareBusy ? 'Sharing…' : 'Share voyage card'}
+                      </button>
+                      <a
+                        className="alice-btn alice-btn-x"
+                        href={buildAliceXShareUrl(buildSharePayload())}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                      >
+                        Post on X
+                      </a>
+                      {sharePreviewUrl ? (
+                        <a
+                          href={sharePreviewUrl}
+                          download="bonklandia-alice-voyage.png"
+                          className="alice-btn alice-btn-ghost"
+                        >
+                          Download PNG
+                        </a>
+                      ) : null}
+                    </div>
+                    {shareMsg ? <p className="alice-share-msg">{shareMsg}</p> : null}
+                    <p className="alice-share-preview-hint">
+                      Mobile: Share opens the system sheet. Desktop: download + text copy. Long-press the
+                      image if needed — stay on this page.
+                    </p>
+                  </div>
+
                   <p className="alice-bank-trust">
                     Only chips the server records after you bank can cash out at the Cashier. Alice Coins
                     alone are dream-wealth.
@@ -1267,7 +1402,7 @@ export default function AliceRoomGame() {
                   {!connected && (
                     <p className="alice-warn">Connect wallet to bank spendable chips.</p>
                   )}
-                  <div className="alice-actions">
+                  <div className="alice-actions alice-end-bank-row">
                     <button
                       type="button"
                       className="alice-btn alice-btn-primary"
@@ -1280,43 +1415,7 @@ export default function AliceRoomGame() {
                           ? 'Banked'
                           : 'Bank Final Tally'}
                     </button>
-                    <button
-                      type="button"
-                      className="alice-btn alice-btn-share"
-                      disabled={shareBusy}
-                      onClick={() => void onShareRun()}
-                    >
-                      {shareBusy ? 'Making card…' : 'Share voyage card'}
-                    </button>
-                    <Link href="/cashier" className="alice-btn alice-btn-ghost">
-                      {BRAND.cashier}
-                    </Link>
-                    <button type="button" className="alice-btn alice-btn-ghost" onClick={() => void startDive()}>
-                      Dive again
-                    </button>
                   </div>
-                  {shareMsg && <p className="alice-share-msg">{shareMsg}</p>}
-                  {sharePreviewUrl && (
-                    <div className="alice-share-preview">
-                      {/* eslint-disable-next-line @next/next/no-img-element */}
-                      <img
-                        src={sharePreviewUrl}
-                        alt="Your Alice voyage share card"
-                        className="alice-share-preview-img"
-                      />
-                      <p className="alice-share-preview-hint">
-                        Long-press or right-click the image to save / share. Stay on this page — do not open blob
-                        links in a new tab.
-                      </p>
-                      <a
-                        href={sharePreviewUrl}
-                        download="bonklandia-alice-voyage.png"
-                        className="alice-btn alice-btn-share"
-                      >
-                        Download card again
-                      </a>
-                    </div>
-                  )}
                   {claimMsg && <p className="alice-claim-msg">{claimMsg}</p>}
                   {spendableEarned != null && (
                     <div className="alice-bank-receipt" role="status">
@@ -1338,19 +1437,49 @@ export default function AliceRoomGame() {
                           disabled={shareBusy}
                           onClick={() => void onShareRun()}
                         >
-                          {shareBusy ? 'Making card…' : 'Share banked run'}
+                          {shareBusy ? 'Sharing…' : 'Share banked run'}
                         </button>
                       </div>
                     </div>
                   )}
+
+                  <nav className="alice-end-paths" aria-label="Where next">
+                    <p className="alice-end-paths-title">Where next?</p>
+                    <div className="alice-end-paths-grid">
+                      <Link href="/cashier" className="alice-btn alice-btn-ghost">
+                        {BRAND.cashier}
+                      </Link>
+                      <Link href="/depths" className="alice-btn alice-btn-ghost">
+                        {BRAND.depths}
+                      </Link>
+                      <button
+                        type="button"
+                        className="alice-btn alice-btn-ghost"
+                        onClick={() => void startDive()}
+                      >
+                        Dive again
+                      </button>
+                      <Link href="/" className="alice-btn alice-btn-ghost">
+                        Home
+                      </Link>
+                    </div>
+                  </nav>
                 </section>
               )}
 
               {phase === 'defeat' && (
-                <section className="alice-panel alice-victory">
+                <section className="alice-panel alice-victory alice-end-screen alice-end-defeat">
+                  <p className="alice-end-kicker">Ejected</p>
                   <h2>Trip kill</h2>
                   <p className="alice-warn">{message}</p>
-                  <p>Repeating the same strategy without presence ejects the voyage. No spendable tally.</p>
+                  <p>
+                    Repeating the same strategy without presence ejects the voyage. No spendable tally.
+                    You still cleared{' '}
+                    <strong>
+                      {endLayersCleared}/{TOTAL_LEVELS}
+                    </strong>{' '}
+                    layers — share it.
+                  </p>
                   {localStats && localStats.bestLayers > 0 && (
                     <p className="alice-run-recap-best-solo">
                       Device deepest: layer {localStats.bestLayers}/{TOTAL_LEVELS}
@@ -1359,10 +1488,53 @@ export default function AliceRoomGame() {
                         : ''}
                     </p>
                   )}
+
+                  <div className="alice-share-hero" aria-label="Share your trip">
+                    <h3 className="alice-share-hero-title">Share the depth you reached</h3>
+                    {sharePreviewUrl ? (
+                      <div className="alice-share-preview alice-share-preview-hero">
+                        {/* eslint-disable-next-line @next/next/no-img-element */}
+                        <img
+                          src={sharePreviewUrl}
+                          alt="Your Alice trip-kill share card"
+                          className="alice-share-preview-img"
+                        />
+                      </div>
+                    ) : (
+                      <p className="alice-share-msg">Building your card…</p>
+                    )}
+                    <div className="alice-share-cta-row">
+                      <button
+                        type="button"
+                        className="alice-btn alice-btn-share alice-btn-share-primary"
+                        disabled={shareBusy}
+                        onClick={() => void onShareRun()}
+                      >
+                        {shareBusy ? 'Sharing…' : 'Share trip card'}
+                      </button>
+                      <a
+                        className="alice-btn alice-btn-x"
+                        href={buildAliceXShareUrl(buildSharePayload())}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                      >
+                        Post on X
+                      </a>
+                    </div>
+                    {shareMsg ? <p className="alice-share-msg">{shareMsg}</p> : null}
+                  </div>
+
                   <div className="alice-actions">
-                    <button type="button" className="alice-btn alice-btn-primary" onClick={() => void startDive()}>
+                    <button
+                      type="button"
+                      className="alice-btn alice-btn-primary"
+                      onClick={() => void startDive()}
+                    >
                       Begin again — slower
                     </button>
+                    <Link href="/depths" className="alice-btn alice-btn-ghost">
+                      {BRAND.depths}
+                    </Link>
                     <Link href="/" className="alice-btn alice-btn-ghost">
                       Leave
                     </Link>

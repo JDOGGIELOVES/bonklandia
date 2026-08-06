@@ -6514,6 +6514,64 @@ html {
   opacity: 0.65;
   cursor: wait;
 }
+.alice-btn-share-primary {
+  min-width: 11rem;
+  padding: 0.85rem 1.5rem;
+  font-size: 1.02rem;
+  box-shadow: 0 0 22px rgba(34, 211, 238, 0.28);
+}
+.alice-btn-x {
+  background: #000;
+  color: #f8fafc;
+  border: 1px solid rgba(248, 250, 252, 0.35);
+  text-decoration: none;
+}
+.alice-btn-x:hover {
+  border-color: #fff;
+  box-shadow: 0 0 14px rgba(255, 255, 255, 0.12);
+}
+.alice-end-kicker {
+  margin: 0 0 0.25rem;
+  font-size: 0.78rem;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: rgba(167, 139, 250, 0.85);
+}
+.alice-end-defeat .alice-end-kicker {
+  color: rgba(251, 113, 133, 0.9);
+}
+.alice-share-hero {
+  margin: 1.15rem auto 1.25rem;
+  padding: 1.1rem 1rem 1.15rem;
+  max-width: 26rem;
+  border-radius: 1.1rem;
+  border: 1px solid rgba(103, 232, 249, 0.35);
+  background: linear-gradient(165deg, rgba(14, 40, 55, 0.55), rgba(20, 8, 40, 0.72));
+  box-shadow: 0 14px 40px rgba(0, 0, 0, 0.35);
+}
+.alice-end-defeat .alice-share-hero {
+  border-color: rgba(251, 113, 133, 0.35);
+  background: linear-gradient(165deg, rgba(50, 12, 24, 0.55), rgba(20, 8, 20, 0.72));
+}
+.alice-share-hero-title {
+  margin: 0 0 0.35rem;
+  font-size: 1.15rem;
+  color: #e9d5ff;
+  font-family: var(--font-display, Georgia, serif);
+}
+.alice-share-hero-sub {
+  margin: 0 0 0.85rem;
+  font-size: 0.88rem;
+  line-height: 1.45;
+  color: rgba(196, 181, 253, 0.88);
+}
+.alice-share-cta-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.55rem;
+  justify-content: center;
+  margin-top: 0.75rem;
+}
 .alice-share-msg {
   text-align: center;
   margin: 0.65rem 0 0;
@@ -6526,6 +6584,10 @@ html {
   margin: 1rem auto 0;
   max-width: 20rem;
   text-align: center;
+}
+.alice-share-preview-hero {
+  margin: 0 auto;
+  max-width: 14.5rem;
 }
 .alice-share-preview-img {
   width: 100%;
@@ -6544,6 +6606,29 @@ html {
 .alice-share-preview .alice-btn {
   display: inline-flex;
   text-decoration: none;
+}
+.alice-end-bank-row {
+  justify-content: center;
+  margin-top: 0.5rem;
+}
+.alice-end-paths {
+  margin: 1.35rem auto 0;
+  padding-top: 1rem;
+  border-top: 1px solid rgba(167, 139, 250, 0.25);
+  max-width: 26rem;
+}
+.alice-end-paths-title {
+  margin: 0 0 0.65rem;
+  font-size: 0.8rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: rgba(196, 181, 253, 0.75);
+}
+.alice-end-paths-grid {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  justify-content: center;
 }
 .alice-bank-receipt-actions {
   display: flex;
