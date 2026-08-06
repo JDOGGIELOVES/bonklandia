@@ -64,9 +64,9 @@ type CoinFlash = {
 /**
  * MUST match CSS `.alice-cabinet .slot-reels { --slot-reel-height }`
  * and each `.slot-symbol` height. Mismatch scrolls the strip into empty black.
- * 176px gives larger character art on mobile without breaking stop math.
+ * 204px: larger windows after reclaiming chrome under the machine.
  */
-const REEL_ITEM_HEIGHT = 176;
+const REEL_ITEM_HEIGHT = 204;
 const REEL_SPIN_MS = CASINO_SPIN_DURATION_MS;
 const LEVER_PULL_MS = CASINO_SPIN_START_DELAY_MS;
 
