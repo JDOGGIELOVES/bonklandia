@@ -3285,6 +3285,83 @@ html {
   line-height: 1.4;
 }
 
+/* Glued to the Bandit cabinet — primary Depths path */
+.casino-continue-under-machine {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.4rem;
+  margin: 0.65rem auto 0.85rem;
+  padding: 0 0.75rem;
+  max-width: 440px;
+  width: 100%;
+  box-sizing: border-box;
+}
+.casino-continue-under-machine .casino-continue-primary {
+  width: 100%;
+  max-width: none;
+  font-size: 1.15rem;
+  padding: 0.95rem 1.25rem;
+  animation: casino-continue-pulse 2.2s ease-in-out infinite;
+}
+.casino-continue-winnings {
+  margin: 0;
+  font-size: 0.88rem;
+  font-weight: 700;
+  color: #f0d878;
+  letter-spacing: 0.02em;
+}
+@keyframes casino-continue-pulse {
+  0%,
+  100% {
+    box-shadow:
+      0 0 24px rgba(212, 175, 55, 0.45),
+      0 6px 20px rgba(0, 0, 0, 0.4);
+  }
+  50% {
+    box-shadow:
+      0 0 36px rgba(240, 216, 120, 0.65),
+      0 6px 22px rgba(0, 0, 0, 0.45);
+  }
+}
+.casino-exit-actions-secondary-stack {
+  margin-top: 0.5rem;
+  padding-top: 0.75rem;
+  border-top: 1px solid rgba(212, 175, 55, 0.15);
+}
+.casino-exit-actions-secondary-stack .casino-optional-spins {
+  margin-top: 0.65rem;
+  padding-top: 0.65rem;
+}
+.casino-exit-actions-secondary-stack .casino-exit-buttons-secondary {
+  margin-top: 0.75rem;
+  opacity: 0.9;
+}
+
+@media (max-width: 720px) {
+  .casino-continue-under-machine {
+    margin-top: 0.45rem;
+    margin-bottom: 0.55rem;
+    position: sticky;
+    bottom: max(0.5rem, env(safe-area-inset-bottom, 0px));
+    z-index: 35;
+    padding: 0.5rem 0.65rem 0.65rem;
+    background: linear-gradient(
+      0deg,
+      rgba(12, 8, 18, 0.98) 55%,
+      rgba(12, 8, 18, 0.88) 85%,
+      transparent 100%
+    );
+  }
+  .casino-continue-under-machine .casino-continue-primary {
+    font-size: 1.08rem;
+    padding: 0.85rem 1rem;
+  }
+  .casino-exit-actions-secondary-stack {
+    padding-bottom: 4.5rem; /* room under sticky continue */
+  }
+}
+
 .casino-optional-spins {
   margin-top: 1.5rem;
   padding-top: 1.15rem;

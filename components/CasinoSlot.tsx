@@ -801,7 +801,7 @@ export default function CasinoSlot({
                 {spinsLeft > 0 ? (
                   <span>{spinsLeft} pull{spinsLeft !== 1 ? 's' : ''} remaining — yank the lever</span>
                 ) : onContinue ? (
-                  <span>Free pulls done — continue below, or buy a 25¢ quarter for another yank</span>
+                  <span>Free pulls done</span>
                 ) : quarterFirst || grantedSpins === 0 ? (
                   <span>No free pulls — buy a 25¢ quarter spin to yank the {BRAND.slotMachine}</span>
                 ) : (
@@ -813,43 +813,61 @@ export default function CasinoSlot({
           </div>
         </div>
 
+        {/* Immediately under the Bandit — primary path back to Depths (not buried in lore). */}
+        {!spinning && spinsLeft <= 0 && onContinue && (
+          <div className="casino-continue-under-machine">
+            <button
+              type="button"
+              onClick={() => void handleContinue()}
+              className="art-btn casino-continue-primary"
+            >
+              {continueLabel}
+            </button>
+            {totalWinnings > 0 && !settleError && (
+              <p className="casino-continue-winnings">
+                +{totalWinnings.toLocaleString()} chips
+                {connected ? ' banked' : ' · connect wallet to bank'}
+              </p>
+            )}
+          </div>
+        )}
+
         {settleError && (
           <p className="casino-result casino-settle-error">{settleError}</p>
         )}
 
-        {lastMessage && (
+        {lastMessage && spinsLeft > 0 && (
           <p className={`casino-result ${jackpotFlash ? 'casino-result-jackpot' : ''}`}>{lastMessage}</p>
         )}
 
-        {/* After free spins: Continue is first / primary — quarters & cashier are optional. */}
+        {/* Secondary actions only — continue already sits on the machine. */}
         {!spinning && spinsLeft <= 0 && (
-          <div className="casino-exit-actions">
-            {onContinue && (
-              <div className="casino-continue-hero">
-                <button
-                  type="button"
-                  onClick={() => void handleContinue()}
-                  className="art-btn casino-continue-primary"
-                >
-                  {continueLabel}
-                </button>
-                <p className="casino-continue-hint">
-                  Next chamber is ready. Quarters and the cashier stay optional below.
-                </p>
-              </div>
-            )}
-
-            {totalWinnings > 0 && !settleError && (
+          <div className={`casino-exit-actions ${onContinue ? 'casino-exit-actions-secondary-stack' : ''}`}>
+            {!onContinue && totalWinnings > 0 && !settleError && (
               <p className="casino-secure-note">
                 {totalWinnings.toLocaleString()} chips settled
                 {connected ? ' — banked as spendable for the cashier' : ' — connect wallet to make them spendable'}.
               </p>
             )}
 
-            <p className="casino-chips-summary">
-              You won <strong>{totalWinnings.toLocaleString()}</strong> Bonk Chips
-              {onContinue ? ' — keep playing or exchange at the cashier anytime.' : ` — exchange at the ${BRAND.cashier}.`}
-            </p>
+            {!onContinue && (
+              <p className="casino-chips-summary">
+                You won <strong>{totalWinnings.toLocaleString()}</strong> Bonk Chips — exchange at the{' '}
+                {BRAND.cashier}.
+              </p>
+            )}
+
+            <div className="casino-optional-spins">
+              <p className="casino-optional-spins-label">Optional — more spins</p>
+              <div className="casino-paid-spin-exit">
+                <PaidSpinButton
+                  disabled={spinning}
+                  sessionId={activeSecure.sessionId}
+                  settleToken={activeSecure.settleToken}
+                  onSpinGranted={grantPaidSpin}
+                />
+              </div>
+            </div>
 
             <div className="casino-exit-buttons casino-exit-buttons-secondary">
               <Link href="/cashier" className="art-btn casino-exit-btn casino-cashier-btn">
@@ -864,23 +882,6 @@ export default function CasinoSlot({
                 {exitLabel}
               </button>
             </div>
-
-            <div className="casino-optional-spins">
-              <p className="casino-optional-spins-label">Optional — more spins</p>
-              {(quarterFirst || grantedSpins === 0) && (
-                <p className="casino-chips-summary casino-quarter-cta">
-                  Want another pull? Feed the treasury a <strong>25¢ quarter spin</strong>, then continue when ready.
-                </p>
-              )}
-              <div className="casino-paid-spin-exit">
-                <PaidSpinButton
-                  disabled={spinning}
-                  sessionId={activeSecure.sessionId}
-                  settleToken={activeSecure.settleToken}
-                  onSpinGranted={grantPaidSpin}
-                />
-              </div>
-            </div>
           </div>
         )}
 
@@ -893,11 +894,14 @@ export default function CasinoSlot({
           </p>
         )}
 
-        <div className="casino-lore">
-          <p className="casino-lore-epithet">{BONGACHILL_LORE.epithet}</p>
-          <p className="casino-lore-text">{BONGACHILL_LORE.backstory}</p>
-          <p className="casino-lore-quote">{BONGACHILL_LORE.legend}</p>
-        </div>
+        {/* Lore is long — hide when Depths continue is active so the CTA isn't a maze. */}
+        {!(onContinue && spinsLeft <= 0 && !spinning) && (
+          <div className="casino-lore">
+            <p className="casino-lore-epithet">{BONGACHILL_LORE.epithet}</p>
+            <p className="casino-lore-text">{BONGACHILL_LORE.backstory}</p>
+            <p className="casino-lore-quote">{BONGACHILL_LORE.legend}</p>
+          </div>
+        )}
 
         {canPull && !lastMessage && (
           <p className="casino-prompt">Bonga Chill reaches in — tap her to yank the lever</p>
