@@ -111,26 +111,26 @@ export function useAliceAudio(level = 1) {
   }, []);
 
   const speakEntityLine = useCallback(
-    (text: string, entityId?: string, opts?: { force?: boolean }) => {
+    (text: string, entityId?: string, opts?: { force?: boolean; preferNetwork?: boolean }) => {
       if (!text.trim()) return;
       if (!isAliceSpeechSupported()) {
-        setVoiceStatus('Speech not supported in this browser. Try Chrome or Edge on desktop.');
+        setVoiceStatus('Audio playback not available in this browser.');
         return;
       }
-      // Opt-in VO for auto lines. “Hear them” / Voice On sample uses force.
+      // Opt-in VO for auto lines. “Hear them” / Voice On / Test use force.
       if (!opts?.force) {
         if (!isAliceVoiceEnabled()) return;
       }
       const music = musicRef.current;
-      // Do NOT call stopEntitySpeech() here — that cancel+delay breaks iOS gestures.
-      // speakAliceLine() replaces any in-flight line safely.
       setEntitySpeaking(true);
       setVoiceStatus('Speaking…');
-      // Duck trip music hard so system TTS is audible
+      // Duck trip music hard so voice can be heard
       if (!isMusicMuted()) music.setMusicDucked(true);
       speakAliceLine(text, {
         entityId,
         volume: 1,
+        // Test / Hear: prefer network TTS — works when Windows Speech is broken
+        preferNetwork: opts?.preferNetwork ?? opts?.force === true,
         onStart: () => {
           setEntitySpeaking(true);
           setVoiceStatus(null);
@@ -175,12 +175,12 @@ export function useAliceAudio(level = 1) {
       setVoiceStatus('Voice off.');
       return next;
     }
-    // Short plain test line — easiest for system TTS to speak
-    speakEntityLine('Voice is on.', undefined, { force: true });
+    // Network TTS so you hear something even if OS speech is dead
+    speakEntityLine('Voice is on.', undefined, { force: true, preferNetwork: true });
     return next;
   }, [stopEntitySpeech, speakEntityLine]);
 
-  /** Enable VO (if needed) and speak a line now — used by “Hear them speak”. */
+  /** Enable VO (if needed) and speak a line now — used by “Hear them speak” / Test voice. */
   const hearEntityLine = useCallback(
     (text: string, entityId?: string) => {
       const line = text.trim() || 'Hello from the Alice Room.';
@@ -189,8 +189,8 @@ export function useAliceAudio(level = 1) {
         setAliceVoiceEnabled(true);
         setVoiceEnabledState(true);
       }
-      // Must be called from a click handler (user gesture)
-      speakEntityLine(line, entityId, { force: true });
+      // Network-first for reliability; must be called from a click
+      speakEntityLine(line, entityId, { force: true, preferNetwork: true });
     },
     [speakEntityLine],
   );
