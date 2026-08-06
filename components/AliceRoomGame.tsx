@@ -25,7 +25,12 @@ import {
 import { getEntityForLevel } from '@/lib/alice-room/symbols';
 import { ALL_ALICE_SYMBOLS, type AliceSymbol } from '@/lib/alice-room/symbols';
 import AliceEntityPortrait from '@/components/AliceEntityPortrait';
+import AliceTripFx from '@/components/AliceTripFx';
 import { BRAND } from '@/lib/brand';
+import {
+  makeTripBurst,
+  type AliceTripBurst,
+} from '@/lib/alice-room/entity-fx';
 import {
   ALICE_COACH_TIPS,
   dismissAliceCoach,
@@ -65,6 +70,14 @@ const REEL_SPIN_MS = CASINO_SPIN_DURATION_MS;
 const LEVER_PULL_MS = CASINO_SPIN_START_DELAY_MS;
 
 type LogLine = { id: number; text: string };
+
+/** Ambient vibe entity while playing (current layer). */
+function ambientEntityIdFor(level: number, phase: AlicePhase): string | null {
+  if (phase === 'intro') return null;
+  if (phase === 'victory') return 'the-other';
+  if (phase === 'defeat') return getEntityForLevel(Math.max(1, level)).id;
+  return getEntityForLevel(level).id;
+}
 
 function AliceSymbolCell({ symbol }: { symbol: AliceSymbol }) {
   const [imgFailed, setImgFailed] = useState(false);
@@ -212,6 +225,15 @@ export default function AliceRoomGame() {
   const [sharePreviewUrl, setSharePreviewUrl] = useState<string | null>(null);
   /** Layers cleared at end-of-run (victory or trip kill) for the share card. */
   const [endLayersCleared, setEndLayersCleared] = useState(0);
+  /** Personality-matched psychedelic screen burst. */
+  const [tripBurst, setTripBurst] = useState<AliceTripBurst | null>(null);
+
+  const fireTripFx = useCallback(
+    (entityId: string, mode: AliceTripBurst['mode']) => {
+      setTripBurst(makeTripBurst(entityId, mode));
+    },
+    [],
+  );
 
   const levelInfo = getLevelInfo(level);
   const defenseEntity = getEntityForLevel(level);
@@ -392,6 +414,7 @@ export default function AliceRoomGame() {
       setMessage('Layer 1 — pull the Alice Machine. Dream-wealth only until the end.');
       pushLog('Eat the Mushroom. Ten layers. Reality softens.');
       pushLog('Only the final tally after The Other can become spendable chips.');
+      fireTripFx('machine-elf', 'enter');
     } catch {
       setMessage('Network error opening Alice Room.');
     }
@@ -462,6 +485,7 @@ export default function AliceRoomGame() {
 
       if (fromLevel >= TOTAL_LEVELS) {
         setEndLayersCleared(TOTAL_LEVELS);
+        fireTripFx('the-other', 'ascend');
         setPhase('victory');
         setMessage('Through the layers. Share your card, then bank when ready.');
         pushLog('Boss cleared. Share the voyage — then bank with your wallet.');
@@ -475,6 +499,8 @@ export default function AliceRoomGame() {
 
       const nextLevel = fromLevel + 1;
       const next = getLevelInfo(nextLevel);
+      const nextEntity = getEntityForLevel(nextLevel);
+      fireTripFx(nextEntity.id, 'enter');
       setLevel(nextLevel);
       setMessage(`Deeper… ${next.name}. Pull when ready.`);
       pushLog(`Layer cleared → ${next.name}.`);
@@ -484,7 +510,7 @@ export default function AliceRoomGame() {
       setPhase('player-spin');
       setBusy(false);
     },
-    [pushLog, stopEntitySpeech, markVoyageEnd, aliceCoins],
+    [pushLog, stopEntitySpeech, markVoyageEnd, aliceCoins, fireTripFx],
   );
 
   const runDefenseSpin = useCallback(
@@ -508,6 +534,7 @@ export default function AliceRoomGame() {
         void playLandClunk('shield');
         void playWinResult('fam-any');
         flashPayline('shield');
+        fireTripFx(entity.id, 'clear');
         setTripKill(s => resetTripKillStreak(s));
         setMessage(result.message);
         setPhase('block-result');
@@ -525,6 +552,7 @@ export default function AliceRoomGame() {
       stopEntitySpeech();
       void playLandClunk('soft');
       void playWinResult('none');
+      fireTripFx(entity.id, 'encounter');
       setPhase('block-result');
       setShieldBeat({
         kind: 'fail',
@@ -560,6 +588,7 @@ export default function AliceRoomGame() {
       speakEntityLine,
       stopEntitySpeech,
       playLandClunk,
+      fireTripFx,
     ],
   );
 
@@ -623,6 +652,8 @@ export default function AliceRoomGame() {
 
     if (killResult.kill) {
       const cleared = Math.max(0, level - 1);
+      const ejectEntity = getEntityForLevel(level);
+      fireTripFx(ejectEntity.id, 'eject');
       setAliceCoins(0);
       setChoices([]);
       setEndLayersCleared(cleared);
@@ -737,8 +768,9 @@ export default function AliceRoomGame() {
                   : 'PULL';
 
   const meltClass = `alice-melt-${Math.min(10, Math.max(0, melt || level - 1))}`;
-
   const inPlay = phase !== 'intro';
+  const ambientEntity = ambientEntityIdFor(level, phase);
+  const vibeClass = ambientEntity ? `alice-vibe-${ambientEntity}` : '';
 
   return (
     <div
@@ -746,15 +778,24 @@ export default function AliceRoomGame() {
         'alice-room',
         'alice-machine-scene',
         meltClass,
+        vibeClass,
         inPlay ? 'alice-room-playing' : '',
         canPullPlayer ? 'alice-room-pull-ready' : '',
         canPullPrize ? 'alice-room-prize-ready' : '',
         canPullShield ? 'alice-room-shield-ready' : '',
+        tripBurst ? 'alice-room-tripping' : '',
       ]
         .filter(Boolean)
         .join(' ')}
+      data-entity-vibe={ambientEntity ?? undefined}
     >
       <div className="alice-room-bg" aria-hidden />
+      <AliceTripFx
+        ambientEntityId={inPlay ? ambientEntity : null}
+        burst={tripBurst}
+        active={inPlay}
+        onBurstEnd={() => setTripBurst(null)}
+      />
       <div className="casino-scene-vignette alice-vignette" />
       <div className="alice-room-content">
         <header className={`casino-header alice-machine-header ${inPlay ? 'alice-header-play' : ''}`}>
