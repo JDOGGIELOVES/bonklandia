@@ -911,10 +911,10 @@ export default function Home() {
                             <div className="champion-plaque-portrait">
                               <Image
                                 src={char.img}
-                                alt={char.name}
+                                alt={`${char.name} token logo`}
                                 width={180}
-                                height={240}
-                                className="character-img champion-plaque-img object-contain"
+                                height={180}
+                                className="character-img champion-plaque-img champion-plaque-logo object-contain"
                                 unoptimized
                               />
                             </div>
@@ -948,13 +948,13 @@ export default function Home() {
                     <div className="illuminated-scroll-rod illuminated-scroll-rod-top" aria-hidden />
                     {preview ? (
                       <div key={preview.id} className="character-preview-content illuminated-scroll-body">
-                        <div className="illuminated-scroll-portrait">
+                        <div className="illuminated-scroll-portrait illuminated-scroll-portrait-logo">
                           <Image
                             src={preview.img}
-                            alt={preview.name}
-                            width={120}
-                            height={160}
-                            className="character-img object-contain"
+                            alt={`${preview.name} token logo`}
+                            width={140}
+                            height={140}
+                            className="character-img object-contain champion-plaque-logo"
                             unoptimized
                           />
                         </div>
