@@ -1007,30 +1007,44 @@ html {
 .champion-plaque-portrait {
   position: relative;
   margin: 0 auto;
-  padding: 6px;
-  max-width: 160px;
+  padding: 8px;
+  max-width: 148px;
+  aspect-ratio: 1;
+  border-radius: 50%;
   background:
-    linear-gradient(155deg, rgba(212, 175, 55, 0.5) 0%, rgba(100, 70, 30, 0.3) 50%, rgba(40, 28, 20, 0.8) 100%);
-  border: 3px solid rgba(212, 175, 55, 0.45);
+    radial-gradient(circle at 35% 30%, rgba(255, 240, 180, 0.2), transparent 50%),
+    linear-gradient(155deg, rgba(212, 175, 55, 0.55) 0%, rgba(40, 28, 20, 0.9) 100%);
+  border: 3px solid rgba(212, 175, 55, 0.55);
   box-shadow:
     inset 0 0 20px rgba(0, 0, 0, 0.4),
-    0 8px 20px rgba(0, 0, 0, 0.45);
+    0 8px 20px rgba(0, 0, 0, 0.45),
+    0 0 24px rgba(212, 175, 55, 0.15);
+  overflow: hidden;
 }
 
 .champion-plaque-portrait::before {
   content: "";
   position: absolute;
   inset: 0;
-  background: linear-gradient(135deg, rgba(255, 240, 180, 0.15) 0%, transparent 50%);
+  border-radius: 50%;
+  background: linear-gradient(135deg, rgba(255, 240, 180, 0.18) 0%, transparent 50%);
   pointer-events: none;
+  z-index: 1;
 }
 
 .champion-plaque-img {
   width: 100%;
-  height: auto;
-  max-height: 200px;
+  height: 100%;
+  max-height: none;
   display: block;
-  filter: drop-shadow(0 8px 16px rgba(0, 0, 0, 0.5));
+  object-fit: contain;
+  filter: drop-shadow(0 4px 12px rgba(0, 0, 0, 0.45));
+}
+
+.champion-plaque-logo {
+  border-radius: 50%;
+  padding: 6%;
+  box-sizing: border-box;
 }
 
 .champion-plaque-difficulty {
