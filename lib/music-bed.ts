@@ -2,7 +2,7 @@
  * Exclusive music bed ownership — no engine imports (cycle-safe).
  */
 
-export type MusicBed = 'casino' | 'alice';
+export type MusicBed = 'casino' | 'alice' | 'depths';
 
 let activeMusicBed: 'none' | MusicBed = 'none';
 

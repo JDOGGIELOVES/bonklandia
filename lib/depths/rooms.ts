@@ -4,6 +4,7 @@ import {
   pickRandomRival,
 } from '@/lib/rival-enemies';
 import type { Enemy } from '@/lib/enemies';
+import { pickDepthsEventPack } from '@/lib/depths/events';
 
 export type DepthsRoomKind = 'fight' | 'elite' | 'event' | 'rest' | 'boss';
 
@@ -15,14 +16,29 @@ export type DepthsRoom = {
   enemy?: Enemy;
   /** Event choice outcomes applied when picked */
   event?: {
-    a: { label: string; log: string; hpDelta: number; vibeDelta: number; chips: number };
-    b: { label: string; log: string; hpDelta: number; vibeDelta: number; chips: number };
+    a: {
+      label: string;
+      whisper?: string;
+      log: string;
+      hpDelta: number;
+      vibeDelta: number;
+      chips: number;
+    };
+    b: {
+      label: string;
+      whisper?: string;
+      log: string;
+      hpDelta: number;
+      vibeDelta: number;
+      chips: number;
+    };
   };
 };
 
 /** One floor: branching-lite path of 6 nodes ending in a boss. */
 export function buildDepthsFloor(floor: number, run = 1): DepthsRoom[] {
   const f = Math.max(1, floor);
+  const eventPack = pickDepthsEventPack(f * 17 + run * 31);
   return [
     {
       id: `${f}-1`,
@@ -34,22 +50,24 @@ export function buildDepthsFloor(floor: number, run = 1): DepthsRoom[] {
     {
       id: `${f}-2`,
       kind: 'event',
-      label: "Jeet's Fork",
-      blurb: 'A glowing terminal offers two bad ideas.',
+      label: eventPack.label,
+      blurb: eventPack.blurb,
       event: {
         a: {
-          label: 'Take the free chips',
-          log: 'You yoink the chips. Your vibe feels slightly scammed.',
-          hpDelta: 0,
-          vibeDelta: -8,
-          chips: 25,
+          label: eventPack.a.label,
+          whisper: eventPack.a.whisper,
+          log: eventPack.a.log,
+          hpDelta: eventPack.a.hpDelta,
+          vibeDelta: eventPack.a.vibeDelta,
+          chips: eventPack.a.chips,
         },
         b: {
-          label: 'Smash the terminal',
-          log: 'Bonk energy floods the room. HP restored a bit.',
-          hpDelta: 30,
-          vibeDelta: 10,
-          chips: 0,
+          label: eventPack.b.label,
+          whisper: eventPack.b.whisper,
+          log: eventPack.b.log,
+          hpDelta: eventPack.b.hpDelta,
+          vibeDelta: eventPack.b.vibeDelta,
+          chips: eventPack.b.chips,
         },
       },
     },

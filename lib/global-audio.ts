@@ -15,6 +15,7 @@ import { getAliceAudioEngine } from '@/lib/alice-audio';
 import { stopAliceSpeech } from '@/lib/alice-voice';
 import { getCasinoAudioEngine } from '@/lib/casino-audio';
 import { getCombatAudioEngine } from '@/lib/combat-audio';
+import { getDepthsAudioEngine } from '@/lib/depths-audio';
 import { getActiveMusicBed, setActiveMusicBed, type MusicBed } from '@/lib/music-bed';
 
 export type { MusicBed, AppAudioPrefs };
@@ -34,6 +35,11 @@ export function stopAllMusicBeds(): void {
     /* */
   }
   try {
+    getDepthsAudioEngine().stopAmbience();
+  } catch {
+    /* */
+  }
+  try {
     stopAliceSpeech();
   } catch {
     /* */
@@ -41,20 +47,28 @@ export function stopAllMusicBeds(): void {
 }
 
 /**
- * Only one music bed may run. Stops the other bed’s music without killing SFX.
+ * Only one music bed may run. Stops the other beds’ music without killing SFX.
  */
 export function claimMusicBed(bed: MusicBed): void {
   setActiveMusicBed(bed);
-  if (bed === 'casino') {
+  if (bed !== 'casino') {
+    try {
+      getCasinoAudioEngine().stopMusicOnly();
+    } catch {
+      /* */
+    }
+  }
+  if (bed !== 'alice') {
     try {
       getAliceAudioEngine().stopAmbience();
       stopAliceSpeech();
     } catch {
       /* */
     }
-  } else {
+  }
+  if (bed !== 'depths') {
     try {
-      getCasinoAudioEngine().stopMusicOnly();
+      getDepthsAudioEngine().stopAmbience();
     } catch {
       /* */
     }
@@ -74,6 +88,11 @@ export function applyAudioChannels(prefs?: AppAudioPrefs): void {
   try {
     // Alice engine is music/VO only.
     getAliceAudioEngine().setMuted(p.musicMuted);
+  } catch {
+    /* */
+  }
+  try {
+    getDepthsAudioEngine().setMuted(p.musicMuted);
   } catch {
     /* */
   }

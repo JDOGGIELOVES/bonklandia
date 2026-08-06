@@ -39,7 +39,6 @@ import {
   DEPTHS_CRIT_MULT,
   depthsAbilityCooldownTurns,
   isAbilityOnCooldown,
-  depthsRestHealFraction,
   scaleDepthsCounter,
   scaleDepthsEnemy,
   scaleDepthsPlayerDamage,
@@ -50,11 +49,23 @@ import {
   buildDepthsDefeatBanditSession,
   buildDepthsRoomBanditSession,
 } from '@/lib/depths/bandit';
+import {
+  depthsRestChoices,
+  type DepthsRestChoiceId,
+} from '@/lib/depths/events';
+import {
+  abilityRole,
+  abilityRoleLabel,
+  roomKindMeta,
+  roomThreatLine,
+} from '@/lib/depths/presentation';
 import { getAbilityMotionClass, getEnemyMotionClass } from '@/lib/combat-vfx';
 import { useWallet } from '@solana/wallet-adapter-react';
 import { useBonkBank } from '@/hooks/useBonkBank';
 import { useCombatAudio } from '@/hooks/useCombatAudio';
 import { earnSpendableChips } from '@/lib/chips-client';
+import { claimMusicBed, isMusicMuted } from '@/lib/global-audio';
+import { DEPTHS_AMBIENCE_CREDIT, getDepthsAudioEngine } from '@/lib/depths-audio';
 import CombatArenaVfx from '@/components/CombatArenaVfx';
 import CasinoSlot from '@/components/CasinoSlot';
 import {
@@ -119,9 +130,42 @@ export default function DepthsGame() {
   const [banditKind, setBanditKind] = useState<BanditKind>('room');
   const [pendingAdvance, setPendingAdvance] = useState(false);
   const [showCoach, setShowCoach] = useState(false);
+  /** Full-screen chamber enter / clear flash */
+  const [chamberFx, setChamberFx] = useState<{
+    key: number;
+    mode: 'enter' | 'clear';
+    label: string;
+  } | null>(null);
+  const [logOpen, setLogOpen] = useState(false);
+  const [turnBanner, setTurnBanner] = useState<'you' | 'enemy' | null>(null);
 
   useEffect(() => {
     setShowCoach(!isDepthsCoachDismissed());
+  }, []);
+
+  useEffect(() => {
+    return () => {
+      try {
+        getDepthsAudioEngine().stopAmbience();
+      } catch {
+        /* */
+      }
+    };
+  }, []);
+
+  const ensureDepthsMusic = useCallback(async () => {
+    if (isMusicMuted()) return;
+    claimMusicBed('depths');
+    const eng = getDepthsAudioEngine();
+    await eng.ensureContext();
+    if (!eng.isMusicRunning) {
+      await eng.startAmbience();
+    }
+  }, []);
+
+  const fireChamberFx = useCallback((mode: 'enter' | 'clear', label: string) => {
+    setChamberFx({ key: Date.now(), mode, label });
+    window.setTimeout(() => setChamberFx(null), mode === 'clear' ? 1100 : 900);
   }, []);
 
   // Combat presentation
@@ -191,6 +235,11 @@ export default function DepthsGame() {
 
   const openBandit = useCallback(
     (session: CasinoSession, kind: BanditKind, willAdvance: boolean) => {
+      try {
+        getDepthsAudioEngine().stopAmbience();
+      } catch {
+        /* */
+      }
       const secure = buildLocalSecureSession(session);
       setCasinoSession(session);
       setCasinoSecure(secure);
@@ -226,7 +275,9 @@ export default function DepthsGame() {
       `Floor ${floor}: ${floorRooms.length} chambers. Heavy moves go on cooldown — mix your kit.`,
     ]);
     setPhase('map');
+    fireChamberFx('enter', floorRooms[0]?.label ?? 'The Depths');
     void playWaveEnter(1);
+    void ensureDepthsMusic();
   };
 
   const currentRoom = rooms[roomIndex] ?? null;
@@ -236,6 +287,8 @@ export default function DepthsGame() {
     setCooldowns({});
     pushLog(`--- ${room.label} ---`);
     pushLog(room.blurb);
+    fireChamberFx('enter', room.label);
+    void ensureDepthsMusic();
 
     if (room.kind === 'rest') {
       setPhase('rest');
@@ -253,6 +306,7 @@ export default function DepthsGame() {
       setEnemyMotion(getEnemyMotionClass(scaled.id));
       setFighterIdle(true);
       setEnemyIdle(true);
+      setTurnBanner('you');
       pushLog(`${scaled.name} appears! (${scaled.hp} Cope HP)`);
       pushLog(scaled.taunt);
       setPhase('fight');
@@ -275,13 +329,15 @@ export default function DepthsGame() {
     }
     setRoomIndex(next);
     setPhase('map');
-  }, [fighter, roomIndex, rooms.length, openBandit, pushLog, playRunComplete]);
+    void ensureDepthsMusic();
+  }, [fighter, roomIndex, rooms.length, openBandit, pushLog, playRunComplete, ensureDepthsMusic]);
 
   const onFightVictory = useCallback(
     async (room: DepthsRoom | null) => {
       if (!fighter || !room) return;
       setChambersCleared(c => c + 1);
       pushLog(room.enemy?.defeatLine ?? 'Chamber cleared!');
+      fireChamberFx('clear', room.label);
       const kind = (room.kind === 'elite' || room.kind === 'boss' ? room.kind : 'fight') as DepthsRoomKind;
       const session = buildDepthsRoomBanditSession(kind, fighter.difficulty);
       pushLog(
@@ -289,9 +345,10 @@ export default function DepthsGame() {
           'Then optional quarter spins, or continue the Depths.',
       );
       void playWaveClear();
+      await wait(650);
       openBandit(session, 'room', true);
     },
-    [fighter, openBandit, playWaveClear, pushLog],
+    [fighter, openBandit, playWaveClear, pushLog, fireChamberFx],
   );
 
   const onPlayerDefeat = useCallback(() => {
@@ -302,14 +359,36 @@ export default function DepthsGame() {
     openBandit(session, 'defeat', false);
   }, [fighter, chambersCleared, openBandit, playDefeat, pushLog]);
 
-  const doRest = () => {
+  const doRestChoice = (choiceId: DepthsRestChoiceId) => {
     if (!fighter) return;
-    const frac = depthsRestHealFraction(fighter.difficulty);
-    const heal = Math.round(fighter.hp * frac);
-    const vibeGain = fighter.difficulty === 'easy' ? 28 : 18;
-    setPlayerHP(h => Math.min(fighter.hp, h + heal));
-    setPlayerVibe(v => Math.min(100, v + vibeGain));
-    pushLog(`Frequency Camp restores ${heal} HP and ${vibeGain} vibe.`);
+    const pick = depthsRestChoices(fighter.difficulty).find(c => c.id === choiceId);
+    if (!pick) return;
+    const heal = Math.round(fighter.hp * pick.healFrac);
+    let hp = Math.min(fighter.hp, playerHP + heal);
+    if (pick.hpRisk > 0) {
+      hp = Math.max(1, hp - pick.hpRisk);
+      pushLog(`Scavenge scrapes you for ${pick.hpRisk} HP.`);
+    }
+    setPlayerHP(hp);
+    setPlayerVibe(v => Math.min(100, v + pick.vibeGain));
+    pushLog(
+      pick.id === 'scavenge'
+        ? `You scavenge +${pick.chips} chips, +${heal} HP, +${pick.vibeGain} vibe.`
+        : `Camp: +${heal} HP, +${pick.vibeGain} vibe.`,
+    );
+    if (pick.chips > 0) {
+      setRunChips(c => c + pick.chips);
+      addChips(pick.chips);
+      const wallet = publicKey?.toBase58();
+      if (connected && wallet) {
+        void earnSpendableChips({
+          wallet,
+          amount: pick.chips,
+          source: 'depths-event',
+        });
+      }
+    }
+    fireChamberFx('clear', 'Camp packed');
     advanceAfterBandit();
   };
 
@@ -364,6 +443,7 @@ export default function DepthsGame() {
 
     attackLockRef.current = true;
     setBusy(true);
+    setTurnBanner('you');
     setFighterIdle(false);
     setEnemyIdle(false);
 
@@ -461,6 +541,7 @@ export default function DepthsGame() {
       }
 
       // Enemy turn
+      setTurnBanner('enemy');
       await wait(280);
       const abilityRes = resolveEnemyAbility(enemy, {
         playerHP: hp,
@@ -549,11 +630,17 @@ export default function DepthsGame() {
       setBusy(false);
       setFighterIdle(true);
       setEnemyIdle(true);
+      setTurnBanner('you');
     }
   };
 
   const resetToHub = () => {
     attackLockRef.current = false;
+    try {
+      getDepthsAudioEngine().stopAmbience();
+    } catch {
+      /* */
+    }
     setPhase('hub');
     setFighter(null);
     setEnemy(null);
@@ -563,6 +650,8 @@ export default function DepthsGame() {
     setCasinoSession(null);
     setCasinoSecure(null);
     setCooldowns({});
+    setTurnBanner(null);
+    setChamberFx(null);
     clearPlayerAttackVfx();
     clearEnemyAttackVfx();
   };
@@ -731,36 +820,58 @@ export default function DepthsGame() {
     rooms.length > 0 ? Math.round(((roomIndex + (phase === 'victory' ? 1 : 0)) / rooms.length) * 100) : 0;
 
   return (
-    <div className="depths-shell">
-      <header className="depths-header depths-header-compact">
+    <div
+      className={`depths-shell ${phase === 'fight' ? 'depths-shell-fight' : ''} ${phase === 'map' ? 'depths-shell-map' : ''}`}
+    >
+      {chamberFx && (
+        <div
+          key={chamberFx.key}
+          className={`depths-chamber-fx depths-chamber-fx-${chamberFx.mode}`}
+          aria-hidden
+        >
+          <span className="depths-chamber-fx-label">{chamberFx.label}</span>
+        </div>
+      )}
+
+      <header
+        className={`depths-header depths-header-compact ${phase === 'fight' ? 'depths-header-fight' : ''}`}
+      >
         <div className="depths-nav">
-          <button type="button" className="art-btn px-4 py-2 text-[#f0d878]" onClick={resetToHub}>
-            Abort run
+          <button type="button" className="art-btn px-3 py-1.5 text-[#f0d878]" onClick={resetToHub}>
+            {phase === 'fight' ? 'Abort' : 'Abort run'}
           </button>
-          <Link href="/alice" className="art-btn px-4 py-2 text-[#f0abfc]">
-            {BRAND.aliceRoomNav}
-          </Link>
-          <Link href="/cashier" className="art-btn px-4 py-2 text-[#f0d878]">
-            {BRAND.cashier}
-          </Link>
+          {phase !== 'fight' && (
+            <>
+              <Link href="/alice" className="art-btn px-3 py-1.5 text-[#f0abfc]">
+                {BRAND.aliceRoomNav}
+              </Link>
+              <Link href="/cashier" className="art-btn px-3 py-1.5 text-[#f0d878]">
+                Cashier
+              </Link>
+            </>
+          )}
           <button
             type="button"
-            className="art-btn px-4 py-2 text-[#f0d878]"
+            className="art-btn px-3 py-1.5 text-[#f0d878]"
             onClick={() => toggleMute()}
             aria-pressed={muted}
+            title={DEPTHS_AMBIENCE_CREDIT}
           >
-            {muted ? '🔇 Music Off' : '🔊 Music On'}
+            {muted ? '🔇 Off' : '🔊 On'}
           </button>
           <span className="depths-chip-pill">
-            Cleared {chambersCleared} · Bank {chips.toLocaleString()}
-            {runChips > 0 ? ` · Run +${runChips}` : ''}
+            {phase === 'fight'
+              ? `${playerHP}/${fighter?.hp ?? 0}`
+              : `Cleared ${chambersCleared} · Bank ${chips.toLocaleString()}${runChips > 0 ? ` · +${runChips}` : ''}`}
           </span>
         </div>
         {fighter && (
           <div className="depths-status-bar">
             <p className="depths-fighter-line">
-              {fighter.name} · HP {playerHP}/{fighter.hp} · Vibe {playerVibe}
-              {blockNext ? ' · BLOCK READY' : ''}
+              {fighter.name}
+              {phase === 'fight'
+                ? ` · ${playerHP}/${fighter.hp} · V${playerVibe}${blockNext ? ' · BLK' : ''}`
+                : ` · HP ${playerHP}/${fighter.hp} · Vibe ${playerVibe}${blockNext ? ' · BLOCK' : ''}`}
             </p>
             {rooms.length > 0 && (
               <div
@@ -778,7 +889,7 @@ export default function DepthsGame() {
                   />
                 </div>
                 <span className="depths-progress-label">
-                  Floor {floor} · {roomIndex + 1}/{rooms.length}
+                  F{floor} · {roomIndex + 1}/{rooms.length}
                 </span>
               </div>
             )}
@@ -788,23 +899,31 @@ export default function DepthsGame() {
 
       {phase === 'map' && currentRoom && (
         <section className="depths-map">
-          <h2 className="depths-section-title">
-            Next chamber · {roomIndex + 1}/{rooms.length}
-          </h2>
-          <div className="depths-path">
-            {rooms.map((room, i) => (
-              <div
-                key={room.id}
-                className={`depths-node ${i === roomIndex ? 'depths-node-active' : ''} ${i < roomIndex ? 'depths-node-done' : ''}`}
-              >
-                <span className="depths-node-kind">{room.kind}</span>
-                <strong>{room.label}</strong>
-              </div>
-            ))}
+          <h2 className="depths-section-title">Chamber path</h2>
+          <div className="depths-path" role="list" aria-label="Floor path">
+            {rooms.map((room, i) => {
+              const meta = roomKindMeta(room.kind);
+              const state = i < roomIndex ? 'done' : i === roomIndex ? 'active' : 'ahead';
+              return (
+                <div
+                  key={room.id}
+                  role="listitem"
+                  className={`depths-node depths-node-${state} ${meta.className}`}
+                >
+                  <span className="depths-node-icon" aria-hidden>
+                    {i < roomIndex ? '✓' : meta.icon}
+                  </span>
+                  <span className="depths-node-kind">{meta.label}</span>
+                  <strong className="depths-node-label">{room.label}</strong>
+                </div>
+              );
+            })}
           </div>
           <div className="depths-room-card">
+            <p className="depths-room-kicker">{roomKindMeta(currentRoom.kind).label}</p>
             <h3>{currentRoom.label}</h3>
-            <p>{currentRoom.blurb}</p>
+            <p className="depths-room-blurb">{currentRoom.blurb}</p>
+            <p className="depths-threat-line">{roomThreatLine(currentRoom.kind)}</p>
             {currentRoom.enemy && (
               <div className="depths-preview-enemy">
                 <Image
@@ -820,9 +939,6 @@ export default function DepthsGame() {
                 </div>
               </div>
             )}
-            <p className="depths-hint" style={{ marginTop: '0.75rem' }}>
-              Win → free {BRAND.slotMachine} bonus pull(s). Floor clear → champion victory spins.
-            </p>
             <button
               type="button"
               className="art-btn depths-enter-btn"
@@ -836,6 +952,11 @@ export default function DepthsGame() {
 
       {phase === 'fight' && enemy && fighter && (
         <section className="depths-fight">
+          {turnBanner && (
+            <p className={`depths-turn-banner depths-turn-banner-${turnBanner}`} role="status">
+              {turnBanner === 'you' ? 'Your move' : 'Enemy counters'}
+            </p>
+          )}
           <div
             className={`combat-arena depths-combat-arena ${arenaShake ? 'arena-shake' : ''} ${arenaFlash ? 'arena-active' : ''} ${arenaFlashEnemy ? 'arena-active-enemy' : ''}`}
           >
@@ -933,19 +1054,22 @@ export default function DepthsGame() {
             {fighter.abilities.map(ab => {
               const onCd = isAbilityOnCooldown(cooldowns, ab.id);
               const cdLeft = cooldowns[ab.id] ?? 0;
+              const role = abilityRole(ab);
               return (
                 <button
                   key={ab.id}
                   type="button"
-                  className={`art-btn depths-ability-btn ${onCd ? 'depths-ability-cd' : ''}`}
+                  className={`art-btn depths-ability-btn depths-ability-${role} ${onCd ? 'depths-ability-cd' : ''}`}
                   disabled={busy || onCd}
                   onClick={() => void playerAttack(ab)}
+                  title={ab.description}
                 >
-                  <strong>
+                  <span className="depths-ability-role">{abilityRoleLabel(role)}</span>
+                  <strong className="depths-ability-name">
                     {ab.name}
-                    {onCd ? ` · CD ${cdLeft}` : ''}
+                    {onCd ? ` · ${cdLeft}` : ''}
                   </strong>
-                  <span>{ab.description}</span>
+                  <span className="depths-ability-desc">{ab.description}</span>
                 </button>
               );
             })}
@@ -954,27 +1078,61 @@ export default function DepthsGame() {
       )}
 
       {phase === 'event' && currentRoom?.event && (
-        <section className="depths-event">
+        <section className="depths-event depths-event-rich">
+          <p className="depths-room-kicker">Event</p>
           <h2>{currentRoom.label}</h2>
-          <p>{currentRoom.blurb}</p>
+          <p className="depths-room-blurb">{currentRoom.blurb}</p>
           <div className="depths-event-choices">
-            <button type="button" className="art-btn depths-ability-btn" onClick={() => resolveEvent('a')}>
-              {currentRoom.event.a.label}
+            <button
+              type="button"
+              className="art-btn depths-choice-card"
+              onClick={() => resolveEvent('a')}
+            >
+              <strong>{currentRoom.event.a.label}</strong>
+              {currentRoom.event.a.whisper ? (
+                <span className="depths-choice-whisper">{currentRoom.event.a.whisper}</span>
+              ) : null}
             </button>
-            <button type="button" className="art-btn depths-ability-btn" onClick={() => resolveEvent('b')}>
-              {currentRoom.event.b.label}
+            <button
+              type="button"
+              className="art-btn depths-choice-card"
+              onClick={() => resolveEvent('b')}
+            >
+              <strong>{currentRoom.event.b.label}</strong>
+              {currentRoom.event.b.whisper ? (
+                <span className="depths-choice-whisper">{currentRoom.event.b.whisper}</span>
+              ) : null}
             </button>
           </div>
         </section>
       )}
 
-      {phase === 'rest' && (
-        <section className="depths-event">
+      {phase === 'rest' && fighter && (
+        <section className="depths-event depths-event-rich depths-rest">
+          <p className="depths-room-kicker">Camp</p>
           <h2>Frequency Camp</h2>
-          <p>Restores some HP and vibe. The hum of Bonk Hall still reaches this deep.</p>
-          <button type="button" className="art-btn depths-enter-btn" onClick={doRest}>
-            Rest & continue
-          </button>
+          <p className="depths-room-blurb">
+            Bonga left a hum in the stone. Choose how you recover — then descend again.
+          </p>
+          <div className="depths-event-choices depths-rest-choices">
+            {depthsRestChoices(fighter.difficulty).map(c => (
+              <button
+                key={c.id}
+                type="button"
+                className={`art-btn depths-choice-card depths-rest-${c.id}`}
+                onClick={() => doRestChoice(c.id)}
+              >
+                <strong>{c.label}</strong>
+                <span className="depths-choice-whisper">{c.whisper}</span>
+                <span className="depths-choice-stats">
+                  {c.healFrac > 0 ? `+${Math.round(fighter.hp * c.healFrac)} HP` : ''}
+                  {c.vibeGain > 0 ? ` · +${c.vibeGain} vibe` : ''}
+                  {c.chips > 0 ? ` · +${c.chips} chips` : ''}
+                  {c.hpRisk > 0 ? ` · −${c.hpRisk} HP risk` : ''}
+                </span>
+              </button>
+            ))}
+          </div>
         </section>
       )}
 
@@ -1021,11 +1179,26 @@ export default function DepthsGame() {
         </section>
       )}
 
-      {phase !== 'bandit' && (
-        <div className="depths-log" aria-live="polite">
-          {log.map((line, i) => (
-            <p key={`${i}-${line.slice(0, 12)}`}>{line}</p>
-          ))}
+      {phase !== 'bandit' && log.length > 0 && (
+        <div className={`depths-log ${logOpen ? 'depths-log-open' : 'depths-log-collapsed'}`}>
+          <button
+            type="button"
+            className="depths-log-toggle"
+            onClick={() => setLogOpen(o => !o)}
+            aria-expanded={logOpen}
+          >
+            {logOpen ? 'Hide log' : 'Show log'}
+            {!logOpen && log.length > 0 ? (
+              <span className="depths-log-preview">{log[log.length - 1]}</span>
+            ) : null}
+          </button>
+          {logOpen && (
+            <div className="depths-log-body" aria-live="polite">
+              {log.slice(-12).map((line, i) => (
+                <p key={`${i}-${line.slice(0, 12)}`}>{line}</p>
+              ))}
+            </div>
+          )}
         </div>
       )}
     </div>
