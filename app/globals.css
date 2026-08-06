@@ -344,6 +344,231 @@ body {
   color: #fde68a !important;
   font-weight: 800;
 }
+.tavern-nav-plaque-carnival {
+  border-color: rgba(251, 146, 60, 0.65);
+  color: #fdba74;
+}
+.realm-path-carnival {
+  border-color: rgba(251, 146, 60, 0.45) !important;
+}
+.realm-path-carnival .realm-path-cta {
+  color: #fdba74 !important;
+}
+
+/* ── Carnival wheel ─────────────────────────────────────────────── */
+.carnival-shell {
+  min-height: 100vh;
+  padding: 1rem 1rem 4rem;
+  background: radial-gradient(ellipse at 50% 0%, #2a1040 0%, #0c0618 55%, #050308 100%);
+  color: #f5e6c8;
+}
+.carnival-header { text-align: center; margin-bottom: 1.25rem; }
+.carnival-nav {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.45rem;
+  justify-content: center;
+  margin-bottom: 0.85rem;
+  align-items: center;
+}
+.carnival-title {
+  font-family: Georgia, serif;
+  font-size: clamp(1.6rem, 4vw, 2.4rem);
+  color: #f0d878;
+  margin: 0.25rem 0;
+}
+.carnival-sub {
+  color: rgba(245, 230, 200, 0.7);
+  max-width: 36rem;
+  margin: 0 auto;
+  line-height: 1.45;
+}
+.carnival-grid {
+  display: grid;
+  grid-template-columns: 1.1fr 0.9fr;
+  gap: 1.25rem;
+  max-width: 1100px;
+  margin: 0 auto;
+}
+@media (max-width: 900px) {
+  .carnival-grid { grid-template-columns: 1fr; }
+}
+.carnival-panel {
+  background: rgba(20, 12, 28, 0.88);
+  border: 1px solid rgba(212, 175, 55, 0.28);
+  border-radius: 14px;
+  padding: 1rem 1.1rem 1.25rem;
+}
+.carnival-wheel-panel {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  min-height: 420px;
+  overflow: hidden;
+}
+.carnival-wheel {
+  width: min(340px, 82vw);
+  height: min(340px, 82vw);
+  border-radius: 50%;
+  border: 6px solid #d4af37;
+  position: relative;
+  background: conic-gradient(
+    from 0deg,
+    #3b1760,
+    #1e3a5f,
+    #14532d,
+    #713f12,
+    #4c1d95,
+    #3b1760
+  );
+  box-shadow: 0 0 40px rgba(212, 175, 55, 0.25);
+  transition: transform 4s cubic-bezier(0.12, 0.75, 0.12, 1);
+}
+.carnival-wheel-spinning {
+  transition: transform 4s cubic-bezier(0.12, 0.75, 0.12, 1);
+}
+.carnival-segment {
+  position: absolute;
+  left: 50%;
+  top: 8px;
+  width: 0;
+  height: 48%;
+  transform-origin: bottom center;
+  display: flex;
+  justify-content: center;
+}
+.carnival-segment span {
+  font-size: 0.48rem;
+  color: rgba(255, 255, 255, 0.85);
+  writing-mode: vertical-rl;
+  transform: rotate(180deg);
+  max-height: 70%;
+  overflow: hidden;
+}
+.carnival-hub {
+  position: absolute;
+  inset: 38%;
+  border-radius: 50%;
+  background: radial-gradient(circle, #f0d878, #b8860b);
+  color: #1a1208;
+  font-weight: 900;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 3px solid #fff3;
+  font-size: 0.85rem;
+}
+.carnival-pointer {
+  width: 0;
+  height: 0;
+  border-left: 12px solid transparent;
+  border-right: 12px solid transparent;
+  border-top: 22px solid #f0d878;
+  margin-top: -8px;
+  filter: drop-shadow(0 2px 4px #000);
+  z-index: 2;
+}
+.carnival-dice {
+  margin-top: 1rem;
+  width: 72px;
+  height: 72px;
+  border-radius: 12px;
+  background: linear-gradient(145deg, #f8fafc, #cbd5e1);
+  color: #0f172a;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 8px 20px rgba(0, 0, 0, 0.35);
+}
+.carnival-dice-face {
+  font-size: 1.8rem;
+  font-weight: 900;
+  line-height: 1;
+}
+.carnival-dice-label {
+  font-size: 0.55rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  opacity: 0.7;
+}
+.carnival-pay-btn,
+.carnival-spin-btn,
+.carnival-cashier-btn {
+  width: 100%;
+  margin-top: 0.65rem;
+  padding: 0.85rem 1rem !important;
+  color: #1a1208 !important;
+  background: linear-gradient(180deg, #f0d878, #b8860b) !important;
+  font-weight: 800 !important;
+}
+.carnival-spin-btn {
+  background: linear-gradient(180deg, #c084fc, #7c3aed) !important;
+  color: #fff !important;
+}
+.carnival-quote {
+  margin: 0.5rem 0 0.75rem;
+  font-size: 0.95rem;
+}
+.carnival-muted {
+  color: rgba(245, 230, 200, 0.55);
+  font-size: 0.82rem;
+}
+.carnival-split {
+  font-size: 0.8rem;
+  color: #67e8f9;
+}
+.carnival-error {
+  color: #fca5a5;
+  margin-top: 0.5rem;
+}
+.carnival-status {
+  color: #a5f3fc;
+  margin-top: 0.5rem;
+  font-size: 0.9rem;
+}
+.carnival-result {
+  margin-top: 0.75rem;
+  padding: 0.85rem;
+  border-radius: 10px;
+  border: 1px solid rgba(240, 216, 120, 0.35);
+  background: rgba(0, 0, 0, 0.35);
+}
+.carnival-chips {
+  font-size: 1.05rem;
+  color: #f0d878;
+}
+.carnival-result-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  margin-top: 0.65rem;
+}
+.carnival-tiers {
+  margin-top: 1.25rem;
+  font-size: 0.85rem;
+}
+.carnival-tiers ul {
+  padding-left: 1.1rem;
+  margin: 0.35rem 0 0;
+}
+.carnival-security-note {
+  margin-top: 1rem;
+  font-size: 0.78rem;
+  line-height: 1.4;
+  color: rgba(196, 181, 253, 0.75);
+}
+.carnival-commit code,
+.carnival-verify code {
+  font-size: 0.72rem;
+  word-break: break-all;
+}
+.carnival-verify {
+  margin-top: 0.75rem;
+  font-size: 0.78rem;
+  color: rgba(245, 230, 200, 0.65);
+}
 .hall-of-champions-kicker {
   margin: 0 0 0.35rem;
   font-size: 0.8rem;

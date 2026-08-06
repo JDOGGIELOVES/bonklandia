@@ -16,6 +16,7 @@ export type EarnSource =
   | 'depths-clear'
   | 'casino-claim'
   | 'alice-room'
+  | 'carnival-wheel'
   | 'other';
 
 const SOURCE_MAX: Record<EarnSource, number> = {
@@ -25,6 +26,8 @@ const SOURCE_MAX: Record<EarnSource, number> = {
   'casino-claim': Number(process.env.MAX_EARN_CASINO_CLAIM ?? '500000'),
   /** Final Alice Room tally only (post-boss), micro-prize aligned. */
   'alice-room': Number(process.env.MAX_EARN_ALICE_ROOM ?? '90'),
+  /** Carnival wheel jackpot max 150 chips; one claim per paid spin. */
+  'carnival-wheel': Number(process.env.MAX_EARN_CARNIVAL_WHEEL ?? '150'),
   other: Number(process.env.MAX_EARN_OTHER ?? '1000'),
 };
 

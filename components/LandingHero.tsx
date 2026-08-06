@@ -20,6 +20,9 @@ export default function LandingHero() {
         <Link href="/alice" className="tavern-nav-plaque tavern-nav-plaque-alice" title={BRAND.aliceRoom}>
           {BRAND.aliceRoomNav}
         </Link>
+        <Link href="/carnival" className="tavern-nav-plaque tavern-nav-plaque-carnival" title="Carnival Wheel">
+          Carnival
+        </Link>
         <Link href="/cashier" className="tavern-nav-plaque">
           {BRAND.cashier}
         </Link>
@@ -96,6 +99,17 @@ export default function LandingHero() {
               Chamber crawl: rivals, Valley Leak degens, rest camps. Free Bandit pulls per clear.
             </p>
             <span className="realm-path-cta">Descend →</span>
+          </Link>
+
+          <Link href="/carnival" className="realm-path-card realm-path-carnival">
+            <span className="realm-path-emoji" aria-hidden>
+              🎡
+            </span>
+            <strong className="realm-path-name">Carnival Wheel</strong>
+            <p className="realm-path-blurb">
+              $0.25 BONGA · 63-space wheel · d6 family coin · prizes cash out only at the Cashier.
+            </p>
+            <span className="realm-path-cta">Spin the wheel →</span>
           </Link>
 
           <Link href="/cashier" className="realm-path-card realm-path-cashier">
