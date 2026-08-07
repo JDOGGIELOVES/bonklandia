@@ -905,7 +905,7 @@ export default function AliceRoomGame() {
                 many times in a row (safe/double paths never kill).
               </li>
               <li>
-                After the boss, bank the final tally (capped spendable chips). Only the server ledger can cash out.
+                After the boss, bank your chips at the end.
               </li>
             </ol>
             <div className="alice-intro-actions">
@@ -1343,7 +1343,7 @@ export default function AliceRoomGame() {
                   <div className="alice-share-hero" aria-label="Share your voyage">
                     <h3 className="alice-share-hero-title">Share your voyage</h3>
                     <p className="alice-share-hero-sub">
-                      Post the card so others can Eat the Mushroom. Then bank chips on the server ledger.
+                      Post the card so others can Eat the Mushroom.
                     </p>
                     {sharePreviewUrl ? (
                       <div className="alice-share-preview alice-share-preview-hero">

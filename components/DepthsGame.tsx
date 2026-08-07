@@ -801,8 +801,7 @@ export default function DepthsGame() {
                   champion spins.
                 </li>
                 <li>
-                  <strong>Cash at the Cashier</strong> — only server-ledger chips (wallet connected) can
-                  cash out.
+                  <strong>Cash out</strong> — visit the Cashier when you&apos;re ready.
                 </li>
               </ol>
             </div>
@@ -1172,7 +1171,6 @@ export default function DepthsGame() {
           <h2>Depths cleared!</h2>
           <p>
             {fighter?.name} reclaimed the frequency. Run chips this dive: {runChips.toLocaleString()}.
-            Cash server-ledger chips at the {BRAND.cashier}.
           </p>
           <div className="depths-end-actions">
             <button type="button" className="art-btn depths-enter-btn" onClick={resetToHub}>

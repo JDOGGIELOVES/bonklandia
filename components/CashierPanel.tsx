@@ -19,7 +19,7 @@ import {
   walletCanReceiveToken,
   type FamCoinId,
 } from '@/lib/fam-tokens';
-import CashierSecurityPanel, { type TreasurySnapshot } from '@/components/CashierSecurityPanel';
+import type { TreasurySnapshot } from '@/components/CashierSecurityPanel';
 import { BRAND } from '@/lib/brand';
 
 type CashierPanelProps = {
@@ -90,12 +90,6 @@ export default function CashierPanel({ showBackLink = true }: CashierPanelProps)
   const [treasuryStatus, setTreasuryStatus] = useState<TreasurySnapshot | null>(null);
   const [treasuryLoading, setTreasuryLoading] = useState(true);
   const [message, setMessage] = useState<{ text: string; ok: boolean; txUrl?: string } | null>(null);
-  const [fairness, setFairness] = useState<{
-    maxUsdPerExchange: number;
-    maxUsdPerWalletPerDay: number;
-    maxChipCostPerExchange: number;
-    maxExchangesPerWalletPerDay: number;
-  } | null>(null);
   const [walletQuota, setWalletQuota] = useState<{
     remainingUsd: number;
     usdMax: number;
@@ -110,10 +104,6 @@ export default function CashierPanel({ showBackLink = true }: CashierPanelProps)
   const treasuryTokenMap = Object.fromEntries(
     (treasuryStatus?.tokens ?? []).map(t => [t.id, t]),
   ) as Record<string, TreasurySnapshot['tokens'][number]>;
-
-  const walletTokenReadyCount = FAM_TOKENS.filter(t =>
-    walletCanReceiveToken(balances[t.id]),
-  ).length;
 
   const refreshTreasury = useCallback(() => {
     setTreasuryLoading(true);
@@ -135,20 +125,13 @@ export default function CashierPanel({ showBackLink = true }: CashierPanelProps)
   }, [refreshTreasury]);
 
   useEffect(() => {
-    const q = walletAddress
-      ? `/api/exchange?wallet=${encodeURIComponent(walletAddress)}`
-      : '/api/exchange';
-    fetch(q)
+    if (!walletAddress) {
+      setWalletQuota(null);
+      return;
+    }
+    fetch(`/api/exchange?wallet=${encodeURIComponent(walletAddress)}`)
       .then(r => r.json())
       .then(data => {
-        if (data?.fairness) {
-          setFairness({
-            maxUsdPerExchange: Number(data.fairness.maxUsdPerExchange) || 1,
-            maxUsdPerWalletPerDay: Number(data.fairness.maxUsdPerWalletPerDay) || 3,
-            maxChipCostPerExchange: Number(data.fairness.maxChipCostPerExchange) || 30,
-            maxExchangesPerWalletPerDay: Number(data.fairness.maxExchangesPerWalletPerDay) || 12,
-          });
-        }
         if (data?.walletQuota) {
           setWalletQuota({
             remainingUsd: Number(data.walletQuota.remainingUsd) || 0,
@@ -164,7 +147,7 @@ export default function CashierPanel({ showBackLink = true }: CashierPanelProps)
         }
       })
       .catch(() => {
-        /* policy panel optional */
+        setWalletQuota(null);
       });
   }, [walletAddress]);
 
@@ -179,14 +162,14 @@ export default function CashierPanel({ showBackLink = true }: CashierPanelProps)
   }, []);
 
   const readinessLabel = !connected
-    ? 'Connect wallet to see cashable balance'
+    ? 'Connect wallet to see your balance'
     : spendableLoading
-      ? 'Loading ledger…'
+      ? 'Loading…'
       : treasuryReady === false
-        ? 'Cashier offline — cannot pay out right now'
+        ? 'Cashier is closed right now — try again later'
         : chips > 0
-          ? 'Ready to exchange micro-prizes'
-          : 'No spendable chips yet — go earn with this wallet';
+          ? 'Ready to cash out'
+          : 'No chips yet — play to earn some';
 
   const setAmount = (id: FamCoinId, value: string) => {
     setAmounts(prev => ({ ...prev, [id]: value }));
@@ -365,7 +348,7 @@ export default function CashierPanel({ showBackLink = true }: CashierPanelProps)
           </p>
           <h1 className="art-title text-center">{BRAND.cashier}</h1>
           <p className="art-subtitle text-center">
-            Micro-prize cashouts only — server-ledger chips → Fam tokens (Solflare &amp; Phantom)
+            Exchange chips for Fam tokens
           </p>
           {showBackLink && (
             <div className="cashier-nav mt-5 flex flex-wrap justify-center gap-3">
@@ -385,37 +368,35 @@ export default function CashierPanel({ showBackLink = true }: CashierPanelProps)
           )}
         </header>
 
-        {/* One-screen story: Earn → Ledger → Exchange → Wallet */}
         <ol className="cashier-journey" aria-label="How cashing out works">
           <li className="cashier-journey-step">
             <span className="cashier-journey-num">1</span>
-            <strong>Earn</strong>
-            <span>Depths, Bandit, or bank Alice with wallet connected</span>
+            <strong>Play</strong>
+            <span>Win chips in the games</span>
           </li>
           <li className="cashier-journey-step">
             <span className="cashier-journey-num">2</span>
-            <strong>Ledger</strong>
-            <span>Server records spendable chips (not browser storage)</span>
+            <strong>Connect</strong>
+            <span>Same wallet you play with</span>
           </li>
           <li className="cashier-journey-step">
             <span className="cashier-journey-num">3</span>
             <strong>Exchange</strong>
-            <span>Micro-prizes only — small caps per cashout &amp; per day</span>
+            <span>Trade chips for Fam tokens</span>
           </li>
           <li className="cashier-journey-step">
             <span className="cashier-journey-num">4</span>
-            <strong>Wallet</strong>
-            <span>Tokens land on the same Solflare / Phantom address</span>
+            <strong>Receive</strong>
+            <span>Tokens arrive in your wallet</span>
           </li>
         </ol>
 
         {!connected && (
           <div className="cashier-wallet-callout" role="region" aria-label="Connect wallet">
             <div>
-              <h2 className="cashier-wallet-callout-title">Connect your wallet to continue</h2>
+              <h2 className="cashier-wallet-callout-title">Connect your wallet</h2>
               <p className="cashier-wallet-callout-body">
-                Without a wallet we cannot show your <strong>real spendable balance</strong> or pay out. Use the same
-                Solflare or Phantom address you play with.
+                Use Solflare or Phantom to see your balance and cash out.
               </p>
             </div>
             <div className="cashier-wallet-callout-connect">
@@ -444,21 +425,6 @@ export default function CashierPanel({ showBackLink = true }: CashierPanelProps)
           </div>
         )}
 
-        <div className="cashier-notice mb-6" role="note">
-          <h2 className="cashier-notice-title">Fair cashier rules</h2>
-          <p className="cashier-notice-body">
-            <strong>Only server-ledger chips cash out.</strong> Local / browser numbers cannot be exchanged. Hold the
-            Fam token you want (e.g. BONGA) on this wallet so we can send more of it.
-          </p>
-          <p className="cashier-notice-body cashier-notice-body-2">
-            Cashouts are <strong>micro-prizes</strong>
-            {fairness
-              ? ` — about $${fairness.maxUsdPerExchange} max per cashout and ~$${fairness.maxUsdPerWalletPerDay}/day per wallet`
-              : ' — about $1 max per cashout with daily caps'}
-            . This is not a bank.
-          </p>
-        </div>
-
         <div className="cashier-top-grid mb-8">
           <div className="art-frame cashier-bank-card">
             <span className="art-frame-corners-tr" aria-hidden />
@@ -471,7 +437,7 @@ export default function CashierPanel({ showBackLink = true }: CashierPanelProps)
 
               {connected && walletQuota && (
                 <div className="cashier-quota cashier-quota-prominent" aria-label="Daily cash-out headroom">
-                  <p className="cashier-quota-title">Your remaining headroom today (UTC)</p>
+                  <p className="cashier-quota-title">Left today</p>
                   <div className="cashier-quota-meters">
                     <div className="cashier-quota-meter">
                       <div className="cashier-quota-meter-head">
@@ -632,26 +598,13 @@ export default function CashierPanel({ showBackLink = true }: CashierPanelProps)
           </div>
         </div>
 
-        <CashierSecurityPanel
-          treasury={treasuryStatus}
-          treasuryLoading={treasuryLoading}
-          connected={connected}
-          serverChips={chips}
-          pendingClaim={null}
-          walletTokenReadyCount={walletTokenReadyCount}
-          onRefresh={() => {
-            refreshTreasury();
-            void refreshBalances();
-          }}
-        />
-
         <div className="art-frame">
           <span className="art-frame-corners-tr" aria-hidden />
           <span className="art-frame-corners-bl" aria-hidden />
           <div className="p-5 md:p-6">
             <h2 className="art-panel-title">Exchange chips → Fam tokens</h2>
             <p className="text-center text-[#f5e6c8]/50 mb-6 max-w-2xl mx-auto">
-              Spend Bonk Chips for SPL tokens from the treasury. Works with Solflare and Phantom.
+              Pick a coin and cash out. Hold a little of that token first so your wallet can receive more.
             </p>
 
             <div className="cashier-exchange-grid">
