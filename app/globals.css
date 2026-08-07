@@ -530,6 +530,13 @@ body {
   opacity: 0.85;
   box-shadow: 4px 0 12px rgba(0, 0, 0, 0.4);
 }
+.boardwalk-stage-spinning .boardwalk-wheel-frame {
+  animation: boardwalk-rickety 0.18s ease-in-out infinite alternate;
+}
+@keyframes boardwalk-rickety {
+  from { transform: rotate(-0.35deg) translateY(0); }
+  to { transform: rotate(0.35deg) translateY(1px); }
+}
 .boardwalk-wheel-frame {
   position: relative;
   width: min(640px, 94vw);
@@ -551,11 +558,11 @@ body {
   width: 100%;
   height: 100%;
   border-radius: 50%;
-  transition: transform 5.1s cubic-bezier(0.08, 0.82, 0.12, 1);
+  transition: transform 5.4s cubic-bezier(0.05, 0.7, 0.08, 1);
   will-change: transform;
 }
 .boardwalk-rotor-spinning {
-  transition: transform 5.1s cubic-bezier(0.08, 0.82, 0.12, 1);
+  transition: transform 5.4s cubic-bezier(0.05, 0.7, 0.08, 1);
 }
 .boardwalk-svg {
   width: 100%;
@@ -565,40 +572,51 @@ body {
 }
 .boardwalk-flapper {
   position: absolute;
-  top: -10px;
+  top: -12px;
   left: 50%;
   z-index: 5;
-  width: 44px;
-  height: 72px;
+  width: 48px;
+  height: 78px;
   display: flex;
   flex-direction: column;
   align-items: center;
-  filter: drop-shadow(0 4px 5px rgba(0, 0, 0, 0.6));
+  filter: drop-shadow(0 4px 5px rgba(0, 0, 0, 0.65));
   transform: translateX(-50%);
-  transform-origin: 50% 8px;
+  transform-origin: 50% 6px;
 }
 .boardwalk-flapper-arm {
-  width: 12px;
-  height: 22px;
-  background: linear-gradient(180deg, #c4a574, #5c3d1e);
+  width: 14px;
+  height: 20px;
+  background: linear-gradient(180deg, #d4af37, #5c3d1e 70%, #2a1a0c);
   border-radius: 3px 3px 1px 1px;
-  border: 1px solid #2a1a0c;
+  border: 1px solid #1a1008;
+  box-shadow: inset 0 1px 0 rgba(255, 240, 200, 0.35);
 }
 .boardwalk-flapper-tip {
   width: 0;
   height: 0;
-  border-left: 18px solid transparent;
-  border-right: 18px solid transparent;
-  border-top: 42px solid #dc2626;
+  border-left: 20px solid transparent;
+  border-right: 20px solid transparent;
+  border-top: 48px solid #dc2626;
   margin-top: -2px;
   filter: drop-shadow(0 2px 0 #7f1d1d);
 }
-.boardwalk-flapper-busy {
-  animation: boardwalk-flap 0.09s ease-in-out infinite alternate;
+/* Each nail hit: red pointer snaps back hard */
+.boardwalk-flapper-hit {
+  animation: boardwalk-flap-hit 0.09s ease-out;
 }
-@keyframes boardwalk-flap {
-  from { transform: translateX(-50%) rotate(-11deg); }
-  to { transform: translateX(-50%) rotate(11deg); }
+@keyframes boardwalk-flap-hit {
+  0% { transform: translateX(-50%) rotate(0deg); }
+  35% { transform: translateX(-50%) rotate(22deg); }
+  70% { transform: translateX(-50%) rotate(-8deg); }
+  100% { transform: translateX(-50%) rotate(0deg); }
+}
+.boardwalk-flapper-busy:not(.boardwalk-flapper-hit) {
+  animation: boardwalk-flap-idle 0.12s ease-in-out infinite alternate;
+}
+@keyframes boardwalk-flap-idle {
+  from { transform: translateX(-50%) rotate(-6deg); }
+  to { transform: translateX(-50%) rotate(6deg); }
 }
 .boardwalk-caption {
   margin: 0.65rem 0 0;

@@ -1,39 +1,36 @@
 /**
- * Carnival wheel — 32 spaces (months + zodiac + crypto), prize tiers, dice → family coin.
- * Outcomes are assigned by the server (HMAC); this module only defines composition.
+ * Carnival wheel — 20 spaces (months + crypto), prize tiers, dice → family coin.
+ * Zodiac removed so wedges stay large and readable.
  */
 
 import type { FamCoinId } from '@/lib/fam-tokens';
 
 export const CARNIVAL_ENTRY_USD = 0.25;
-/** Months 12 + Zodiac 12 + Crypto 8 — numbers 1–31 removed for readability. */
-export const CARNIVAL_WHEEL_SPACES = 32;
+/** 12 months + 8 crypto — no numbers, no zodiac. */
+export const CARNIVAL_WHEEL_SPACES = 20;
 
 export type PrizeTierId = 'dead' | 'low' | 'small' | 'medium' | 'big' | 'jackpot';
 
 export type PrizeTier = {
   id: PrizeTierId;
   label: string;
-  /** Target USD prize value (paid as spendable chips via Cashier path only). */
   prizeUsd: number;
-  /** Spaces allocated (must sum to CARNIVAL_WHEEL_SPACES). */
   spaces: number;
 };
 
 /**
- * 32-space boardwalk mix (scaled from former 63-space odds):
- * Dead 10 · Low 6 · Small 9 · Medium 4 · Big 2 · Jackpot 1
+ * 20-space mix:
+ * Dead 6 · Low 4 · Small 5 · Medium 3 · Big 1 · Jackpot 1
  */
 export const PRIZE_TIERS: PrizeTier[] = [
-  { id: 'dead', label: 'Dead', prizeUsd: 0, spaces: 10 },
-  { id: 'low', label: 'Low', prizeUsd: 0.05, spaces: 6 },
-  { id: 'small', label: 'Small', prizeUsd: 0.1, spaces: 9 },
-  { id: 'medium', label: 'Medium', prizeUsd: 0.3, spaces: 4 },
-  { id: 'big', label: 'Big', prizeUsd: 1, spaces: 2 },
+  { id: 'dead', label: 'Dead', prizeUsd: 0, spaces: 6 },
+  { id: 'low', label: 'Low', prizeUsd: 0.05, spaces: 4 },
+  { id: 'small', label: 'Small', prizeUsd: 0.1, spaces: 5 },
+  { id: 'medium', label: 'Medium', prizeUsd: 0.3, spaces: 3 },
+  { id: 'big', label: 'Big', prizeUsd: 1, spaces: 1 },
   { id: 'jackpot', label: 'Jackpot', prizeUsd: 5, spaces: 1 },
 ];
 
-/** Verify tier space counts. */
 export function assertTierSpaces(): void {
   const sum = PRIZE_TIERS.reduce((a, t) => a + t.spaces, 0);
   if (sum !== CARNIVAL_WHEEL_SPACES) {
@@ -56,43 +53,22 @@ const MONTHS = [
   { label: 'DEC', full: 'December' },
 ] as const;
 
-const ZODIAC = [
-  'Aries',
-  'Taurus',
-  'Gemini',
-  'Cancer',
-  'Leo',
-  'Virgo',
-  'Libra',
-  'Scorpio',
-  'Sagittarius',
-  'Capricorn',
-  'Aquarius',
-  'Pisces',
-] as const;
-
 const CRYPTO = ['BTC', 'SOL', 'ETH', 'BONK', 'BONGA', 'DOGE', 'XRP', 'USDC'] as const;
 
 export type WheelSpace = {
   index: number;
   label: string;
-  /** Longer name for result UI */
   fullLabel: string;
-  kind: 'month' | 'zodiac' | 'crypto';
+  kind: 'month' | 'crypto';
   tierId: PrizeTierId;
   prizeUsd: number;
 };
 
-/** Build the fixed 32-space wheel: 12 months, 12 zodiac, 8 crypto. */
+/** Build fixed 20-space wheel: 12 months + 8 crypto. */
 export function buildWheelSpaces(): WheelSpace[] {
   assertTierSpaces();
   const labels: { label: string; fullLabel: string; kind: WheelSpace['kind'] }[] = [
     ...MONTHS.map(m => ({ label: m.label, fullLabel: m.full, kind: 'month' as const })),
-    ...ZODIAC.map(label => ({
-      label: label.length > 6 ? label.slice(0, 4) : label,
-      fullLabel: label,
-      kind: 'zodiac' as const,
-    })),
     ...CRYPTO.map(label => ({ label, fullLabel: label, kind: 'crypto' as const })),
   ];
   if (labels.length !== CARNIVAL_WHEEL_SPACES) {
@@ -103,7 +79,7 @@ export function buildWheelSpaces(): WheelSpace[] {
   for (const t of PRIZE_TIERS) {
     for (let i = 0; i < t.spaces; i++) tierSlots.push(t.id);
   }
-  const perm = fixedPermute(tierSlots.length, 0xc4a1b032);
+  const perm = fixedPermute(tierSlots.length, 0xc4a1b020);
   const orderedTiers = perm.map(i => tierSlots[i]!);
   const tierById = Object.fromEntries(PRIZE_TIERS.map(t => [t.id, t])) as Record<
     PrizeTierId,

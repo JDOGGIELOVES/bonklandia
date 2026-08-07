@@ -36,7 +36,7 @@ export const BRAND = {
   aliceRoomNav: 'Eat the Mushroom',
   storagePrefix: 'bonklandia',
   /** Bump on each production ship so you can confirm the live build. */
-  buildId: '2026-07-30x',
+  buildId: '2026-07-30y',
 } as const;
 
 export const LEGACY_STORAGE_KEYS = {

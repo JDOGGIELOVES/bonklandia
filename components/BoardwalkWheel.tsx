@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useMemo, useRef } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { CARNIVAL_WHEEL_SPACES, type PrizeTierId } from '@/lib/carnival/wheel';
 import { playPegTick } from '@/lib/carnival/boardwalk-audio';
 
@@ -12,17 +12,14 @@ export type BoardwalkSpace = {
   prizeUsd: number;
 };
 
-/**
- * Bright boardwalk paint — dead spaces are cream/tan wood, not grey sludge.
- * Prize wedges stay loud and carnival-like.
- */
+/** Hand-painted carnival colors — bold, slightly uneven. */
 export const TIER_COLORS: Record<string, { fill: string; fillAlt: string; ink: string }> = {
-  dead: { fill: '#c4a574', fillAlt: '#a67c45', ink: '#1a1208' },
-  low: { fill: '#38bdf8', fillAlt: '#0ea5e9', ink: '#0c1a24' },
-  small: { fill: '#4ade80', fillAlt: '#22c55e', ink: '#052e16' },
-  medium: { fill: '#60a5fa', fillAlt: '#2563eb', ink: '#eff6ff' },
-  big: { fill: '#c084fc', fillAlt: '#a855f7', ink: '#faf5ff' },
-  jackpot: { fill: '#facc15', fillAlt: '#f59e0b', ink: '#1c1917' },
+  dead: { fill: '#d2b48c', fillAlt: '#b8956a', ink: '#1a1208' },
+  low: { fill: '#5ec8f0', fillAlt: '#2ea8d8', ink: '#0a1a24' },
+  small: { fill: '#5edc7a', fillAlt: '#35b854', ink: '#052e16' },
+  medium: { fill: '#5b8def', fillAlt: '#3b6fd4', ink: '#f0f6ff' },
+  big: { fill: '#c98bf5', fillAlt: '#a855e0', ink: '#faf5ff' },
+  jackpot: { fill: '#ffd84d', fillAlt: '#f0b429', ink: '#1c1400' },
 };
 
 function polar(cx: number, cy: number, r: number, deg: number) {
@@ -58,19 +55,23 @@ type Props = {
   spinning: boolean;
 };
 
+/**
+ * Rickety boardwalk wheel — 20 big hand-painted wedges, metal nails, red flapper.
+ */
 export default function BoardwalkWheel({ spaces, rotationDeg, spinning }: Props) {
   const n = Math.max(1, spaces.length || CARNIVAL_WHEEL_SPACES);
   const seg = 360 / n;
   const size = 640;
   const cx = size / 2;
   const cy = size / 2;
-  const rOuter = 292;
-  const rInner = 58;
-  const rLabel = 228;
-  const rPeg = 300;
+  const rOuter = 288;
+  const rInner = 52;
+  const rLabel = 210;
+  const rPeg = 298;
 
   const lastPegRef = useRef(-1);
   const prevRotRef = useRef(rotationDeg);
+  const [flapperKick, setFlapperKick] = useState(0);
 
   useEffect(() => {
     if (!spinning) {
@@ -90,34 +91,41 @@ export default function BoardwalkWheel({ spaces, rotationDeg, spinning }: Props)
       const b = parts[1] ?? 0;
       let deg = (Math.atan2(b, a) * 180) / Math.PI;
       if (deg < 0) deg += 360;
+      // Pegs sit at segment boundaries — flapper at top (0°)
       const peg = Math.floor((((deg % 360) + 360) % 360) / seg);
       if (peg !== lastPegRef.current) {
         lastPegRef.current = peg;
-        const speed = Math.min(1, Math.abs(deg - (prevRotRef.current % 360)) / 20);
-        playPegTick(0.35 + speed * 0.55);
+        // Speed estimate from rotation delta → louder/faster clicks early in spin
+        const delta = Math.abs(deg - (prevRotRef.current % 360));
+        const speed = Math.min(1, delta / 14);
+        playPegTick(0.45 + speed * 0.55);
+        setFlapperKick(k => k + 1);
       }
       prevRotRef.current = deg;
-    }, 32);
+    }, 20);
     return () => window.clearInterval(id);
   }, [spinning, seg, rotationDeg]);
 
   const wedges = useMemo(() => {
     return spaces.map((s, i) => {
+      // Slight irregular wedge edges — hand-cut feel (tiny a0/a1 jitter for paint lines only)
       const a0 = i * seg;
       const a1 = (i + 1) * seg;
       const mid = a0 + seg / 2;
       const labelPos = polar(cx, cy, rLabel, mid);
       const colors = TIER_COLORS[s.tierId] ?? TIER_COLORS.dead!;
       const fill = i % 2 === 0 ? colors.fill : colors.fillAlt;
+      // Slight per-wedge radius wobble for rickety paint
+      const rJitter = rOuter + ((i * 7) % 5) - 2;
       return {
         key: s.index,
-        path: wedgePath(cx, cy, rInner, rOuter, a0, a1),
+        path: wedgePath(cx, cy, rInner, rJitter, a0, a1),
         fill,
         ink: colors.ink,
         mid,
         labelPos,
         short: s.label,
-        title: `${s.label} · ${s.tierId}`,
+        title: s.label,
         peg: polar(cx, cy, rPeg, a1),
         fontSize: sFont(s.label),
       };
@@ -125,10 +133,14 @@ export default function BoardwalkWheel({ spaces, rotationDeg, spinning }: Props)
   }, [spaces, seg, cx, cy, rInner, rOuter, rLabel, rPeg]);
 
   return (
-    <div className="boardwalk-stage" aria-label={`${n}-space carnival prize wheel`}>
+    <div className={`boardwalk-stage ${spinning ? 'boardwalk-stage-spinning' : ''}`}>
       <div className="boardwalk-post" aria-hidden />
       <div className="boardwalk-wheel-frame">
-        <div className={`boardwalk-flapper ${spinning ? 'boardwalk-flapper-busy' : ''}`} aria-hidden>
+        <div
+          key={flapperKick}
+          className={`boardwalk-flapper ${spinning ? 'boardwalk-flapper-busy' : ''} ${flapperKick > 0 ? 'boardwalk-flapper-hit' : ''}`}
+          aria-hidden
+        >
           <div className="boardwalk-flapper-arm" />
           <div className="boardwalk-flapper-tip" />
         </div>
@@ -140,99 +152,110 @@ export default function BoardwalkWheel({ spaces, rotationDeg, spinning }: Props)
         >
           <svg className="boardwalk-svg" viewBox={`0 0 ${size} ${size}`} role="img" aria-label={`${n} prize spaces`}>
             <defs>
-              <radialGradient id="boardwalk-hub-grad" cx="40%" cy="35%" r="65%">
-                <stop offset="0%" stopColor="#f5e6c8" />
-                <stop offset="45%" stopColor="#c4a574" />
-                <stop offset="100%" stopColor="#5c3d1e" />
+              <radialGradient id="boardwalk-hub-grad" cx="38%" cy="32%" r="68%">
+                <stop offset="0%" stopColor="#f0e0c0" />
+                <stop offset="40%" stopColor="#c4a574" />
+                <stop offset="100%" stopColor="#4a3018" />
               </radialGradient>
               <linearGradient id="boardwalk-rim-grad" x1="0%" y1="0%" x2="100%" y2="100%">
-                <stop offset="0%" stopColor="#8b5a2b" />
-                <stop offset="40%" stopColor="#e8d4a8" />
-                <stop offset="100%" stopColor="#3b2410" />
+                <stop offset="0%" stopColor="#5c3d1e" />
+                <stop offset="30%" stopColor="#e8d4a8" />
+                <stop offset="65%" stopColor="#8b5a2b" />
+                <stop offset="100%" stopColor="#2a1a0c" />
               </linearGradient>
-              <filter id="boardwalk-wood-grain" x="-5%" y="-5%" width="110%" height="110%">
-                <feTurbulence type="fractalNoise" baseFrequency="0.05 0.85" numOctaves="3" seed="11" result="noise" />
+              <filter id="boardwalk-wood-grain" x="-8%" y="-8%" width="116%" height="116%">
+                <feTurbulence type="fractalNoise" baseFrequency="0.035 0.75" numOctaves="4" seed="19" result="noise" />
                 <feColorMatrix
                   in="noise"
                   type="matrix"
-                  values="0 0 0 0 0.4
-                          0 0 0 0 0.25
+                  values="0 0 0 0 0.42
+                          0 0 0 0 0.26
                           0 0 0 0 0.1
-                          0 0 0 0.28 0"
+                          0 0 0 0.4 0"
                   result="grain"
                 />
                 <feBlend in="SourceGraphic" in2="grain" mode="multiply" />
               </filter>
-              <filter id="boardwalk-shadow" x="-20%" y="-20%" width="140%" height="140%">
-                <feDropShadow dx="0" dy="6" stdDeviation="8" floodOpacity="0.55" />
+              <filter id="boardwalk-paint-edge" x="-5%" y="-5%" width="110%" height="110%">
+                <feTurbulence type="fractalNoise" baseFrequency="0.9" numOctaves="2" seed="5" result="n" />
+                <feDisplacementMap in="SourceGraphic" in2="n" scale="2.2" xChannelSelector="R" yChannelSelector="G" />
               </filter>
-              <pattern id="boardwalk-plank" width="24" height="24" patternUnits="userSpaceOnUse">
-                <rect width="24" height="24" fill="#6b4423" />
-                <path d="M0 12 H24" stroke="#3b2410" strokeWidth="1" opacity="0.45" />
-                <path d="M0 6 H24" stroke="#a67c45" strokeWidth="0.5" opacity="0.4" />
-                <path d="M0 18 H24" stroke="#2a1a0c" strokeWidth="0.6" opacity="0.35" />
+              <filter id="boardwalk-shadow" x="-25%" y="-25%" width="150%" height="150%">
+                <feDropShadow dx="2" dy="8" stdDeviation="10" floodOpacity="0.55" />
+              </filter>
+              <pattern id="boardwalk-plank" width="32" height="32" patternUnits="userSpaceOnUse">
+                <rect width="32" height="32" fill="#6b4423" />
+                <path d="M0 8 H32" stroke="#3b2410" strokeWidth="1.2" opacity="0.5" />
+                <path d="M0 16 H32" stroke="#a67c45" strokeWidth="0.7" opacity="0.45" />
+                <path d="M0 24 H32" stroke="#2a1a0c" strokeWidth="0.9" opacity="0.4" />
+                <path d="M0 4 H32" stroke="#8b5a2b" strokeWidth="0.4" opacity="0.3" />
               </pattern>
             </defs>
 
-            {/* Outer wooden rim */}
-            <circle cx={cx} cy={cy} r={rOuter + 26} fill="url(#boardwalk-rim-grad)" filter="url(#boardwalk-shadow)" />
-            <circle cx={cx} cy={cy} r={rOuter + 20} fill="url(#boardwalk-plank)" filter="url(#boardwalk-wood-grain)" />
-            <circle cx={cx} cy={cy} r={rOuter + 14} fill="none" stroke="#2a1a0c" strokeWidth="10" />
-            <circle cx={cx} cy={cy} r={rOuter + 7} fill="none" stroke="#d2a679" strokeWidth="4" opacity="0.85" />
-            <circle cx={cx} cy={cy} r={rOuter + 2} fill="#1a1208" />
+            {/* Rickety outer wood rim */}
+            <circle cx={cx} cy={cy} r={rOuter + 28} fill="url(#boardwalk-rim-grad)" filter="url(#boardwalk-shadow)" />
+            <circle cx={cx} cy={cy} r={rOuter + 22} fill="url(#boardwalk-plank)" filter="url(#boardwalk-wood-grain)" />
+            <circle cx={cx} cy={cy} r={rOuter + 16} fill="none" stroke="#1a1008" strokeWidth="12" />
+            <circle cx={cx} cy={cy} r={rOuter + 9} fill="none" stroke="#c4a574" strokeWidth="5" opacity="0.75" />
+            <circle cx={cx} cy={cy} r={rOuter + 3} fill="#1a1008" />
 
-            {/* Bright painted wedges */}
-            {wedges.map(w => (
-              <g key={w.key}>
-                <path d={w.path} fill={w.fill} stroke="#1a1208" strokeWidth="2.4" strokeLinejoin="round" />
-                <path d={w.path} fill="none" stroke="rgba(255,255,255,0.18)" strokeWidth="1" />
-                <title>{w.title}</title>
-                <text
-                  x={w.labelPos.x}
-                  y={w.labelPos.y}
-                  fill={w.ink}
-                  fontSize={w.fontSize}
-                  fontWeight="900"
-                  fontFamily="Georgia, 'Times New Roman', serif"
-                  textAnchor="middle"
-                  dominantBaseline="middle"
-                  transform={`rotate(${w.mid}, ${w.labelPos.x}, ${w.labelPos.y})`}
-                  style={{ pointerEvents: 'none', userSelect: 'none', paintOrder: 'stroke' }}
-                  stroke="rgba(0,0,0,0.35)"
-                  strokeWidth="0.7"
-                >
-                  {w.short}
-                </text>
-              </g>
-            ))}
+            {/* Hand-painted wedges */}
+            <g filter="url(#boardwalk-paint-edge)">
+              {wedges.map(w => (
+                <g key={w.key}>
+                  <path d={w.path} fill={w.fill} stroke="#1a1008" strokeWidth="3" strokeLinejoin="round" />
+                  <path d={w.path} fill="none" stroke="rgba(255,248,220,0.22)" strokeWidth="1.2" />
+                  <title>{w.title}</title>
+                  <text
+                    x={w.labelPos.x}
+                    y={w.labelPos.y}
+                    fill={w.ink}
+                    fontSize={w.fontSize}
+                    fontWeight="900"
+                    fontFamily="Georgia, 'Palatino Linotype', serif"
+                    textAnchor="middle"
+                    dominantBaseline="middle"
+                    transform={`rotate(${w.mid}, ${w.labelPos.x}, ${w.labelPos.y})`}
+                    style={{ pointerEvents: 'none', userSelect: 'none', paintOrder: 'stroke' }}
+                    stroke="rgba(0,0,0,0.4)"
+                    strokeWidth="1"
+                  >
+                    {w.short}
+                  </text>
+                </g>
+              ))}
+            </g>
 
-            {/* Rusty nails / pegs */}
+            {/* Metal nails at every space edge */}
             {wedges.map(w => (
               <g key={`peg-${w.key}`}>
-                <circle cx={w.peg.x} cy={w.peg.y} r={6} fill="#a89060" stroke="#2a1a0c" strokeWidth="1.4" />
-                <circle cx={w.peg.x - 1.2} cy={w.peg.y - 1.4} r={1.6} fill="#f5e6c8" opacity="0.8" />
+                <circle cx={w.peg.x} cy={w.peg.y} r={7} fill="#6b7280" stroke="#1a1a1a" strokeWidth="1.6" />
+                <circle cx={w.peg.x} cy={w.peg.y} r={4.2} fill="#c0c0c0" />
+                <circle cx={w.peg.x - 1.4} cy={w.peg.y - 1.6} r={1.8} fill="#f8fafc" opacity="0.9" />
               </g>
             ))}
 
-            {/* Wooden hub */}
-            <circle cx={cx} cy={cy} r={rInner + 10} fill="#2a1a0c" />
+            {/* Worn wooden hub */}
+            <circle cx={cx} cy={cy} r={rInner + 12} fill="#1a1008" />
             <circle
               cx={cx}
               cy={cy}
-              r={rInner + 3}
+              r={rInner + 4}
               fill="url(#boardwalk-hub-grad)"
-              stroke="#8b5a2b"
-              strokeWidth="5"
+              stroke="#5c3d1e"
+              strokeWidth="6"
               filter="url(#boardwalk-wood-grain)"
             />
+            <circle cx={cx} cy={cy} r={rInner - 8} fill="none" stroke="#3b2410" strokeWidth="2" opacity="0.5" />
             <text
               x={cx}
-              y={cy + 7}
+              y={cy + 8}
               textAnchor="middle"
               fill="#2a1a0c"
-              fontSize="22"
+              fontSize="24"
               fontWeight="900"
               fontFamily="Georgia, serif"
+              opacity="0.9"
             >
               SPIN
             </text>
@@ -244,8 +267,8 @@ export default function BoardwalkWheel({ spaces, rotationDeg, spinning }: Props)
 }
 
 function sFont(label: string): number {
-  if (label.length <= 3) return 16;
-  if (label.length <= 4) return 14;
-  if (label.length <= 6) return 12;
-  return 10;
+  if (label.length <= 3) return 18;
+  if (label.length <= 4) return 16;
+  if (label.length <= 5) return 14;
+  return 12;
 }
