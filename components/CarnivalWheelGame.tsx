@@ -16,7 +16,13 @@ import { PublicKey, Transaction } from '@solana/web3.js';
 import { BRAND } from '@/lib/brand';
 import type { FamCoinId } from '@/lib/fam-tokens';
 import { loadChipLedgerToken, saveChipLedgerToken } from '@/lib/chip-ledger-client';
-import { CARNIVAL_ENTRY_USD, CARNIVAL_WHEEL_SPACES, type PrizeTierId } from '@/lib/carnival/wheel';
+import {
+  CARNIVAL_ENTRY_USD,
+  CARNIVAL_WHEEL_SPACES,
+  getWheelSpaces,
+  PRIZE_TIERS,
+  type PrizeTierId,
+} from '@/lib/carnival/wheel';
 import { findWalletTokenAccount } from '@/lib/token-accounts';
 import { sendSolTransferWithWallet } from '@/lib/wallet/send-sol-transfer';
 import BoardwalkWheel, { TIER_COLORS, type BoardwalkSpace } from '@/components/BoardwalkWheel';
@@ -82,10 +88,17 @@ export default function CarnivalWheelGame() {
   const { connection } = useConnection();
   const { publicKey, sendTransaction, connected, wallet, connecting } = useWallet();
   const [quote, setQuote] = useState<Quote | null>(null);
-  const [spaces, setSpaces] = useState<BoardwalkSpace[]>([]);
-  const [tiers, setTiers] = useState<{ id: string; label: string; prizeUsd: number; spaces: number }[]>(
-    [],
+  // Always paint the designed wheel immediately — never a number-fallback grey disc
+  const [spaces, setSpaces] = useState<BoardwalkSpace[]>(() =>
+    getWheelSpaces().map(s => ({
+      index: s.index,
+      label: s.label,
+      kind: s.kind,
+      tierId: s.tierId,
+      prizeUsd: s.prizeUsd,
+    })),
   );
+  const [tiers, setTiers] = useState(PRIZE_TIERS);
   const [error, setError] = useState<string | null>(null);
   const [status, setStatus] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
@@ -108,8 +121,14 @@ export default function CarnivalWheelGame() {
         const q = data.quote as Quote;
         quoteRef.current = q;
         setQuote(q);
-        setSpaces((data.spaces as BoardwalkSpace[]) ?? []);
-        setTiers(data.tiers ?? []);
+        // Prefer server spaces only when they look like the real boardwalk layout
+        const apiSpaces = (data.spaces as BoardwalkSpace[]) ?? [];
+        const looksValid =
+          apiSpaces.length === CARNIVAL_WHEEL_SPACES &&
+          apiSpaces.some(s => /[A-Za-z]/.test(s.label)) &&
+          !apiSpaces.every(s => /^\d+$/.test(s.label));
+        if (looksValid) setSpaces(apiSpaces);
+        if (data.tiers?.length) setTiers(data.tiers);
       })
       .catch(e => setError(e instanceof Error ? e.message : 'Quote failed'));
   }, []);
@@ -120,7 +139,7 @@ export default function CarnivalWheelGame() {
     return () => window.clearInterval(t);
   }, [loadQuote]);
 
-  const segmentAngle = 360 / Math.max(1, spaces.length || 63);
+  const segmentAngle = 360 / Math.max(1, spaces.length || CARNIVAL_WHEEL_SPACES);
 
   const fetchBlockhash = useCallback(async () => {
     try {
@@ -359,14 +378,14 @@ export default function CarnivalWheelGame() {
   };
 
   const displaySpaces =
-    spaces.length === CARNIVAL_WHEEL_SPACES
+    spaces.length > 0
       ? spaces
-      : Array.from({ length: CARNIVAL_WHEEL_SPACES }, (_, i) => ({
-          index: i,
-          label: '…',
-          kind: 'month',
-          tierId: 'dead' as PrizeTierId,
-          prizeUsd: 0,
+      : getWheelSpaces().map(s => ({
+          index: s.index,
+          label: s.label,
+          kind: s.kind,
+          tierId: s.tierId,
+          prizeUsd: s.prizeUsd,
         }));
 
   const resetForPlayAgain = () => {
@@ -485,10 +504,10 @@ export default function CarnivalWheelGame() {
                 <li key={t.id}>
                   <span
                     className="carnival-tier-swatch"
-                    style={{ background: TIER_COLORS[t.id]?.fill ?? '#666' }}
+                    style={{ background: TIER_COLORS[t.id]?.fill ?? '#c4a574' }}
                     aria-hidden
                   />
-                  <span style={{ color: TIER_COLORS[t.id]?.fill ?? '#ccc' }}>{t.label}</span>
+                  <span style={{ color: TIER_COLORS[t.id]?.fill ?? '#c4a574' }}>{t.label}</span>
                   {t.prizeUsd > 0 ? ` · $${t.prizeUsd.toFixed(2)}` : ''}
                 </li>
               ))}
