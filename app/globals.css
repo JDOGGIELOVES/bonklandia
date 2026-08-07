@@ -49,7 +49,7 @@ body {
   font-family: var(--font-body), Georgia, serif;
 }
 
-/* ── Artistic scene & frames ── */
+/* â”€â”€ Artistic scene & frames â”€â”€ */
 
 .game-scene {
   position: relative;
@@ -85,7 +85,7 @@ body {
   z-index: 2;
 }
 
-/* ── Renaissance hall landing (champion select) ── */
+/* â”€â”€ Renaissance hall landing (champion select) â”€â”€ */
 
 .game-scene-landing {
   background: #08040a;
@@ -364,7 +364,7 @@ body {
   color: #fdba74 !important;
 }
 
-/* ── Carnival wheel ─────────────────────────────────────────────── */
+/* â”€â”€ Carnival wheel â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
 .carnival-shell {
   min-height: 100vh;
   padding: 1rem 1rem 4rem;
@@ -437,7 +437,7 @@ body {
   justify-content: center;
 }
 
-/* ── Carnival jester (real Alice entity art) ── */
+/* â”€â”€ Carnival jester (real Alice entity art) â”€â”€ */
 .carnival-clown {
   flex: 0 0 auto;
   width: min(200px, 38vw);
@@ -505,7 +505,7 @@ body {
   }
 }
 
-/* ── Boardwalk wooden prize wheel ── */
+/* â”€â”€ Boardwalk wooden prize wheel â”€â”€ */
 .boardwalk-stage {
   width: 100%;
   display: flex;
@@ -602,7 +602,7 @@ body {
   letter-spacing: 0.04em;
 }
 
-/* ── Carnival win/lose overlay ── */
+/* â”€â”€ Carnival win/lose overlay â”€â”€ */
 .carnival-result-overlay {
   position: fixed;
   inset: 0;
@@ -782,7 +782,7 @@ body {
   opacity: 0.85;
 }
 
-/* Degen Valley combat — token logos (square coin art) */
+/* Degen Valley combat â€” token logos (square coin art) */
 .valley-fighter-logo {
   border-radius: 50%;
   background: radial-gradient(circle at 35% 30%, rgba(255, 240, 180, 0.15), transparent 55%),
@@ -791,7 +791,7 @@ body {
   box-sizing: border-box;
 }
 
-/* Carnival family d6 — one logo per face */
+/* Carnival family d6 â€” one logo per face */
 .fam-logo-dice {
   margin-top: 1rem;
   perspective: 600px;
@@ -949,7 +949,7 @@ body {
   font-weight: 800;
 }
 
-/* ── Home realm path cards (funnel) ─────────────────────────────── */
+/* â”€â”€ Home realm path cards (funnel) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
 .realm-paths {
   margin: 1.75rem auto 0.5rem;
   max-width: 56rem;
@@ -1710,7 +1710,7 @@ html {
 }
 
 .art-header::after {
-  content: "✦ ─── ❖ ─── ✦";
+  content: "âœ¦ â”€â”€â”€ â– â”€â”€â”€ âœ¦";
   display: block;
   margin-top: 0.75rem;
   font-size: 0.95rem;
@@ -2306,7 +2306,7 @@ html {
   }
 }
 
-/* ── Combat arena animations ── */
+/* â”€â”€ Combat arena animations â”€â”€ */
 
 .combat-arena {
   position: relative;
@@ -3266,7 +3266,7 @@ html {
   border-bottom: 1px solid rgba(212, 175, 55, 0.2);
 }
 
-/* ── Bonklandia Chronicle (lore) ── */
+/* â”€â”€ Bonklandia Chronicle (lore) â”€â”€ */
 
 .lore-frame {
   background: linear-gradient(160deg, rgba(22, 8, 24, 0.96) 0%, rgba(10, 4, 14, 0.98) 100%);
@@ -3558,7 +3558,7 @@ html {
   font-size: 0.9rem;
 }
 
-/* ── Casino & slot machine ── */
+/* â”€â”€ Casino & slot machine â”€â”€ */
 
 .casino-transition {
   position: fixed;
@@ -3861,7 +3861,7 @@ html {
 
 .casino-exit-actions { margin-top: 1.25rem; text-align: center; }
 
-/* After free spins — Continue is the first / sticky primary action */
+/* After free spins â€” Continue is the first / sticky primary action */
 .casino-continue-sticky {
   position: sticky;
   top: 0;
@@ -3910,7 +3910,7 @@ html {
   line-height: 1.4;
 }
 
-/* Glued to the Bandit cabinet — primary Depths path */
+/* Glued to the Bandit cabinet â€” primary Depths path */
 .casino-continue-under-machine {
   display: flex;
   flex-direction: column;
@@ -4036,7 +4036,7 @@ html {
   color: var(--gold-light);
 }
 
-/* ── Casino extras (bet, ladder, paid spin) ── */
+/* â”€â”€ Casino extras (bet, ladder, paid spin) â”€â”€ */
 
 .casino-side-column {
   display: flex;
@@ -4314,7 +4314,7 @@ html {
   }
 }
 
-/* ── Slot paytable (winning key) ── */
+/* â”€â”€ Slot paytable (winning key) â”€â”€ */
 
 .slot-stage-layout {
   display: flex;
@@ -4504,7 +4504,7 @@ html {
   margin-top: 0.15rem;
 }
 
-/* ── Slot cabinet ── */
+/* â”€â”€ Slot cabinet â”€â”€ */
 
 .slot-stage {
   perspective: 1400px;
@@ -5016,7 +5016,7 @@ html {
   color: rgba(255, 200, 80, 0.6);
 }
 
-/* ── One-armed bandit lever (hinge at socket; arm tips toward player) ── */
+/* â”€â”€ One-armed bandit lever (hinge at socket; arm tips toward player) â”€â”€ */
 
 .slot-lever-column {
   position: relative;
@@ -5150,8 +5150,8 @@ html {
 }
 
 /*
-  Classic bandit yank: rest upright → tip hard toward player → hold → spring home.
-  rotateX ~0 = upright; rotateX ~88° = ball near the socket plane (down / toward you).
+  Classic bandit yank: rest upright â†’ tip hard toward player â†’ hold â†’ spring home.
+  rotateX ~0 = upright; rotateX ~88Â° = ball near the socket plane (down / toward you).
 */
 @keyframes lever-arm-yank {
   0% {
@@ -5162,7 +5162,7 @@ html {
     transform: rotateX(14deg) rotateZ(-3deg);
   }
   36% {
-    /* full stroke — arm down toward the player */
+    /* full stroke â€” arm down toward the player */
     transform: rotateX(88deg) rotateZ(-6deg);
   }
   48% {
@@ -5275,7 +5275,7 @@ html {
   pointer-events: none;
 }
 
-/* Fixed brass housing bolted to the cabinet side — does not rotate */
+/* Fixed brass housing bolted to the cabinet side â€” does not rotate */
 .slot-lever-socket {
   position: absolute;
   bottom: 4px;
@@ -5384,7 +5384,7 @@ html {
   50% { transform: rotate(-1.5deg) translateY(-6px) translateX(-3px); }
 }
 
-/* Reach for the red ball, yank it down, ease back — synced with lever-arm-yank */
+/* Reach for the red ball, yank it down, ease back â€” synced with lever-arm-yank */
 @keyframes bonga-chill-pull {
   0% {
     transform: rotate(0deg) translateY(0) translateX(0) scale(1);
@@ -5394,7 +5394,7 @@ html {
     transform: rotate(-12deg) translateY(-10px) translateX(-18px) scale(1.04);
   }
   38% {
-    /* Full yank — body follows the ball down the arc */
+    /* Full yank â€” body follows the ball down the arc */
     transform: rotate(18deg) translateY(42px) translateX(-8px) scale(1.06);
   }
   48% {
@@ -5424,7 +5424,7 @@ html {
   animation: pulse-glow 2s ease-in-out infinite;
 }
 
-/* ── Cabinet base ── */
+/* â”€â”€ Cabinet base â”€â”€ */
 
 .slot-cabinet-base {
   padding: 0.75rem 1.25rem 1rem;
@@ -5609,7 +5609,7 @@ html {
   }
 }
 
-/* ── Bonklandia Bank badge & Cashier ── */
+/* â”€â”€ Bonklandia Bank badge & Cashier â”€â”€ */
 
 .bonk-bank-badge {
   display: inline-flex;
@@ -6852,14 +6852,14 @@ html {
 }
 
 /* Compact arena so Depths reuses main combat motion + VFX classes.
-   Tall portraits (Bonnie sword/head, etc.) need enough vertical room —
+   Tall portraits (Bonnie sword/head, etc.) need enough vertical room â€”
    overflow:hidden + short min-height was clipping the top of fighters on mobile. */
 .depths-combat-arena {
   min-height: 380px;
   max-width: 720px;
   margin: 0 auto 0.75rem;
   border-radius: 12px;
-  /* Keep hidden for shake/VFX — room for tall art comes from min-height + image max-height */
+  /* Keep hidden for shake/VFX â€” room for tall art comes from min-height + image max-height */
   overflow: hidden;
   padding-top: 0.5rem;
   padding-bottom: 0.25rem;
@@ -7084,7 +7084,7 @@ html {
   margin: 0.2rem 0;
 }
 
-/* ── Depths Phase A+B polish ───────────────────────────────────── */
+/* â”€â”€ Depths Phase A+B polish â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
 .depths-chamber-fx {
   position: fixed;
   inset: 0;
@@ -7473,7 +7473,7 @@ html {
   color: #f5f3ff;
 }
 .alice-coins { color: #f0abfc; }
-/* Plain CSS (not CSS modules) — no :global() pseudo */
+/* Plain CSS (not CSS modules) â€” no :global() pseudo */
 .alice-wallet button {
   font-size: 0.8rem !important;
   height: auto !important;
@@ -7827,7 +7827,7 @@ html {
   border-bottom: 1px solid rgba(167, 139, 250, 0.08);
 }
 
-/* -- Alice Machine (Bandit cabinet  ·  Wonderland skin) ------------- */
+/* -- Alice Machine (Bandit cabinet  Â·  Wonderland skin) ------------- */
 .alice-machine-scene .casino-title.alice-page-title {
   color: #f0abfc;
   text-shadow: 0 0 28px rgba(232, 121, 249, 0.5);
@@ -8053,7 +8053,7 @@ html {
 }
 .alice-slot-stage {
   position: relative;
-  /* Base .slot-stage is row flex — that put the machine BESIDE choices and covered them */
+  /* Base .slot-stage is row flex â€” that put the machine BESIDE choices and covered them */
   flex-direction: column !important;
   align-items: stretch !important;
   width: 100% !important;
@@ -8152,7 +8152,7 @@ html {
     0 28px 50px rgba(0, 0, 0, 0.75),
     0 50px 80px rgba(0, 0, 0, 0.45) !important;
 }
-/* Prize pull ready — magenta / rose */
+/* Prize pull ready â€” magenta / rose */
 .alice-cabinet.alice-cabinet-prize-ready {
   box-shadow:
     0 0 0 1px rgba(244, 114, 182, 0.85),
@@ -8160,7 +8160,7 @@ html {
     0 0 48px rgba(244, 114, 182, 0.35),
     0 28px 50px rgba(0, 0, 0, 0.75) !important;
 }
-/* Shield pull ready — cyan / ice */
+/* Shield pull ready â€” cyan / ice */
 .alice-cabinet.alice-cabinet-shield-ready {
   box-shadow:
     0 0 0 1px rgba(103, 232, 249, 0.9),
@@ -8393,7 +8393,7 @@ html {
     inset 0 4px 8px rgba(255, 255, 255, 0.25);
   transform: scale(1.06);
 }
-/* Hover/active tip the arm toward the player — never sideways off-screen */
+/* Hover/active tip the arm toward the player â€” never sideways off-screen */
 .alice-lever-hit:not(:disabled):hover .slot-lever-arm {
   transform: rotateX(18deg) rotateZ(-4deg);
   transition: transform 0.15s ease-out;
@@ -8402,7 +8402,7 @@ html {
   transform: rotateX(72deg) rotateZ(-5deg);
   transition: transform 0.12s cubic-bezier(0.2, 0.9, 0.25, 1);
 }
-/* While pulled animation runs, do NOT override transform (was freezing at rotate 72° right) */
+/* While pulled animation runs, do NOT override transform (was freezing at rotate 72Â° right) */
 .alice-lever-hit-pulled:not(:disabled):hover .slot-lever-arm,
 .alice-lever-hit-pulled:not(:disabled):active .slot-lever-arm {
   /* let lever-arm-yank keyframes own the motion */
@@ -8412,7 +8412,7 @@ html {
   cursor: not-allowed;
   opacity: 0.55;
 }
-/* Prize pull ready — hot pink ball */
+/* Prize pull ready â€” hot pink ball */
 .alice-lever-hit-prize:not(:disabled) .alice-lever-hint {
   color: #f0abfc;
   text-shadow: 0 0 14px rgba(240, 171, 252, 0.75);
@@ -8427,7 +8427,7 @@ html {
     inset 0 -5px 10px rgba(0, 0, 0, 0.35),
     inset 0 4px 8px rgba(255, 255, 255, 0.25);
 }
-/* Second pull: shield is ready — ice cyan ball */
+/* Second pull: shield is ready â€” ice cyan ball */
 .alice-lever-hit-shield:not(:disabled) .alice-lever-hint {
   color: #67e8f9;
   text-shadow: 0 0 14px rgba(103, 232, 249, 0.75);
@@ -8484,8 +8484,8 @@ html {
   box-sizing: border-box;
 }
 /*
- * FIXED reel cell height — MUST match REEL_ITEM_HEIGHT in AliceRoomGame.tsx.
- * Fluid clamp() broke translateY stop math → black reels after spin.
+ * FIXED reel cell height â€” MUST match REEL_ITEM_HEIGHT in AliceRoomGame.tsx.
+ * Fluid clamp() broke translateY stop math â†’ black reels after spin.
  */
 .alice-cabinet .slot-reels {
   --slot-reel-height: 204px;
@@ -8677,7 +8677,7 @@ html {
   /* Glow lives on wrapper so video can use mix-blend without filter fighting it */
   filter: drop-shadow(0 12px 40px rgba(0, 0, 0, 0.55)) drop-shadow(0 0 28px rgba(192, 132, 252, 0.35));
 }
-/* Soft purple “stage” behind keyed video — blacks dissolve into the room, not a hard box */
+/* Soft purple â€œstageâ€ behind keyed video â€” blacks dissolve into the room, not a hard box */
 .alice-entity-media-keyed {
   isolation: isolate;
   overflow: visible;
@@ -8874,7 +8874,7 @@ html {
 @media (max-width: 720px) {
   /*
    * Mobile: reclaim text chrome under/around the machine for larger reels.
-   * Status lives in the thin strip + on-cabinet LEDs — not giant paragraphs.
+   * Status lives in the thin strip + on-cabinet LEDs â€” not giant paragraphs.
    */
   .alice-room-playing .alice-room-content {
     padding: 0.08rem 0 max(5.75rem, calc(4.75rem + env(safe-area-inset-bottom, 0px))) !important;
@@ -8901,7 +8901,7 @@ html {
   .alice-room-playing .alice-audio-bar {
     display: none; /* use global Music/SFX dock + compact voice below if needed */
   }
-  /* Single compact status row — no multi-line essay under the machine */
+  /* Single compact status row â€” no multi-line essay under the machine */
   .alice-stage-solo {
     gap: 0.15rem !important;
   }
@@ -8937,7 +8937,7 @@ html {
   .alice-trip-strip-coins small {
     font-size: 0.55rem !important;
   }
-  /* Progress: hairline only — layer # already in strip + LEDs */
+  /* Progress: hairline only â€” layer # already in strip + LEDs */
   .alice-progress {
     margin: 0 0.35rem 0.08rem !important;
     gap: 0.35rem;
@@ -8985,7 +8985,7 @@ html {
   }
   /*
    * Reels first: narrow lever so three spin windows + art stay readable.
-   * Touch still works — full column height is the hit target.
+   * Touch still works â€” full column height is the hit target.
    */
   .alice-cabinet .slot-reels-panel {
     flex: 1 1 auto;
@@ -9094,7 +9094,7 @@ html {
     font-size: 0.78rem;
     line-height: 1.1;
   }
-  /* Shrink marquee — reclaim height for reels */
+  /* Shrink marquee â€” reclaim height for reels */
   .alice-cabinet .slot-marquee-hood,
   .alice-marquee-hood {
     padding: 0.15rem 0.35rem 0.1rem !important;
@@ -9172,7 +9172,7 @@ html {
     align-items: flex-start;
     max-width: none;
   }
-  /* Keep compact sizes — do not re-inflate the dock on mobile */
+  /* Keep compact sizes â€” do not re-inflate the dock on mobile */
   .global-music-btn {
     height: 1.75rem;
     min-height: 0;
@@ -9225,7 +9225,7 @@ html {
   }
 }
 
-/* ── Global music / SFX dock — compact so play area stays clear ── */
+/* â”€â”€ Global music / SFX dock â€” compact so play area stays clear â”€â”€ */
 .global-music-dock {
   position: fixed;
   z-index: 10050;
@@ -9301,7 +9301,7 @@ html {
 }
 @media (max-width: 480px) {
   .global-music-dock {
-    /* Tighter on phones — still tappable, less screen steal */
+    /* Tighter on phones â€” still tappable, less screen steal */
     right: max(0.3rem, env(safe-area-inset-right, 0px));
     bottom: max(0.4rem, calc(0.3rem + env(safe-area-inset-bottom, 0px)));
     gap: 0.2rem;
@@ -9319,7 +9319,7 @@ html {
   }
 }
 
-/* ── Alice session clarity ─────────────────────────────────────── */
+/* â”€â”€ Alice session clarity â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
 .alice-coach {
   margin: 0 0 1rem;
   padding: 0.85rem 1rem;
@@ -9618,7 +9618,7 @@ html {
 .alice-encounter-caption .alice-voice-status {
   margin-top: 0.45rem;
 }
-/* Voice: one compact row only — no Test voice stack eating reel space */
+/* Voice: one compact row only â€” no Test voice stack eating reel space */
 @media (max-width: 720px) {
   .alice-room-playing .alice-audio-bar {
     display: flex !important;
@@ -9641,7 +9641,7 @@ html {
 .alice-encounter .alice-trick-card {
   min-height: 3.25rem;
 }
-/* Room for compact Music/SFX dock on phones — reels keep the height */
+/* Room for compact Music/SFX dock on phones â€” reels keep the height */
 .alice-room-playing .alice-room-content {
   padding-bottom: max(3.25rem, calc(2.5rem + env(safe-area-inset-bottom, 0px))) !important;
 }
@@ -9752,7 +9752,7 @@ html {
 }
 
 /* ==========================================================================
-   Alice Trip FX — entity personality psychedelia (screen transitions)
+   Alice Trip FX â€” entity personality psychedelia (screen transitions)
    MUST sit above .alice-room-content or flashes are invisible behind the cabinet.
    ========================================================================== */
 .alice-trip-fx {
@@ -9889,7 +9889,7 @@ html {
   pointer-events: none;
 }
 
-/* Do not filter .alice-room-content during bursts — door / choice text must stay readable. */
+/* Do not filter .alice-room-content during bursts â€” door / choice text must stay readable. */
 .alice-room-tripping .alice-room-bg {
   animation: alice-bg-trip 2s ease-out;
 }
@@ -10060,7 +10060,7 @@ html {
   animation-name: alice-core-void;
 }
 
-/* Continuous room vibe filters removed — they washed out door text during encounters.
+/* Continuous room vibe filters removed â€” they washed out door text during encounters.
    Personality color lives only on the short intro burst overlay. */
 
 .alice-trip-burst-clear .alice-trip-burst-veil { filter: brightness(1.35); }
@@ -10257,7 +10257,7 @@ html {
   .alice-trip-burst-label { font-size: 1.2rem; bottom: 14%; }
 }
 
-/* -- Mobile: Cashier � Carnival � Valley combat -- */
+/* -- Mobile: Cashier · Carnival · Valley combat -- */
 @media (max-width: 720px) {
   .carnival-shell {
     padding: 0.65rem 0.55rem 5.5rem;
