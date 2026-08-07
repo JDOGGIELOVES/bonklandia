@@ -111,7 +111,7 @@ export default function LandingHero() {
             </span>
             <strong className="realm-path-name">Carnival Wheel</strong>
             <p className="realm-path-blurb">
-              $0.25 BONGA · 32-space wheel · family logo d6 · prizes cash out only at the Cashier.
+              $0.25 BONGA a spin.
             </p>
             <span className="realm-path-cta">Spin the wheel →</span>
           </Link>

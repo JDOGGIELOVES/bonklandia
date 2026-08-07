@@ -37,8 +37,7 @@ export default function FamilyLogoDice({ face, rolling }: Props) {
   return (
     <div
       className={`fam-logo-dice ${rolling ? 'fam-logo-dice-rolling' : ''}`}
-      aria-label={`Family dice showing ${label} (face ${safeFace})`}
-      title={`d6 face ${safeFace}: ${label}`}
+      aria-label={rolling ? 'Dice rolling' : label}
     >
       <div
         className="fam-logo-dice-cube"
@@ -58,13 +57,9 @@ export default function FamilyLogoDice({ face, rolling }: Props) {
               className="fam-logo-dice-img"
               unoptimized
             />
-            <span className="fam-logo-dice-num">{f.face}</span>
           </div>
         ))}
       </div>
-      <p className="fam-logo-dice-caption">
-        {rolling ? 'Rolling…' : `${label} · face ${safeFace}`}
-      </p>
     </div>
   );
 }

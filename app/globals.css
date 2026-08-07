@@ -559,33 +559,33 @@ body {
 }
 .boardwalk-flapper {
   position: absolute;
-  top: -6px;
+  top: -10px;
   left: 50%;
   z-index: 5;
-  width: 36px;
-  height: 54px;
+  width: 44px;
+  height: 72px;
   display: flex;
   flex-direction: column;
   align-items: center;
-  filter: drop-shadow(0 3px 4px rgba(0, 0, 0, 0.55));
+  filter: drop-shadow(0 4px 5px rgba(0, 0, 0, 0.6));
   transform: translateX(-50%);
   transform-origin: 50% 8px;
 }
 .boardwalk-flapper-arm {
-  width: 10px;
-  height: 28px;
-  background: linear-gradient(180deg, #e8e8e8, #71717a);
+  width: 12px;
+  height: 22px;
+  background: linear-gradient(180deg, #c4a574, #5c3d1e);
   border-radius: 3px 3px 1px 1px;
-  border: 1px solid #3f3f46;
+  border: 1px solid #2a1a0c;
 }
 .boardwalk-flapper-tip {
   width: 0;
   height: 0;
-  border-left: 14px solid transparent;
-  border-right: 14px solid transparent;
-  border-top: 22px solid #f0d878;
+  border-left: 18px solid transparent;
+  border-right: 18px solid transparent;
+  border-top: 42px solid #dc2626;
   margin-top: -2px;
-  filter: drop-shadow(0 1px 0 #b45309);
+  filter: drop-shadow(0 2px 0 #7f1d1d);
 }
 .boardwalk-flapper-busy {
   animation: boardwalk-flap 0.09s ease-in-out infinite alternate;
@@ -864,6 +864,17 @@ body {
   vertical-align: middle;
   border: 1px solid rgba(255, 255, 255, 0.25);
 }
+.carnival-pay-box {
+  margin-top: 0.75rem;
+  padding: 0.55rem;
+  border: 3px solid #d4af37;
+  border-radius: 14px;
+  background:
+    linear-gradient(165deg, rgba(60, 40, 12, 0.55), rgba(20, 12, 8, 0.75));
+  box-shadow:
+    inset 0 0 0 1px rgba(255, 220, 140, 0.2),
+    0 6px 18px rgba(0, 0, 0, 0.35);
+}
 .carnival-pay-btn,
 .carnival-spin-btn,
 .carnival-cashier-btn {
@@ -874,21 +885,17 @@ body {
   background: linear-gradient(180deg, #f0d878, #b8860b) !important;
   font-weight: 800 !important;
 }
+.carnival-pay-box .carnival-pay-btn {
+  margin-top: 0;
+}
 .carnival-spin-btn {
   background: linear-gradient(180deg, #c084fc, #7c3aed) !important;
   color: #fff !important;
 }
 .carnival-quote {
-  margin: 0.5rem 0 0.75rem;
-  font-size: 0.95rem;
-}
-.carnival-muted {
-  color: rgba(245, 230, 200, 0.55);
-  font-size: 0.82rem;
-}
-.carnival-split {
-  font-size: 0.8rem;
-  color: #67e8f9;
+  margin: 0.35rem 0 0.5rem;
+  font-size: 1.05rem;
+  text-align: center;
 }
 .carnival-error {
   color: #fca5a5;

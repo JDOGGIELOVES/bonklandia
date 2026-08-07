@@ -5,7 +5,6 @@ import Link from 'next/link';
 import type { FamCoinId } from '@/lib/fam-tokens';
 import { getFamToken } from '@/lib/fam-tokens';
 import type { PrizeTierId } from '@/lib/carnival/wheel';
-import { BRAND } from '@/lib/brand';
 import { TIER_COLORS } from '@/components/BoardwalkWheel';
 
 export type CarnivalResult = {
@@ -80,10 +79,8 @@ export default function CarnivalResultOverlay({
             </span>
           </div>
           <div className="carnival-result-chip">
-            <span className="carnival-result-chip-label">Family d6</span>
-            <strong>
-              {result.diceFace} → {result.coinName}
-            </strong>
+            <span className="carnival-result-chip-label">Coin</span>
+            <strong>{result.coinName}</strong>
             {coinImg && (
               <Image
                 src={coinImg}
@@ -97,16 +94,10 @@ export default function CarnivalResultOverlay({
           </div>
         </div>
 
-        {won && (
-          <p className="carnival-result-hint">
-            Tokens leave only via the {BRAND.cashier} — exchange chips there.
-          </p>
-        )}
-
         <div className="carnival-result-actions">
           {won && (
             <Link href="/cashier" className="art-btn carnival-cashier-btn carnival-result-primary">
-              Open {BRAND.cashier} →
+              Cash out →
             </Link>
           )}
           <button type="button" className="art-btn carnival-result-primary" onClick={onPlayAgain}>

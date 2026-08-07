@@ -90,9 +90,7 @@ export default function CarnivalWheelGame() {
   const [status, setStatus] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   const [sessionToken, setSessionToken] = useState<string | null>(null);
-  const [commit, setCommit] = useState<string | null>(null);
   const [outcome, setOutcome] = useState<Outcome | null>(null);
-  const [serverSeed, setServerSeed] = useState<string | null>(null);
   const [spinning, setSpinning] = useState(false);
   const [wheelRot, setWheelRot] = useState(0);
   const [diceFace, setDiceFace] = useState(1);
@@ -192,9 +190,8 @@ export default function CarnivalWheelGame() {
 
     setBusy(true);
     setError(null);
-    setStatus('Preparing BONGA payment…');
+      setStatus('Pay with BONGA…');
     setOutcome(null);
-    setServerSeed(null);
     setChipsCredited(0);
     setShowResultOverlay(false);
 
@@ -206,18 +203,15 @@ export default function CarnivalWheelGame() {
 
       const userToken = await findWalletTokenAccount(connection, publicKey, mint);
       if (!userToken) {
-        throw new Error('No BONGA token account found — receive some BONGA in this wallet first.');
+        throw new Error('No BONGA in this wallet — get some BONGA first.');
       }
       if (userToken.amount < raw) {
         const need = activeQuote.bongaAmount.toLocaleString(undefined, { maximumFractionDigits: 2 });
-        throw new Error(
-          `Not enough BONGA. Need about ${need} BONGA (~$${CARNIVAL_ENTRY_USD.toFixed(2)}) plus a little SOL for fees.`,
-        );
+        throw new Error(`Not enough BONGA. Need about ${need} BONGA.`);
       }
 
       const tx = new Transaction();
 
-      // Only create treasury ATA if truly missing (never on RPC blips)
       try {
         await getAccount(connection, treasuryAta, 'confirmed', TOKEN_PROGRAM_ID);
       } catch (err) {
@@ -233,7 +227,6 @@ export default function CarnivalWheelGame() {
             ),
           );
         } else {
-          // Account likely exists; RPC glitch — proceed with transfer only
           console.warn('[carnival] treasury ATA check flaky, continuing', err);
         }
       }
@@ -251,12 +244,11 @@ export default function CarnivalWheelGame() {
         ),
       );
 
-      setStatus('Getting network ticket…');
+      setStatus('Approve in wallet…');
       const { blockhash, lastValidBlockHeight } = await fetchBlockhash();
       tx.recentBlockhash = blockhash;
       tx.feePayer = publicKey;
 
-      setStatus(`Approve ~$${CARNIVAL_ENTRY_USD.toFixed(2)} BONGA in ${walletName}…`);
       const sig = await sendSolTransferWithWallet({
         transaction: tx,
         connection,
@@ -265,15 +257,15 @@ export default function CarnivalWheelGame() {
         walletName,
       });
 
-      setStatus('Payment sent — confirming on Solana…');
+      setStatus('Confirming…');
       await waitForConfirmation(sig, blockhash, lastValidBlockHeight);
 
-      setStatus('Opening sealed spin session…');
+      setStatus('Almost ready…');
       let startData: { error?: string; sessionToken?: string; commit?: string } | null = null;
       let startOk = false;
       for (let attempt = 0; attempt < 6; attempt++) {
         if (attempt > 0) {
-          setStatus(`Finding payment on-chain — retry ${attempt + 1}/6…`);
+          setStatus('Still confirming…');
           await sleep(900 * attempt);
         }
         const startRes = await fetch('/api/carnival/start', {
@@ -282,7 +274,6 @@ export default function CarnivalWheelGame() {
           body: JSON.stringify({
             wallet: publicKey.toBase58(),
             signature: sig,
-            // Hint so server can tolerate minor quote refresh drift
             paidRaw: activeQuote.bongaRaw,
           }),
         });
@@ -291,7 +282,6 @@ export default function CarnivalWheelGame() {
           startOk = true;
           break;
         }
-        // Don't retry permanent failures
         if (
           startRes.status === 409 ||
           /already used|Insufficient BONGA|Payer wallet/i.test(startData?.error ?? '')
@@ -300,12 +290,11 @@ export default function CarnivalWheelGame() {
         }
       }
       if (!startOk || !startData?.sessionToken) {
-        throw new Error(startData?.error ?? 'Could not start carnival session.');
+        throw new Error(startData?.error ?? 'Could not open spin. Try again.');
       }
 
       setSessionToken(startData.sessionToken);
-      setCommit(startData.commit ?? null);
-      setStatus('Session sealed. Give the wheel a spin — result is locked on the server.');
+      setStatus('Ready — spin!');
     } catch (e) {
       setError(walletErrorMessage(e));
       setStatus(null);
@@ -319,7 +308,7 @@ export default function CarnivalWheelGame() {
     setBusy(true);
     setError(null);
     setSpinning(true);
-    setStatus('Wheel is spinning — flapper on the pins…');
+    setStatus(null);
     playDiceRoll();
 
     try {
@@ -350,11 +339,10 @@ export default function CarnivalWheelGame() {
       window.setTimeout(() => {
         playWheelStop();
         setOutcome(out);
-        setServerSeed(data.serverSeed as string);
         setChipsCredited(data.chipsCredited ?? 0);
         setSpinning(false);
         setShowResultOverlay(true);
-        setStatus(data.message ?? 'Done.');
+        setStatus(null);
         if (data.ledgerToken) {
           saveChipLedgerToken(publicKey.toBase58(), data.ledgerToken, data.chipsCredited ?? 0, {
             force: true,
@@ -383,7 +371,6 @@ export default function CarnivalWheelGame() {
 
   const resetForPlayAgain = () => {
     setOutcome(null);
-    setServerSeed(null);
     setStatus(null);
     setShowResultOverlay(false);
     setChipsCredited(0);
@@ -425,11 +412,8 @@ export default function CarnivalWheelGame() {
           </Link>
           <WalletMultiButton />
         </div>
-        <h1 className="carnival-title">Bonklandia Carnival Wheel</h1>
-        <p className="carnival-sub">
-          Boardwalk prize wheel · ${CARNIVAL_ENTRY_USD.toFixed(2)} in $BONGA · {CARNIVAL_WHEEL_SPACES}{' '}
-          spaces · family logo d6 · prizes only via {BRAND.cashier}
-        </p>
+        <h1 className="carnival-title">Carnival Wheel</h1>
+        <p className="carnival-sub">${CARNIVAL_ENTRY_USD.toFixed(2)} BONGA a spin</p>
       </header>
 
       <div className="carnival-grid">
@@ -445,80 +429,54 @@ export default function CarnivalWheelGame() {
         </section>
 
         <section className="carnival-panel carnival-controls">
-          <h2>Play</h2>
           {quote && (
             <div className="carnival-quote">
               <p>
-                Entry: <strong>${quote.usd.toFixed(2)}</strong> ≈{' '}
                 <strong>
                   {quote.bongaAmount.toLocaleString(undefined, { maximumFractionDigits: 2 })} BONGA
                 </strong>
-              </p>
-              <p className="carnival-muted">
-                BONGA @ ${quote.bongaUsd < 0.0001 ? quote.bongaUsd.toExponential(2) : quote.bongaUsd.toPrecision(4)}
-                {quote.priceStale ? ' (fallback price)' : ` (${quote.priceSource ?? 'live'})`}
-              </p>
-              <p className="carnival-split">
-                Split on entry (accounting): 55% treasury · 30% prize pool · 15% ops
               </p>
             </div>
           )}
 
           {!sessionToken && !outcome && (
-            <button
-              type="button"
-              className="art-btn carnival-pay-btn"
-              disabled={busy || !connected || !quote}
-              onClick={() => void payAndOpen()}
-            >
-              {busy ? 'Working…' : `Pay $${CARNIVAL_ENTRY_USD.toFixed(2)} BONGA & open spin`}
-            </button>
-          )}
-
-          {sessionToken && !outcome && (
-            <>
-              <p className="carnival-commit">
-                Commit: <code>{commit?.slice(0, 18)}…</code>
-              </p>
-              <button
-                type="button"
-                className="art-btn carnival-spin-btn"
-                disabled={busy || spinning}
-                onClick={() => void spin()}
-              >
-                {spinning ? 'Bongo is spinning…' : 'Let Bongo spin the wheel'}
-              </button>
-            </>
-          )}
-
-          {outcome && !showResultOverlay && (
-            <div className="carnival-result">
+            <div className="carnival-pay-box">
               <button
                 type="button"
                 className="art-btn carnival-pay-btn"
-                onClick={() => setShowResultOverlay(true)}
+                disabled={busy || !connected || !quote}
+                onClick={() => void payAndOpen()}
               >
-                Show result again
+                {busy ? 'Working…' : `Pay $${CARNIVAL_ENTRY_USD.toFixed(2)} BONGA & open spin`}
               </button>
-              {serverSeed && (
-                <details className="carnival-verify">
-                  <summary>Verify randomness (commit-reveal)</summary>
-                  <p>
-                    Seed: <code className="break-all">{serverSeed}</code>
-                  </p>
-                  <p>
-                    Commit: <code className="break-all">{commit}</code>
-                  </p>
-                </details>
-              )}
             </div>
+          )}
+
+          {sessionToken && !outcome && (
+            <button
+              type="button"
+              className="art-btn carnival-spin-btn"
+              disabled={busy || spinning}
+              onClick={() => void spin()}
+            >
+              {spinning ? 'Spinning…' : 'Spin!'}
+            </button>
+          )}
+
+          {outcome && !showResultOverlay && (
+            <button
+              type="button"
+              className="art-btn carnival-pay-btn"
+              onClick={() => setShowResultOverlay(true)}
+            >
+              See result
+            </button>
           )}
 
           {status && <p className="carnival-status">{status}</p>}
           {error && <p className="carnival-error">{error}</p>}
 
           <div className="carnival-tiers">
-            <h3>Prize tiers ({CARNIVAL_WHEEL_SPACES} spaces)</h3>
             <ul>
               {tiers.map(t => (
                 <li key={t.id}>
@@ -527,17 +485,12 @@ export default function CarnivalWheelGame() {
                     style={{ background: TIER_COLORS[t.id]?.fill ?? '#666' }}
                     aria-hidden
                   />
-                  <span style={{ color: TIER_COLORS[t.id]?.fill ?? '#ccc' }}>{t.label}</span> —{' '}
-                  {t.spaces} spaces · ${t.prizeUsd.toFixed(2)}
+                  <span style={{ color: TIER_COLORS[t.id]?.fill ?? '#ccc' }}>{t.label}</span>
+                  {t.prizeUsd > 0 ? ` · $${t.prizeUsd.toFixed(2)}` : ''}
                 </li>
               ))}
             </ul>
           </div>
-
-          <p className="carnival-security-note">
-            Animations and peg ticks are cosmetic. Outcomes are sealed server-side (HMAC commit-reveal).
-            No client balances are trusted. Family coins exit only through the Cashier.
-          </p>
         </section>
       </div>
     </div>

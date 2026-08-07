@@ -793,58 +793,16 @@ export default function AliceRoomGame() {
             <div className="casino-audio-bar alice-audio-bar alice-audio-bar-voice">
               <button
                 type="button"
-                className="casino-audio-btn"
-                onClick={() => void toggleMute()}
-                aria-label={muted ? 'Unmute music' : 'Mute music'}
-                title={`${ambienceCredit} · Music only — use dock for Music / SFX`}
-              >
-                {muted ? '🎵 Music Off' : '🎵 Music On'}
-              </button>
-              <button
-                type="button"
                 className={`casino-audio-btn alice-voice-btn ${voiceEnabled ? 'alice-voice-btn-on' : ''}`}
                 onClick={() => {
-                  // Unlock SFX/music + entity voice in the same tap
                   void unlockAudio();
                   toggleVoice();
                 }}
                 aria-pressed={voiceEnabled}
-                aria-label={
-                  voiceEnabled
-                    ? 'Turn entity voices off'
-                    : 'Turn entity voices on — plays a short confirmation'
-                }
-                title={
-                  voiceEnabled
-                    ? 'Entity voice ON — click to silence'
-                    : 'Entity voice OFF — click once (you should hear a short line)'
-                }
+                aria-label={voiceEnabled ? 'Voice off' : 'Voice on'}
               >
-                {voiceEnabled ? '🗣 Voice On' : '🗣 Voice Off'}
+                {voiceEnabled ? 'Voice On' : 'Voice Off'}
               </button>
-              <button
-                type="button"
-                className="casino-audio-btn alice-voice-test-btn"
-                onClick={() => {
-                  void unlockAudio();
-                  hearEntityLine(
-                    'Hello from the Alice Room. If you hear this, speech is working.',
-                  );
-                }}
-                aria-label="Test character speech now"
-                title="Plays a short test line right now"
-              >
-                ▶ Test voice
-              </button>
-              {!audioReady && (
-                <button
-                  type="button"
-                  className="casino-audio-unlock"
-                  onClick={() => void unlockAudio()}
-                >
-                  Sound
-                </button>
-              )}
             </div>
             {voiceStatus && (
               <p className="alice-voice-status" role="status">
