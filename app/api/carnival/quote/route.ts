@@ -11,6 +11,7 @@ export async function GET() {
     const spaces = getWheelSpaces().map(s => ({
       index: s.index,
       label: s.label,
+      fullLabel: s.fullLabel,
       kind: s.kind,
       tierId: s.tierId,
       prizeUsd: s.prizeUsd,

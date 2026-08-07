@@ -110,15 +110,15 @@ export function deriveOutcome(serverSeed: string, sessionId: string): CarnivalOu
   const digest = createHmac('sha256', serverSeed)
     .update(`carnival-outcome:${sessionId}`)
     .digest();
-  const wheelIndex = digest.readUInt32BE(0) % 63;
-  const diceFace = (digest.readUInt8(4) % 6) + 1;
   const spaces = getWheelSpaces();
+  const wheelIndex = digest.readUInt32BE(0) % spaces.length;
+  const diceFace = (digest.readUInt8(4) % 6) + 1;
   const space = spaces[wheelIndex]!;
   const coin = coinForDice(diceFace);
   const chips = prizeUsdToChips(space.prizeUsd);
   return {
     wheelIndex,
-    wheelLabel: space.label,
+    wheelLabel: space.fullLabel ?? space.label,
     tierId: space.tierId,
     prizeUsd: space.prizeUsd,
     diceFace,

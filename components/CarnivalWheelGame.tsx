@@ -1,8 +1,7 @@
 'use client';
 
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import Link from 'next/link';
-import Image from 'next/image';
 import { useConnection, useWallet } from '@solana/wallet-adapter-react';
 import { WalletMultiButton } from '@solana/wallet-adapter-react-ui';
 import {
@@ -15,13 +14,14 @@ import {
 } from '@solana/spl-token';
 import { PublicKey, Transaction } from '@solana/web3.js';
 import { BRAND } from '@/lib/brand';
-import { getFamToken, type FamCoinId } from '@/lib/fam-tokens';
+import type { FamCoinId } from '@/lib/fam-tokens';
 import { loadChipLedgerToken, saveChipLedgerToken } from '@/lib/chip-ledger-client';
-import { CARNIVAL_ENTRY_USD, type PrizeTierId } from '@/lib/carnival/wheel';
+import { CARNIVAL_ENTRY_USD, CARNIVAL_WHEEL_SPACES, type PrizeTierId } from '@/lib/carnival/wheel';
 import { findWalletTokenAccount } from '@/lib/token-accounts';
 import { sendSolTransferWithWallet } from '@/lib/wallet/send-sol-transfer';
 import BoardwalkWheel, { TIER_COLORS, type BoardwalkSpace } from '@/components/BoardwalkWheel';
 import CarnivalClown from '@/components/CarnivalClown';
+import CarnivalResultOverlay from '@/components/CarnivalResultOverlay';
 import FamilyLogoDice from '@/components/FamilyLogoDice';
 import {
   unlockBoardwalkAudio,
@@ -97,6 +97,7 @@ export default function CarnivalWheelGame() {
   const [wheelRot, setWheelRot] = useState(0);
   const [diceFace, setDiceFace] = useState(1);
   const [chipsCredited, setChipsCredited] = useState(0);
+  const [showResultOverlay, setShowResultOverlay] = useState(false);
   const quoteRef = useRef<Quote | null>(null);
 
   const walletName = wallet?.adapter?.name ?? 'Wallet';
@@ -195,6 +196,7 @@ export default function CarnivalWheelGame() {
     setOutcome(null);
     setServerSeed(null);
     setChipsCredited(0);
+    setShowResultOverlay(false);
 
     try {
       const mint = new PublicKey(activeQuote.mint);
@@ -351,6 +353,7 @@ export default function CarnivalWheelGame() {
         setServerSeed(data.serverSeed as string);
         setChipsCredited(data.chipsCredited ?? 0);
         setSpinning(false);
+        setShowResultOverlay(true);
         setStatus(data.message ?? 'Done.');
         if (data.ledgerToken) {
           saveChipLedgerToken(publicKey.toBase58(), data.ledgerToken, data.chipsCredited ?? 0, {
@@ -367,24 +370,45 @@ export default function CarnivalWheelGame() {
     setBusy(false);
   };
 
-  const coinImg = useMemo(() => {
-    if (!outcome) return null;
-    return getFamToken(outcome.coinId)?.img ?? null;
-  }, [outcome]);
-
   const displaySpaces =
-    spaces.length === 63
+    spaces.length === CARNIVAL_WHEEL_SPACES
       ? spaces
-      : Array.from({ length: 63 }, (_, i) => ({
+      : Array.from({ length: CARNIVAL_WHEEL_SPACES }, (_, i) => ({
           index: i,
-          label: String(i + 1),
-          kind: 'number',
+          label: '…',
+          kind: 'month',
           tierId: 'dead' as PrizeTierId,
           prizeUsd: 0,
         }));
 
+  const resetForPlayAgain = () => {
+    setOutcome(null);
+    setServerSeed(null);
+    setStatus(null);
+    setShowResultOverlay(false);
+    setChipsCredited(0);
+    loadQuote();
+  };
+
   return (
     <div className="carnival-shell">
+      {showResultOverlay && outcome && (
+        <CarnivalResultOverlay
+          result={{
+            wheelLabel: outcome.wheelLabel,
+            tierId: outcome.tierId,
+            prizeUsd: outcome.prizeUsd,
+            diceFace: outcome.diceFace,
+            coinId: outcome.coinId,
+            coinName: outcome.coinName,
+            chips: outcome.chips,
+          }}
+          chipsCredited={chipsCredited}
+          onPlayAgain={resetForPlayAgain}
+          onDismiss={() => setShowResultOverlay(false)}
+        />
+      )}
+
       <header className="carnival-header">
         <div className="carnival-nav">
           <Link href={`${BRAND.homePath}${BRAND.homeAnchor}`} className="art-btn px-3 py-1.5 text-[#f0d878]">
@@ -403,8 +427,8 @@ export default function CarnivalWheelGame() {
         </div>
         <h1 className="carnival-title">Bonklandia Carnival Wheel</h1>
         <p className="carnival-sub">
-          Boardwalk prize wheel · ${CARNIVAL_ENTRY_USD.toFixed(2)} in $BONGA · 63 colored spaces · family d6 ·
-          prizes only via {BRAND.cashier}
+          Boardwalk prize wheel · ${CARNIVAL_ENTRY_USD.toFixed(2)} in $BONGA · {CARNIVAL_WHEEL_SPACES}{' '}
+          spaces · family logo d6 · prizes only via {BRAND.cashier}
         </p>
       </header>
 
@@ -462,50 +486,20 @@ export default function CarnivalWheelGame() {
                 disabled={busy || spinning}
                 onClick={() => void spin()}
               >
-                {spinning ? 'The Jester is spinning…' : 'Let the Jester spin the wheel'}
+                {spinning ? 'Bongo is spinning…' : 'Let Bongo spin the wheel'}
               </button>
             </>
           )}
 
-          {outcome && (
+          {outcome && !showResultOverlay && (
             <div className="carnival-result">
-              <h3>
-                {outcome.tierId === 'dead' || outcome.prizeUsd === 0
-                  ? 'Dead spin'
-                  : `${outcome.tierId.toUpperCase()} · $${outcome.prizeUsd.toFixed(2)}`}
-              </h3>
-              <p>
-                Wheel: <strong>{outcome.wheelLabel}</strong> (space #{outcome.wheelIndex + 1}/63)
-              </p>
-              <p>
-                Dice: <strong>{outcome.diceFace}</strong> → {outcome.coinName}
-              </p>
-              {coinImg && (
-                <Image src={coinImg} alt={outcome.coinName} width={72} height={72} unoptimized />
-              )}
-              <p className="carnival-chips">
-                Spendable chips credited: <strong>{chipsCredited}</strong>
-              </p>
-              <p className="carnival-muted">
-                Tokens leave only via the Cashier — exchange chips for {outcome.coinName} there.
-              </p>
-              <div className="carnival-result-actions">
-                <Link href="/cashier" className="art-btn carnival-cashier-btn">
-                  Open {BRAND.cashier} →
-                </Link>
-                <button
-                  type="button"
-                  className="art-btn"
-                  onClick={() => {
-                    setOutcome(null);
-                    setServerSeed(null);
-                    setStatus(null);
-                    loadQuote();
-                  }}
-                >
-                  Play again
-                </button>
-              </div>
+              <button
+                type="button"
+                className="art-btn carnival-pay-btn"
+                onClick={() => setShowResultOverlay(true)}
+              >
+                Show result again
+              </button>
               {serverSeed && (
                 <details className="carnival-verify">
                   <summary>Verify randomness (commit-reveal)</summary>
@@ -524,7 +518,7 @@ export default function CarnivalWheelGame() {
           {error && <p className="carnival-error">{error}</p>}
 
           <div className="carnival-tiers">
-            <h3>Prize tiers (63 spaces)</h3>
+            <h3>Prize tiers ({CARNIVAL_WHEEL_SPACES} spaces)</h3>
             <ul>
               {tiers.map(t => (
                 <li key={t.id}>

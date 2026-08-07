@@ -1,12 +1,13 @@
 /**
- * Carnival wheel — 63 spaces, prize tiers, dice → family coin.
+ * Carnival wheel — 32 spaces (months + zodiac + crypto), prize tiers, dice → family coin.
  * Outcomes are assigned by the server (HMAC); this module only defines composition.
  */
 
 import type { FamCoinId } from '@/lib/fam-tokens';
 
 export const CARNIVAL_ENTRY_USD = 0.25;
-export const CARNIVAL_WHEEL_SPACES = 63;
+/** Months 12 + Zodiac 12 + Crypto 8 — numbers 1–31 removed for readability. */
+export const CARNIVAL_WHEEL_SPACES = 32;
 
 export type PrizeTierId = 'dead' | 'low' | 'small' | 'medium' | 'big' | 'jackpot';
 
@@ -15,20 +16,20 @@ export type PrizeTier = {
   label: string;
   /** Target USD prize value (paid as spendable chips via Cashier path only). */
   prizeUsd: number;
-  /** Spaces allocated (must sum to 63). */
+  /** Spaces allocated (must sum to CARNIVAL_WHEEL_SPACES). */
   spaces: number;
 };
 
 /**
- * Exact composition requested:
- * Dead/Low 32 · Small 18 · Medium 9 · Big 3 · Jackpot 1
+ * 32-space boardwalk mix (scaled from former 63-space odds):
+ * Dead 10 · Low 6 · Small 9 · Medium 4 · Big 2 · Jackpot 1
  */
 export const PRIZE_TIERS: PrizeTier[] = [
-  { id: 'dead', label: 'Dead', prizeUsd: 0, spaces: 20 },
-  { id: 'low', label: 'Low', prizeUsd: 0.05, spaces: 12 },
-  { id: 'small', label: 'Small', prizeUsd: 0.1, spaces: 18 },
-  { id: 'medium', label: 'Medium', prizeUsd: 0.3, spaces: 9 },
-  { id: 'big', label: 'Big', prizeUsd: 1, spaces: 3 },
+  { id: 'dead', label: 'Dead', prizeUsd: 0, spaces: 10 },
+  { id: 'low', label: 'Low', prizeUsd: 0.05, spaces: 6 },
+  { id: 'small', label: 'Small', prizeUsd: 0.1, spaces: 9 },
+  { id: 'medium', label: 'Medium', prizeUsd: 0.3, spaces: 4 },
+  { id: 'big', label: 'Big', prizeUsd: 1, spaces: 2 },
   { id: 'jackpot', label: 'Jackpot', prizeUsd: 5, spaces: 1 },
 ];
 
@@ -36,23 +37,23 @@ export const PRIZE_TIERS: PrizeTier[] = [
 export function assertTierSpaces(): void {
   const sum = PRIZE_TIERS.reduce((a, t) => a + t.spaces, 0);
   if (sum !== CARNIVAL_WHEEL_SPACES) {
-    throw new Error(`Carnival tiers must sum to 63 spaces (got ${sum})`);
+    throw new Error(`Carnival tiers must sum to ${CARNIVAL_WHEEL_SPACES} spaces (got ${sum})`);
   }
 }
 
 const MONTHS = [
-  'January',
-  'February',
-  'March',
-  'April',
-  'May',
-  'June',
-  'July',
-  'August',
-  'September',
-  'October',
-  'November',
-  'December',
+  { label: 'JAN', full: 'January' },
+  { label: 'FEB', full: 'February' },
+  { label: 'MAR', full: 'March' },
+  { label: 'APR', full: 'April' },
+  { label: 'MAY', full: 'May' },
+  { label: 'JUN', full: 'June' },
+  { label: 'JUL', full: 'July' },
+  { label: 'AUG', full: 'August' },
+  { label: 'SEP', full: 'September' },
+  { label: 'OCT', full: 'October' },
+  { label: 'NOV', full: 'November' },
+  { label: 'DEC', full: 'December' },
 ] as const;
 
 const ZODIAC = [
@@ -75,34 +76,34 @@ const CRYPTO = ['BTC', 'SOL', 'ETH', 'BONK', 'BONGA', 'DOGE', 'XRP', 'USDC'] as 
 export type WheelSpace = {
   index: number;
   label: string;
-  kind: 'number' | 'month' | 'zodiac' | 'crypto';
+  /** Longer name for result UI */
+  fullLabel: string;
+  kind: 'month' | 'zodiac' | 'crypto';
   tierId: PrizeTierId;
   prizeUsd: number;
 };
 
-/** Build the fixed 63-space wheel: numbers 1–31, 12 months, 12 zodiac, 8 crypto. */
+/** Build the fixed 32-space wheel: 12 months, 12 zodiac, 8 crypto. */
 export function buildWheelSpaces(): WheelSpace[] {
   assertTierSpaces();
-  const labels: { label: string; kind: WheelSpace['kind'] }[] = [
-    ...Array.from({ length: 31 }, (_, i) => ({
-      label: String(i + 1),
-      kind: 'number' as const,
+  const labels: { label: string; fullLabel: string; kind: WheelSpace['kind'] }[] = [
+    ...MONTHS.map(m => ({ label: m.label, fullLabel: m.full, kind: 'month' as const })),
+    ...ZODIAC.map(label => ({
+      label: label.length > 6 ? label.slice(0, 4) : label,
+      fullLabel: label,
+      kind: 'zodiac' as const,
     })),
-    ...MONTHS.map(label => ({ label, kind: 'month' as const })),
-    ...ZODIAC.map(label => ({ label, kind: 'zodiac' as const })),
-    ...CRYPTO.map(label => ({ label, kind: 'crypto' as const })),
+    ...CRYPTO.map(label => ({ label, fullLabel: label, kind: 'crypto' as const })),
   ];
   if (labels.length !== CARNIVAL_WHEEL_SPACES) {
-    throw new Error(`Expected 63 labels, got ${labels.length}`);
+    throw new Error(`Expected ${CARNIVAL_WHEEL_SPACES} labels, got ${labels.length}`);
   }
 
-  // Deterministic tier assignment by shuffling tier slots with fixed seed order
   const tierSlots: PrizeTierId[] = [];
   for (const t of PRIZE_TIERS) {
     for (let i = 0; i < t.spaces; i++) tierSlots.push(t.id);
   }
-  // Fixed permutation so the layout is stable across deploys (not random per request)
-  const perm = fixedPermute(tierSlots.length, 0xc4a1b006);
+  const perm = fixedPermute(tierSlots.length, 0xc4a1b032);
   const orderedTiers = perm.map(i => tierSlots[i]!);
   const tierById = Object.fromEntries(PRIZE_TIERS.map(t => [t.id, t])) as Record<
     PrizeTierId,
@@ -115,6 +116,7 @@ export function buildWheelSpaces(): WheelSpace[] {
     return {
       index,
       label: L.label,
+      fullLabel: L.fullLabel,
       kind: L.kind,
       tierId,
       prizeUsd: tier.prizeUsd,
@@ -122,7 +124,6 @@ export function buildWheelSpaces(): WheelSpace[] {
   });
 }
 
-/** Deterministic LCG permutation of 0..n-1 */
 function fixedPermute(n: number, seed: number): number[] {
   const arr = Array.from({ length: n }, (_, i) => i);
   let s = seed >>> 0;
@@ -156,26 +157,19 @@ export function coinForDice(face: number) {
   return row;
 }
 
-/**
- * Convert prize USD → spendable chips (internal ledger unit).
- * Conservative mapping aligned with micro-prize Cashier policy.
- * Jackpot hard-capped per spin for economy safety.
- */
 export function prizeUsdToChips(prizeUsd: number): number {
   if (prizeUsd <= 0) return 0;
   if (prizeUsd <= 0.05) return 1;
   if (prizeUsd <= 0.1) return 3;
   if (prizeUsd <= 0.3) return 9;
   if (prizeUsd <= 1) return 30;
-  // $5 jackpot
   return 150;
 }
 
-/** Entry fee split accounting (55/30/15) — recorded server-side; all BONGA to treasury. */
 export const ENTRY_SPLIT = {
-  treasuryBps: 5500, // 55% permanent BONGA treasury
-  prizePoolBps: 3000, // 30% prize pool accounting
-  opsBps: 1500, // 15% ops / artist / LP
+  treasuryBps: 5500,
+  prizePoolBps: 3000,
+  opsBps: 1500,
 } as const;
 
 export function splitEntryAmount(rawAmount: bigint): {

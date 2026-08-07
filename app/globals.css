@@ -602,6 +602,186 @@ body {
   letter-spacing: 0.04em;
 }
 
+/* ── Carnival win/lose overlay ── */
+.carnival-result-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 12000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: max(0.75rem, env(safe-area-inset-top)) 0.75rem max(0.75rem, env(safe-area-inset-bottom));
+  background: rgba(4, 2, 8, 0.78);
+  backdrop-filter: blur(8px);
+  animation: carnival-overlay-in 0.35s ease-out;
+}
+@keyframes carnival-overlay-in {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+.carnival-result-burst {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background:
+    radial-gradient(circle at 50% 40%, rgba(240, 216, 120, 0.22) 0%, transparent 45%),
+    radial-gradient(circle at 20% 80%, rgba(168, 85, 247, 0.12) 0%, transparent 40%);
+}
+.carnival-result-win .carnival-result-burst {
+  background:
+    radial-gradient(circle at 50% 35%, rgba(74, 222, 128, 0.28) 0%, transparent 50%),
+    radial-gradient(circle at 50% 50%, rgba(240, 216, 120, 0.2) 0%, transparent 60%);
+  animation: carnival-burst-pulse 1.2s ease-in-out infinite alternate;
+}
+.carnival-result-lose .carnival-result-burst {
+  background: radial-gradient(circle at 50% 40%, rgba(100, 80, 90, 0.25) 0%, transparent 50%);
+}
+.carnival-result-jackpot .carnival-result-burst {
+  background:
+    radial-gradient(circle at 50% 30%, rgba(250, 204, 21, 0.45) 0%, transparent 40%),
+    radial-gradient(circle at 30% 70%, rgba(244, 63, 94, 0.2) 0%, transparent 45%),
+    radial-gradient(circle at 70% 70%, rgba(168, 85, 247, 0.25) 0%, transparent 45%);
+}
+@keyframes carnival-burst-pulse {
+  from { opacity: 0.75; transform: scale(1); }
+  to { opacity: 1; transform: scale(1.04); }
+}
+.carnival-result-card {
+  position: relative;
+  z-index: 1;
+  width: min(420px, 100%);
+  max-height: min(92vh, 640px);
+  overflow: auto;
+  padding: 1.35rem 1.25rem 1.2rem;
+  border-radius: 18px;
+  text-align: center;
+  border: 2px solid rgba(212, 175, 55, 0.55);
+  background:
+    linear-gradient(165deg, rgba(48, 28, 12, 0.98) 0%, rgba(12, 6, 10, 0.99) 100%);
+  box-shadow:
+    0 0 0 1px rgba(0, 0, 0, 0.5),
+    0 24px 60px rgba(0, 0, 0, 0.65),
+    0 0 48px rgba(212, 175, 55, 0.2);
+  animation: carnival-card-pop 0.45s cubic-bezier(0.2, 1.2, 0.3, 1);
+}
+.carnival-result-win .carnival-result-card {
+  border-color: rgba(74, 222, 128, 0.65);
+  box-shadow:
+    0 0 0 1px rgba(0, 0, 0, 0.5),
+    0 24px 60px rgba(0, 0, 0, 0.65),
+    0 0 56px rgba(52, 211, 153, 0.35);
+}
+.carnival-result-lose .carnival-result-card {
+  border-color: rgba(148, 163, 184, 0.4);
+}
+.carnival-result-jackpot .carnival-result-card {
+  border-color: #facc15;
+  box-shadow:
+    0 0 0 2px rgba(250, 204, 21, 0.4),
+    0 24px 70px rgba(0, 0, 0, 0.7),
+    0 0 80px rgba(250, 204, 21, 0.45);
+}
+@keyframes carnival-card-pop {
+  from { opacity: 0; transform: scale(0.82) translateY(24px); }
+  to { opacity: 1; transform: scale(1) translateY(0); }
+}
+.carnival-result-kicker {
+  margin: 0 0 0.35rem;
+  font-size: 0.78rem;
+  font-weight: 800;
+  letter-spacing: 0.22em;
+  text-transform: uppercase;
+}
+.carnival-result-headline {
+  margin: 0 0 0.5rem;
+  font-family: Georgia, serif;
+  font-size: clamp(2.2rem, 8vw, 3.2rem);
+  line-height: 1.05;
+  color: #f0d878;
+  text-shadow: 0 2px 0 #3b2410, 0 0 28px rgba(240, 216, 120, 0.45);
+}
+.carnival-result-lose .carnival-result-headline {
+  color: #cbd5e1;
+  text-shadow: none;
+}
+.carnival-result-win .carnival-result-headline {
+  color: #86efac;
+  text-shadow: 0 2px 0 #14532d, 0 0 32px rgba(74, 222, 128, 0.45);
+}
+.carnival-result-jackpot .carnival-result-headline {
+  color: #fde047;
+  animation: carnival-jackpot-glow 0.7s ease-in-out infinite alternate;
+}
+@keyframes carnival-jackpot-glow {
+  from { text-shadow: 0 0 12px rgba(250, 204, 21, 0.5); }
+  to { text-shadow: 0 0 36px rgba(250, 204, 21, 0.95), 0 0 60px rgba(244, 63, 94, 0.4); }
+}
+.carnival-result-sub {
+  margin: 0 0 1rem;
+  font-size: 1.05rem;
+  color: rgba(245, 230, 200, 0.85);
+  line-height: 1.4;
+}
+.carnival-result-details {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.65rem;
+  margin-bottom: 0.85rem;
+}
+@media (max-width: 420px) {
+  .carnival-result-details { grid-template-columns: 1fr; }
+}
+.carnival-result-chip {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.25rem;
+  padding: 0.75rem 0.5rem;
+  border-radius: 12px;
+  background: rgba(0, 0, 0, 0.35);
+  border: 1px solid rgba(212, 175, 55, 0.25);
+}
+.carnival-result-chip-label {
+  font-size: 0.65rem;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: rgba(245, 230, 200, 0.5);
+}
+.carnival-result-chip strong {
+  font-size: 1rem;
+  color: #f5e6c8;
+}
+.carnival-result-tier {
+  font-size: 0.75rem;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+}
+.carnival-result-coin {
+  border-radius: 50%;
+  margin-top: 0.25rem;
+}
+.carnival-result-hint {
+  margin: 0 0 0.85rem;
+  font-size: 0.8rem;
+  color: rgba(196, 181, 253, 0.8);
+  line-height: 1.35;
+}
+.carnival-result-actions {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+.carnival-result-primary {
+  width: 100%;
+  padding: 0.85rem 1rem !important;
+  font-weight: 800 !important;
+}
+.carnival-result-secondary {
+  width: 100%;
+  opacity: 0.85;
+}
+
 /* Degen Valley combat — token logos (square coin art) */
 .valley-fighter-logo {
   border-radius: 50%;
@@ -10075,4 +10255,125 @@ html {
 @media (max-width: 640px) {
   .alice-trip-ambient { opacity: 0.65; }
   .alice-trip-burst-label { font-size: 1.2rem; bottom: 14%; }
+}
+
+/* -- Mobile: Cashier � Carnival � Valley combat -- */
+@media (max-width: 720px) {
+  .carnival-shell {
+    padding: 0.65rem 0.55rem 5.5rem;
+  }
+  .carnival-nav {
+    gap: 0.3rem;
+  }
+  .carnival-nav .art-btn,
+  .carnival-nav .wallet-adapter-button {
+    font-size: 0.72rem !important;
+    padding: 0.4rem 0.55rem !important;
+    min-height: 36px;
+  }
+  .carnival-title {
+    font-size: 1.45rem;
+    margin: 0.35rem 0 0.2rem;
+  }
+  .carnival-sub {
+    font-size: 0.82rem;
+    padding: 0 0.25rem;
+  }
+  .carnival-grid {
+    gap: 0.85rem;
+  }
+  .carnival-panel {
+    padding: 0.75rem 0.7rem 1rem;
+  }
+  .carnival-wheel-panel {
+    min-height: 0;
+    padding-bottom: 0.75rem;
+  }
+  .boardwalk-wheel-frame {
+    width: min(100%, 94vw);
+    height: min(100vw - 1.2rem, 92vw);
+    max-width: 420px;
+    max-height: 420px;
+  }
+  .carnival-clown {
+    width: min(140px, 36vw);
+  }
+  .carnival-pay-btn,
+  .carnival-spin-btn {
+    min-height: 48px;
+    font-size: 0.95rem !important;
+    padding: 0.85rem 0.75rem !important;
+  }
+  .carnival-quote p {
+    font-size: 0.9rem;
+  }
+  .wallet-adapter-button {
+    height: 36px !important;
+  }
+
+  .cashier-content {
+    padding-left: 0.65rem !important;
+    padding-right: 0.65rem !important;
+    padding-bottom: max(4.5rem, calc(3.5rem + env(safe-area-inset-bottom, 0px))) !important;
+  }
+  .cashier-nav {
+    gap: 0.4rem !important;
+  }
+  .cashier-nav .art-btn {
+    font-size: 0.78rem !important;
+    padding: 0.45rem 0.65rem !important;
+  }
+  .cashier-coin-card {
+    padding: 0.75rem;
+  }
+  .cashier-token-logo {
+    width: 56px;
+    height: 56px;
+  }
+  .cashier-coin-header h3 {
+    font-size: 1.1rem;
+  }
+
+  .game-scene-content {
+    margin-top: 0.5rem !important;
+    margin-bottom: 0.75rem !important;
+    padding-left: 0.4rem !important;
+    padding-right: 0.4rem !important;
+  }
+  .art-meta-bar {
+    flex-wrap: wrap;
+    gap: 0.35rem 0.65rem;
+    font-size: 0.82rem;
+    padding: 0.5rem 0.65rem;
+  }
+  .turn-banner {
+    font-size: 0.9rem;
+    padding: 0.45rem 0.5rem;
+  }
+  .wave-modifier-banner {
+    font-size: 0.78rem;
+    padding: 0.4rem 0.5rem;
+  }
+  .combat-row {
+    gap: 0.75rem !important;
+    padding: 0.65rem !important;
+  }
+  .combat-col.w-full.lg\:w-\[280px\] {
+    width: 100%;
+  }
+  .fighter-img.valley-fighter-logo {
+    max-width: min(200px, 42vw) !important;
+    max-height: min(200px, 42vw) !important;
+    width: auto !important;
+    height: auto !important;
+  }
+  .enemy-img {
+    max-width: min(140px, 32vw) !important;
+  }
+  .combat-arena {
+    min-height: 280px;
+  }
+  .enemy-placard h1 {
+    font-size: 1.45rem !important;
+  }
 }

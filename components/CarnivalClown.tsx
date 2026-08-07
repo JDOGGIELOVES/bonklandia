@@ -4,12 +4,13 @@ import Image from 'next/image';
 
 type Props = {
   spinning: boolean;
-  /** When true, jester is mid-spin (request in flight or wheel moving). */
   active?: boolean;
 };
 
+const CLOWN_SRC = '/assets/carnival/boardwalk-clown.png?v=20260806clown1';
+
 /**
- * Boardwalk spinner — uses the real Alice jester hero portrait (not CSS cartoon).
+ * Traditional boardwalk carnival clown (not the Alice Room jester).
  */
 export default function CarnivalClown({ spinning, active }: Props) {
   const busy = spinning || active;
@@ -17,11 +18,11 @@ export default function CarnivalClown({ spinning, active }: Props) {
     <div
       className={`carnival-clown ${busy ? 'carnival-clown-spinning' : ''}`}
       aria-hidden
-      title={busy ? 'Spinning the wheel…' : 'Carnival jester'}
+      title={busy ? 'Spinning the wheel…' : 'Boardwalk clown'}
     >
       <div className="carnival-clown-figure">
         <Image
-          src="/assets/alice/entities/jester.png"
+          src={CLOWN_SRC}
           alt=""
           width={220}
           height={280}
@@ -30,7 +31,7 @@ export default function CarnivalClown({ spinning, active }: Props) {
           priority
         />
       </div>
-      <p className="carnival-clown-name">The Jester</p>
+      <p className="carnival-clown-name">Bongo the Clown</p>
       <p className="carnival-clown-line">{busy ? 'Round she goes!' : 'Ready when you are!'}</p>
     </div>
   );

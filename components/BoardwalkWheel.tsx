@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useMemo, useRef } from 'react';
-import type { PrizeTierId } from '@/lib/carnival/wheel';
+import { CARNIVAL_WHEEL_SPACES, type PrizeTierId } from '@/lib/carnival/wheel';
 import { playPegTick } from '@/lib/carnival/boardwalk-audio';
 
 export type BoardwalkSpace = {
@@ -56,24 +56,22 @@ type Props = {
 };
 
 /**
- * Classic boardwalk prize wheel: wooden rim, colored wedges, rim pins, top flapper.
- * All 63 spaces are painted and labeled from the start.
+ * Boardwalk prize wheel — 32 readable wedges (months, zodiac, crypto).
  */
 export default function BoardwalkWheel({ spaces, rotationDeg, spinning }: Props) {
-  const n = Math.max(1, spaces.length || 63);
+  const n = Math.max(1, spaces.length || CARNIVAL_WHEEL_SPACES);
   const seg = 360 / n;
   const size = 640;
   const cx = size / 2;
   const cy = size / 2;
   const rOuter = 292;
-  const rInner = 58;
-  const rLabel = 248;
+  const rInner = 62;
+  const rLabel = 230;
   const rPeg = 300;
 
   const lastPegRef = useRef(-1);
   const prevRotRef = useRef(rotationDeg);
 
-  // Peg ticks while the wheel turns (flapper hitting pins)
   useEffect(() => {
     if (!spinning) {
       lastPegRef.current = -1;
@@ -81,8 +79,6 @@ export default function BoardwalkWheel({ spaces, rotationDeg, spinning }: Props)
       return;
     }
     const id = window.setInterval(() => {
-      // Sample CSS transform via estimated ease is hard — approximate from wall clock
-      // by reading the live style from the wheel element
       const el = document.getElementById('boardwalk-wheel-rotor');
       if (!el) return;
       const tr = getComputedStyle(el).transform;
@@ -94,7 +90,7 @@ export default function BoardwalkWheel({ spaces, rotationDeg, spinning }: Props)
       const b = parts[1] ?? 0;
       let deg = (Math.atan2(b, a) * 180) / Math.PI;
       if (deg < 0) deg += 360;
-      const peg = Math.floor(((deg % 360) + 360) % 360 / seg);
+      const peg = Math.floor((((deg % 360) + 360) % 360) / seg);
       if (peg !== lastPegRef.current) {
         lastPegRef.current = peg;
         const speed = Math.min(1, Math.abs(deg - (prevRotRef.current % 360)) / 20);
@@ -112,7 +108,6 @@ export default function BoardwalkWheel({ spaces, rotationDeg, spinning }: Props)
       const mid = a0 + seg / 2;
       const labelPos = polar(cx, cy, rLabel, mid);
       const colors = TIER_COLORS[s.tierId] ?? TIER_COLORS.dead!;
-      // Alternate brightness so every slot edge is visible
       const fill =
         s.tierId === 'jackpot'
           ? i % 2 === 0
@@ -122,9 +117,7 @@ export default function BoardwalkWheel({ spaces, rotationDeg, spinning }: Props)
             ? colors.fill
             : s.tierId === 'dead'
               ? '#2a241c'
-              : lightenHex(colors.fill, 14);
-      const short =
-        s.label.length > 8 ? s.label.slice(0, 7) + '…' : s.kind === 'number' ? s.label : s.label;
+              : lightenHex(colors.fill, 18);
       return {
         key: s.index,
         path: wedgePath(cx, cy, rInner, rOuter, a0, a1),
@@ -132,18 +125,18 @@ export default function BoardwalkWheel({ spaces, rotationDeg, spinning }: Props)
         ink: colors.ink,
         mid,
         labelPos,
-        short,
+        short: s.label,
         title: `${s.label} · ${s.tierId} · $${s.prizeUsd.toFixed(2)}`,
         peg: polar(cx, cy, rPeg, a1),
+        fontSize: sFont(s.label),
       };
     });
   }, [spaces, seg, cx, cy, rInner, rOuter, rLabel, rPeg]);
 
   return (
-    <div className="boardwalk-stage" aria-label="63-space carnival prize wheel">
+    <div className="boardwalk-stage" aria-label={`${n}-space carnival prize wheel`}>
       <div className="boardwalk-post" aria-hidden />
       <div className="boardwalk-wheel-frame">
-        {/* Fixed flapper (clicks against pegs) */}
         <div className={`boardwalk-flapper ${spinning ? 'boardwalk-flapper-busy' : ''}`} aria-hidden>
           <div className="boardwalk-flapper-arm" />
           <div className="boardwalk-flapper-tip" />
@@ -178,22 +171,20 @@ export default function BoardwalkWheel({ spaces, rotationDeg, spinning }: Props)
               </filter>
             </defs>
 
-            {/* Outer wooden disc */}
             <circle cx={cx} cy={cy} r={rOuter + 22} fill="url(#boardwalk-rim-grad)" filter="url(#boardwalk-shadow)" />
             <circle cx={cx} cy={cy} r={rOuter + 14} fill="none" stroke="#3b2410" strokeWidth="6" />
             <circle cx={cx} cy={cy} r={rOuter + 4} fill="#2a1a0c" />
 
-            {/* Colored prize wedges — all 63 always visible */}
             {wedges.map(w => (
               <g key={w.key}>
-                <path d={w.path} fill={w.fill} stroke="#1a1208" strokeWidth="0.8" />
+                <path d={w.path} fill={w.fill} stroke="#1a1208" strokeWidth="1.4" />
                 <title>{w.title}</title>
                 <text
                   x={w.labelPos.x}
                   y={w.labelPos.y}
                   fill={w.ink}
-                  fontSize={sFont(w.short)}
-                  fontWeight="700"
+                  fontSize={w.fontSize}
+                  fontWeight="800"
                   fontFamily="Georgia, 'Times New Roman', serif"
                   textAnchor="middle"
                   dominantBaseline="middle"
@@ -205,26 +196,16 @@ export default function BoardwalkWheel({ spaces, rotationDeg, spinning }: Props)
               </g>
             ))}
 
-            {/* Metal pegs / pins at every slot boundary */}
             {wedges.map(w => (
               <g key={`peg-${w.key}`}>
-                <circle cx={w.peg.x} cy={w.peg.y} r={4.2} fill="#c0c0c0" stroke="#3f3f46" strokeWidth="1" />
-                <circle cx={w.peg.x - 1} cy={w.peg.y - 1} r={1.2} fill="#f4f4f5" opacity="0.85" />
+                <circle cx={w.peg.x} cy={w.peg.y} r={5} fill="#c0c0c0" stroke="#3f3f46" strokeWidth="1" />
+                <circle cx={w.peg.x - 1.2} cy={w.peg.y - 1.2} r={1.4} fill="#f4f4f5" opacity="0.85" />
               </g>
             ))}
 
-            {/* Center hub */}
             <circle cx={cx} cy={cy} r={rInner + 6} fill="#3b2410" />
             <circle cx={cx} cy={cy} r={rInner} fill="url(#boardwalk-hub-grad)" stroke="#f0d878" strokeWidth="3" />
-            <text
-              x={cx}
-              y={cy - 6}
-              textAnchor="middle"
-              fill="#3b2410"
-              fontSize="22"
-              fontWeight="900"
-              fontFamily="Georgia, serif"
-            >
+            <text x={cx} y={cy - 6} textAnchor="middle" fill="#3b2410" fontSize="22" fontWeight="900" fontFamily="Georgia, serif">
               SPIN
             </text>
             <text
@@ -243,17 +224,17 @@ export default function BoardwalkWheel({ spaces, rotationDeg, spinning }: Props)
         </div>
       </div>
       <p className="boardwalk-caption">
-        Boardwalk prize wheel · every wedge is a real space · flapper hits the pins
+        {n} big wedges · months · zodiac · crypto · flapper on the pins
       </p>
     </div>
   );
 }
 
 function sFont(label: string): number {
-  if (label.length <= 2) return 13;
-  if (label.length <= 4) return 10;
-  if (label.length <= 6) return 8.5;
-  return 7;
+  if (label.length <= 3) return 15;
+  if (label.length <= 4) return 13;
+  if (label.length <= 6) return 11;
+  return 9;
 }
 
 function lightenHex(hex: string, amount: number): string {

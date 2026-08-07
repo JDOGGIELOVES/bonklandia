@@ -3,7 +3,7 @@
 ## Product summary
 
 - **Entry:** $0.25 equivalent in $BONGA (`7YoAymCyauHAXus3snMEKcLgRx546MrHuBW3EuUNKKQs`) to the Bonklandia treasury.
-- **Play:** 63-space wheel + d6 family coin.
+- **Play:** 32-space wheel (months + zodiac + crypto) + d6 family coin logos.
 - **Prizes:** Micro-USD tiers, credited as **spendable chips** on the server ledger.
 - **Token exit:** **Cashier only** (`POST /api/exchange`). The wheel never transfers SPL prizes to players.
 
@@ -23,7 +23,7 @@
 1. On `start`, server stores `serverSeed` inside the sealed session token and returns `commit = HMAC(secret, "carnival-commit:"+seed)`.
 2. On `spin`, server computes:
    - `digest = HMAC-SHA256(serverSeed, "carnival-outcome:"+sessionId)`
-   - `wheelIndex = u32(digest[0..4]) % 63`
+   - `wheelIndex = u32(digest[0..4]) % spaceCount` (32 spaces)
    - `diceFace = (digest[4] % 6) + 1`
 3. Response reveals `serverSeed` so anyone can recompute and match the outcome.
 
