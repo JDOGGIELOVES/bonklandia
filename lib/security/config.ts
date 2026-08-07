@@ -16,30 +16,34 @@ export const MAX_PAID_SPINS_PER_WALLET_PER_HOUR = 40;
 /**
  * Cashier payout policy (sole treasury SPL exit = /api/exchange).
  *
- * Prizes should feel worth playing. Caps still exist as treasury safety nets,
- * not micro-cents limits. Override any of these with env vars in Vercel.
+ * Two separate limits (do not confuse them):
+ * 1) USD caps — estimated dollar value of the tokens (safety net for expensive mints).
+ *    10,000 BONK is ~cents, not $50. USD caps only bite when price × amount is high.
+ * 2) Chip caps — game currency spent (backstop if a mint’s USD price is ~0).
+ *
+ * Override with env in Vercel if needed.
  */
 
-/** Hard max estimated USD value for a single exchange. */
-export const MAX_USD_PER_EXCHANGE = Number(process.env.MAX_USD_PER_EXCHANGE ?? '50');
+/** Max estimated USD value for one cashout (not “token count”). */
+export const MAX_USD_PER_EXCHANGE = Number(process.env.MAX_USD_PER_EXCHANGE ?? '5');
 
-/** Hard max estimated USD a wallet may cash out per UTC day. */
-export const MAX_USD_PER_WALLET_PER_DAY = Number(process.env.MAX_USD_PER_WALLET_PER_DAY ?? '150');
+/** Max estimated USD a wallet may cash out per UTC day. */
+export const MAX_USD_PER_WALLET_PER_DAY = Number(process.env.MAX_USD_PER_WALLET_PER_DAY ?? '15');
 
 /** Soft multi-wallet brake on one IP (best-effort per instance). */
 export const MAX_USD_PER_IP_PER_DAY = Number(
   process.env.MAX_USD_PER_IP_PER_DAY ?? String(MAX_USD_PER_WALLET_PER_DAY * 3),
 );
 
-/** Log / flag large cashouts (does not block until max/tx). */
-export const USD_CONCERN_THRESHOLD = Number(process.env.USD_CONCERN_THRESHOLD ?? '25');
+/** Log / flag larger cashouts (does not block until max/tx). */
+export const USD_CONCERN_THRESHOLD = Number(process.env.USD_CONCERN_THRESHOLD ?? '3');
 
 /** Official accounting: chips per 1 BONGA-equivalent (internal, not the cashier rate table). */
 export const CHIPS_PER_BONGA = Number(process.env.CHIPS_PER_BONGA ?? '15');
 
 /**
- * Chip backstops — stop unlimited drains if a mint’s USD price is near zero.
- * Defaults allow real prize sizes (e.g. thousands of BONK per cashout).
+ * Chip backstops — if a mint is nearly worthless in USD, still stop unlimited drain.
+ * At 100 BONK / chip, 10k chips ≈ 1,000,000 BONK (~$20 if BONK is $0.00002).
  */
 export const MAX_CHIP_COST_PER_EXCHANGE = Number(
   process.env.MAX_CHIP_COST_PER_EXCHANGE ?? '10000',
