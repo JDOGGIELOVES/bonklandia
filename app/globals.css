@@ -395,6 +395,12 @@ body {
   margin: 0 auto;
   line-height: 1.45;
 }
+.carnival-build {
+  margin: 0.35rem 0 0;
+  font-size: 0.7rem;
+  letter-spacing: 0.06em;
+  color: rgba(245, 230, 200, 0.4);
+}
 .carnival-grid {
   display: grid;
   grid-template-columns: 1.25fr 0.85fr;

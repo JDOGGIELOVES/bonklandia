@@ -414,6 +414,9 @@ export default function CarnivalWheelGame() {
         </div>
         <h1 className="carnival-title">Carnival Wheel</h1>
         <p className="carnival-sub">${CARNIVAL_ENTRY_USD.toFixed(2)} BONGA a spin</p>
+        <p className="carnival-build" aria-label="Build version">
+          Build {BRAND.buildId}
+        </p>
       </header>
 
       <div className="carnival-grid">

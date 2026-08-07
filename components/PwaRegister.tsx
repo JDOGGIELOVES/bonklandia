@@ -3,25 +3,35 @@
 import { useEffect } from 'react';
 import { BRAND } from '@/lib/brand';
 
+const BUILD_KEY = `${BRAND.storagePrefix}-last-build-id`;
+
 /**
- * Registers Phase-1 service worker (production only).
- * Safe: SW never caches /api/* ledger routes.
+ * Registers SW + busts stale caches when buildId changes so deploys show up.
  */
 export default function PwaRegister() {
   useEffect(() => {
     if (typeof window === 'undefined') return;
     if (!('serviceWorker' in navigator)) return;
-    // Dev HMR + SW fights — only register on real deploys
     if (process.env.NODE_ENV !== 'production') return;
+
+    const prev = localStorage.getItem(BUILD_KEY);
+    const isNewBuild = prev !== BRAND.buildId;
+    localStorage.setItem(BUILD_KEY, BRAND.buildId);
 
     const swUrl = `/sw.js?v=${encodeURIComponent(BRAND.buildId)}`;
 
-    // No auto-reload on controllerchange — that can interrupt Alice bank / wallet flows.
-    // New SW activates; next navigation picks up the new shell.
+    void (async () => {
+      try {
+        if (isNewBuild && prev) {
+          // New deploy: drop every Cache API entry so old JS never sticks
+          const keys = await caches.keys();
+          await Promise.all(keys.map(k => caches.delete(k)));
+          const regs = await navigator.serviceWorker.getRegistrations();
+          await Promise.all(regs.map(r => r.unregister()));
+        }
 
-    navigator.serviceWorker
-      .register(swUrl, { scope: '/' })
-      .then(reg => {
+        const reg = await navigator.serviceWorker.register(swUrl, { scope: '/' });
+
         const ping = () => {
           try {
             void reg.update();
@@ -30,7 +40,7 @@ export default function PwaRegister() {
           }
         };
         window.addEventListener('focus', ping);
-        window.setTimeout(ping, 4000);
+        window.setTimeout(ping, 2000);
 
         reg.addEventListener('updatefound', () => {
           const worker = reg.installing;
@@ -38,13 +48,20 @@ export default function PwaRegister() {
           worker.addEventListener('statechange', () => {
             if (worker.state === 'installed' && navigator.serviceWorker.controller) {
               worker.postMessage({ type: 'SKIP_WAITING' });
+              worker.postMessage({ type: 'CLEAR_CACHES' });
             }
           });
         });
-      })
-      .catch(() => {
-        /* registration can fail on restricted browsers — ignore */
-      });
+
+        // One soft reload after a build change so the new app shell loads
+        if (isNewBuild && prev && !sessionStorage.getItem(`${BUILD_KEY}-reloaded`)) {
+          sessionStorage.setItem(`${BUILD_KEY}-reloaded`, '1');
+          window.location.reload();
+        }
+      } catch {
+        /* restricted browsers */
+      }
+    })();
   }, []);
 
   return null;

@@ -4,7 +4,7 @@ import type { Metadata } from 'next';
 
 export const metadata: Metadata = {
   title: `Carnival Wheel · ${BRAND.name}`,
-  description: `$${0.25} BONGA carnival wheel — 32 spaces, family logo d6, Cashier-only exits.`,
+  description: `$${0.25} BONGA carnival wheel.`,
 };
 
 export default function CarnivalPage() {
