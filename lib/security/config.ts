@@ -14,44 +14,39 @@ export const MAX_PAID_SPINS_PER_SESSION = 25;
 export const MAX_PAID_SPINS_PER_WALLET_PER_HOUR = 40;
 
 /**
- * Micro-prize cashier policy (sole treasury SPL exit = /api/exchange).
+ * Cashier payout policy (sole treasury SPL exit = /api/exchange).
  *
- * Large cashouts are not allowed. ~$1 USD is the concern threshold:
- * anything at or above that is blocked per exchange and logged.
- * All Fam coins (BONK, BONGA, BONG, …) use the same USD + chip rules.
+ * Prizes should feel worth playing. Caps still exist as treasury safety nets,
+ * not micro-cents limits. Override any of these with env vars in Vercel.
  */
 
 /** Hard max estimated USD value for a single exchange. */
-export const MAX_USD_PER_EXCHANGE = Number(process.env.MAX_USD_PER_EXCHANGE ?? '1');
+export const MAX_USD_PER_EXCHANGE = Number(process.env.MAX_USD_PER_EXCHANGE ?? '50');
 
-/**
- * Hard max estimated USD a wallet may cash out per UTC day.
- * Slightly above $1 so a few tiny wins can still redeem; not a whale day.
- */
-export const MAX_USD_PER_WALLET_PER_DAY = Number(process.env.MAX_USD_PER_WALLET_PER_DAY ?? '3');
+/** Hard max estimated USD a wallet may cash out per UTC day. */
+export const MAX_USD_PER_WALLET_PER_DAY = Number(process.env.MAX_USD_PER_WALLET_PER_DAY ?? '150');
 
 /** Soft multi-wallet brake on one IP (best-effort per instance). */
 export const MAX_USD_PER_IP_PER_DAY = Number(
   process.env.MAX_USD_PER_IP_PER_DAY ?? String(MAX_USD_PER_WALLET_PER_DAY * 3),
 );
 
-/** Log / flag when a cashout reaches this USD (default = same as max/tx). */
-export const USD_CONCERN_THRESHOLD = Number(process.env.USD_CONCERN_THRESHOLD ?? '1');
+/** Log / flag large cashouts (does not block until max/tx). */
+export const USD_CONCERN_THRESHOLD = Number(process.env.USD_CONCERN_THRESHOLD ?? '25');
 
-/** Official cashier rate: chips required for 1 BONGA. */
+/** Official accounting: chips per 1 BONGA-equivalent (internal, not the cashier rate table). */
 export const CHIPS_PER_BONGA = Number(process.env.CHIPS_PER_BONGA ?? '15');
 
 /**
- * Chip backstops — apply even if a token’s USD price is near zero
- * (so “worthless” mints cannot drain unlimited supply).
- * Defaults: 2 BONGA worth of chips per tx, 6 BONGA per day.
+ * Chip backstops — stop unlimited drains if a mint’s USD price is near zero.
+ * Defaults allow real prize sizes (e.g. thousands of BONK per cashout).
  */
 export const MAX_CHIP_COST_PER_EXCHANGE = Number(
-  process.env.MAX_CHIP_COST_PER_EXCHANGE ?? String(2 * CHIPS_PER_BONGA),
+  process.env.MAX_CHIP_COST_PER_EXCHANGE ?? '10000',
 );
 
 export const MAX_CHIPS_EXCHANGED_PER_WALLET_PER_DAY = Number(
-  process.env.MAX_CHIPS_EXCHANGED_PER_WALLET_PER_DAY ?? String(6 * CHIPS_PER_BONGA),
+  process.env.MAX_CHIPS_EXCHANGED_PER_WALLET_PER_DAY ?? '50000',
 );
 
 export const MAX_CHIPS_EXCHANGED_PER_IP_PER_DAY = Number(
@@ -71,7 +66,7 @@ export const MAX_BONGA_EQUIVALENT_PER_IP_PER_DAY =
 
 /** Successful cashier exchanges per wallet per UTC day. */
 export const MAX_EXCHANGES_PER_WALLET_PER_DAY = Number(
-  process.env.MAX_EXCHANGES_PER_WALLET_PER_DAY ?? '12',
+  process.env.MAX_EXCHANGES_PER_WALLET_PER_DAY ?? '50',
 );
 
 /** Exchange attempt gate per IP per hour. */

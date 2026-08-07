@@ -26,16 +26,21 @@ export type FamTokenConfig = {
   minTokens: number;
 };
 
+/**
+ * How many SPL tokens one Bonk Chip buys.
+ * Rates should feel rewarding for play time — BONK especially (cheap mint).
+ */
 const EXCHANGE_RATES: Record<
   FamCoinId,
   { tokensPerChip: number; rateLabel: string; minTokens: number }
 > = {
-  bonk: { tokensPerChip: 1 / 3, rateLabel: '3 chips → 1 BONK', minTokens: 1 },
-  bonga: { tokensPerChip: 1 / 15, rateLabel: '15 chips → 1 BONGA', minTokens: 1 },
-  bong: { tokensPerChip: 5, rateLabel: '1 chip → 5 BONG', minTokens: 1 },
-  bink: { tokensPerChip: 10, rateLabel: '1 chip → 10 BINK', minTokens: 1 },
-  bonnie: { tokensPerChip: 0.05, rateLabel: '1 chip → 0.05 BONNIE', minTokens: 0.05 },
-  beng: { tokensPerChip: 0.4, rateLabel: '1 chip → 0.4 BENG', minTokens: 0.4 },
+  // Was 3 chips → 1 BONK (essentially nothing). Now prizes scale with chips.
+  bonk: { tokensPerChip: 100, rateLabel: '1 chip → 100 BONK', minTokens: 100 },
+  bonga: { tokensPerChip: 1, rateLabel: '1 chip → 1 BONGA', minTokens: 1 },
+  bong: { tokensPerChip: 50, rateLabel: '1 chip → 50 BONG', minTokens: 10 },
+  bink: { tokensPerChip: 100, rateLabel: '1 chip → 100 BINK', minTokens: 10 },
+  bonnie: { tokensPerChip: 0.5, rateLabel: '1 chip → 0.5 BONNIE', minTokens: 0.1 },
+  beng: { tokensPerChip: 5, rateLabel: '1 chip → 5 BENG', minTokens: 1 },
 };
 
 export const FAM_TOKENS: FamTokenConfig[] = PLAYABLE_CHARACTERS.map(c => {

@@ -489,10 +489,7 @@ export default function CashierPanel({ showBackLink = true }: CashierPanelProps)
                       </div>
                     </div>
                   </div>
-                  <p className="cashier-quota-note">
-                    Each cashout still capped at ~${walletQuota.maxUsdPerExchange}. Resets daily (UTC). Best-effort
-                    for this region.
-                  </p>
+                  <p className="cashier-quota-note">Resets daily (UTC).</p>
                 </div>
               )}
 
